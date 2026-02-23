@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import crypto from 'crypto'
 
+export const dynamic = 'force-dynamic'
+
 function hashPassword(password: string): string {
     return crypto.createHash('sha256').update(password).digest('hex')
 }
