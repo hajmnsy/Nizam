@@ -1,0 +1,26 @@
+<svg width="600" height="200" viewBox="0 0 600 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Clean transparent background -->
+  
+  <!-- Icon / Monogram Area -->
+  <g transform="translate(40, 40)">
+    <!-- Hexagon representing nuts/bolts/industry -->
+    <path d="M60 0 L111.96 30 L111.96 90 L60 120 L8.04 90 L8.04 30 Z" fill="#1e3a8a"/>
+    <!-- Inner cutout representing a J or a steel beam -->
+    <path d="M45 25 H85 V85 C85 95 80 100 70 100 H45 V80 H65 V45 H45 V25 Z" fill="#ffffff"/>
+  </g>
+
+  <!-- Typography -->
+  <g transform="translate(180, 105)">
+    <text x="0" y="0" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="64" fill="#0f172a" letter-spacing="-1">JAWDA</text>
+    <text x="245" y="0" font-family="Arial, Helvetica, sans-serif" font-weight="300" font-size="64" fill="#64748b" letter-spacing="-1">STEEL</text>
+  </g>
+
+  <!-- Arabic Subtitle -->
+  <g transform="translate(185, 140)">
+    <text x="0" y="0" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="20" fill="#3b82f6" letter-spacing="2">شركة الجودة للحديد والصلب</text>
+  </g>
+
+  <!-- Decorative Line -->
+  <line x1="180" y1="155" x2="350" y2="155" stroke="#cbd5e1" stroke-width="2"/>
+  <line x1="180" y1="155" x2="230" y2="155" stroke="#f59e0b" stroke-width="4"/>
+</svg>

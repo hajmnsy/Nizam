@@ -1,0 +1,241 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 2, 6, 23;
+  /* Slate-950 (Very Dark) */
+  --background-rgb: 248, 250, 252;
+  --primary: 37, 99, 235;
+  --primary-dark: 29, 78, 216;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background-color: #f1f5f9;
+  /* Solid Slate-100 */
+}
+
+/* ... scrollbar ... */
+
+/* ======================== */
+/* Page Backgrounds         */
+/* ======================== */
+
+.page-bg {
+  background-color: #f1f5f9;
+  min-height: 100vh;
+}
+
+.page-bg::before {
+  display: none;
+  /* Remove soft gradient overlay */
+}
+
+/* Stronger Gradient Text - kept for headers but made darker */
+.gradient-text {
+  background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+  text-shadow: none;
+}
+
+/* Sharper Glass/Panel */
+.glass-panel {
+  background: white;
+  border: 1px solid #cbd5e1;
+  /* Slate-300 */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* ======================== */
+/* Stat Cards               */
+/* ======================== */
+
+.stat-card {
+  position: relative;
+  background: white;
+  border-radius: 0.375rem;
+  /* rounded-md */
+  padding: 1.5rem;
+  border: 1px solid #cbd5e1;
+  /* Slate-300 */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+}
+
+.stat-card.green::before {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.stat-card.blue::before {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.stat-card.purple::before {
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+}
+
+.stat-card.red::before {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.stat-card.amber::before {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.stat-card.sky::before {
+  background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+}
+
+/* ======================== */
+/* Premium Table            */
+/* ======================== */
+
+.premium-table {
+  width: 100%;
+  text-align: right;
+  font-size: 0.875rem;
+}
+
+.premium-table thead {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+}
+
+.premium-table thead th {
+  padding: 0.875rem 1rem;
+  font-weight: 700;
+  color: #475569;
+  font-size: 0.8rem;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.premium-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.2s ease;
+}
+
+.premium-table tbody tr:hover {
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.03), rgba(99, 102, 241, 0.03));
+}
+
+.premium-table tbody td {
+  padding: 0.875rem 1rem;
+}
+
+/* ======================== */
+/* Section Headers          */
+/* ======================== */
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.section-title h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #1e293b, #334155);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.section-title .icon-wrapper {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ======================== */
+/* Print styles             */
+/* ======================== */
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body {
+    background: white !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  nav,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Layout for Print */
+  .print-container {
+    padding: 40px;
+    background: white;
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  /* Table Styles */
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #000;
+  }
+
+  .print-table th,
+  .print-table td {
+    border: 1px solid #000;
+    padding: 8px;
+    text-align: center;
+    font-size: 14px;
+  }
+
+  .print-table th {
+    background-color: #f3f4f6 !important;
+    font-weight: bold;
+  }
+
+  /* Visibility Control */
+  .print-only {
+    display: block !important;
+  }
+
+  .screen-only {
+    display: none !important;
+  }
+}
+
+.print-only {
+  display: none;
+}
