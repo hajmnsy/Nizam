@@ -313,17 +313,17 @@ export default function InvoiceDetails() {
                                     <tr key={item.id} className="group">
                                         <td className="py-0.5 px-1 text-center font-black text-slate-800 text-base border-l border-slate-300">{item.quantity}</td>
                                         {isQuotation ? (
-                                            <td className="py-0.5 px-1 text-center font-mono text-slate-700 border-l border-slate-300 text-sm">
+                                            <td className="py-0.5 px-1 text-center font-mono text-slate-800 font-bold border-l border-slate-300 text-sm">
                                                 {item.price.toLocaleString()}
                                             </td>
                                         ) : (
-                                            <td className="py-0.5 px-1 text-center font-bold text-slate-700 border-l border-slate-300 text-xs">
+                                            <td className="py-0.5 px-1 text-center font-bold text-slate-800 border-l border-slate-300 text-sm leading-tight">
                                                 {numberToArabicWords(item.quantity)}
                                             </td>
                                         )}
                                         <td className="py-0.5 px-1 font-bold text-slate-800 text-right border-l border-slate-300 text-sm leading-tight">{item.product.name}</td>
-                                        <td className="py-0.5 px-1 text-center text-slate-700 font-medium break-words border-l border-slate-300 text-sm">{item.product.type || '-'}</td>
-                                        <td className="py-0.5 px-1 text-center text-slate-600 font-mono text-xs">{item.product.thickness || '-'}</td>
+                                        <td className="py-0.5 px-1 text-center text-slate-800 font-bold break-words border-l border-slate-300 text-sm">{item.product.type || '-'}</td>
+                                        <td className="py-0.5 px-1 text-center text-slate-800 font-bold font-mono text-sm">{item.product.thickness || '-'}</td>
                                     </tr>
                                 ))}
                             </tbody>
