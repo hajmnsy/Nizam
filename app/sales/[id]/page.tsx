@@ -243,6 +243,11 @@ export default function InvoiceDetails() {
                 )}
 
                 {/* Invoice Paper */}
+                <style type="text/css" media="print">
+                    {`
+                        @page { margin: 5mm; }
+                    `}
+                </style>
                 <div ref={componentRef} className="bg-white p-10 rounded-xl shadow-xl print:shadow-none print:p-0 relative overflow-hidden mt-6 print:m-0 mx-auto max-w-[210mm] min-h-[297mm] print:min-h-0 ring-1 ring-slate-200 print:ring-0">
                     {/* Watermark for Quotation */}
                     {isQuotation && (
@@ -254,7 +259,7 @@ export default function InvoiceDetails() {
                     )}
 
                     {/* Header */}
-                    <div className="relative z-10 pb-2 mb-2 flex justify-between items-center h-40">
+                    <div className="relative z-10 pb-4 mb-4 print:pb-0 print:mb-[1mm] flex justify-between items-center h-auto">
                         <div className="w-1/3 text-right space-y-0.5 mt-2">
                             <h2 className="text-xl font-black text-slate-800">{settings?.companyName || 'لا يوجد اسم للشركة'}</h2>
                             <div className="flex flex-col items-start gap-0.5 text-slate-600 font-medium text-sm">
@@ -265,9 +270,9 @@ export default function InvoiceDetails() {
                         </div>
                         <div className="w-1/3 flex justify-center items-center">
                             {settings?.logoUrl ? (
-                                <img src={settings.logoUrl} alt="Logo" className="h-32 object-contain mix-blend-multiply print:mix-blend-normal" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                <img src={settings.logoUrl} alt="Logo" className="h-28 print:h-24 object-contain mix-blend-multiply print:mix-blend-normal" onError={(e) => (e.currentTarget.style.display = 'none')} />
                             ) : (
-                                <img src="/emblem.png" alt="Logo" className="h-32 w-32 object-contain mix-blend-multiply print:mix-blend-normal" />
+                                <img src="/emblem.png" alt="Logo" className="h-28 w-28 print:h-24 print:w-24 object-contain mix-blend-multiply print:mix-blend-normal" />
                             )}
                         </div>
                         <div className="w-1/3 text-left space-y-1 mt-2">
