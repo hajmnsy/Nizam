@@ -6,8 +6,6 @@ import Card from '@/components/ui/Card'
 import { Users, UserPlus, Trash2, Edit2, ShieldAlert } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
-
 type User = {
     id: number
     username: string

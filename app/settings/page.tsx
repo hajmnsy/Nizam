@@ -7,8 +7,6 @@ import Input from '@/components/ui/Input'
 import { Save, Settings2, Building2, Phone, Receipt, Loader2, Image as ImageIcon, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
-
 export default function SettingsPage() {
     const router = useRouter()
     const [loading, setLoading] = useState(true)

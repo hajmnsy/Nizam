@@ -5,8 +5,6 @@ import { Package, CheckCircle, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 
-export const dynamic = 'force-dynamic'
-
 export default async function WarehouseDashboard() {
     const paidOrders = await prisma.sale.findMany({
         where: { status: 'PAID' },
