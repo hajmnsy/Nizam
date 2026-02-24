@@ -255,13 +255,13 @@ export default function InvoiceDetails() {
 
                     {/* Header */}
                     <div className="relative z-10 pb-2 mb-2 flex justify-between items-center h-40">
-                        <div className="w-1/3 text-right space-y-1">
-                            <h2 className="text-2xl font-black text-slate-800">{settings?.companyName || 'لا يوجد اسم للشركة'}</h2>
-                            <div className="flex items-center justify-start gap-1.5 text-slate-500 font-medium">
-                                <Phone size={16} className="text-slate-500" />
-                                <span dir="ltr" className="font-bold text-slate-700">{settings?.phone || '-'}</span>
+                        <div className="w-1/3 text-right space-y-0.5 mt-2">
+                            <h2 className="text-xl font-black text-slate-800">{settings?.companyName || 'لا يوجد اسم للشركة'}</h2>
+                            <div className="flex flex-col items-start gap-0.5 text-slate-600 font-medium text-sm">
+                                <div className="flex items-center gap-1.5"><Phone size={14} className="text-slate-500" /> <span className="font-bold text-slate-700">م. محمد إسماعيل</span></div>
+                                <span dir="ltr" className="font-bold text-slate-700 pr-5">{settings?.phone || '-'}</span>
                             </div>
-                            {settings?.vatRate > 0 && <p className="text-[10px] text-slate-400 border border-slate-200 inline-block px-2 py-0.5 rounded-full font-bold mt-1">الرقم الضريبي متوفر</p>}
+                            {settings?.vatRate > 0 && <p className="text-[10px] text-slate-400 border border-slate-200 inline-block px-1.5 py-0.5 rounded-sm font-bold mt-1">الرقم الضريبي متوفر</p>}
                         </div>
                         <div className="w-1/3 flex justify-center items-center">
                             {settings?.logoUrl ? (
@@ -270,19 +270,19 @@ export default function InvoiceDetails() {
                                 <img src="/emblem.png" alt="Logo" className="h-32 w-32 object-contain mix-blend-multiply print:mix-blend-normal" />
                             )}
                         </div>
-                        <div className="w-1/3 text-left space-y-3">
+                        <div className="w-1/3 text-left space-y-1 mt-2">
                             {isQuotation && (
-                                <h1 className="text-4xl font-black text-slate-800 tracking-tight">
+                                <h1 className="text-2xl font-black text-slate-800 tracking-tight">
                                     عرض سعر
                                 </h1>
                             )}
                             <div>
-                                <p className="text-slate-400 text-sm font-bold mb-0.5">رقم إذن الإستلام</p>
-                                <p className="font-mono text-xl font-bold text-slate-700">{sale.id}</p>
+                                <p className="text-slate-400 text-xs font-bold">رقم إذن الإستلام</p>
+                                <p className="font-mono text-lg font-bold text-slate-700 leading-tight">{sale.id}</p>
                             </div>
-                            <div className="text-sm text-slate-500 font-medium">
+                            <div className="text-xs text-slate-600 font-medium">
                                 <div>التاريخ: <span className="text-slate-700">{new Date(sale.createdAt).toLocaleDateString('en-GB')}</span></div>
-                                <div className="mt-1 border-t pt-1 border-slate-100">العميل: <span className="text-slate-700 font-bold">{sale.customer}</span></div>
+                                <div>العميل: <span className="text-slate-700 font-bold">{sale.customer}</span></div>
                             </div>
                         </div>
                     </div>
@@ -303,22 +303,22 @@ export default function InvoiceDetails() {
                                     <th className="py-2 px-2 w-[15%] text-center font-bold">السماكة</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-200">
+                            <tbody className="divide-y divide-slate-300">
                                 {sale.items.map((item, index) => (
                                     <tr key={item.id} className="group">
-                                        <td className="py-1.5 px-2 text-center font-black text-slate-800 text-lg border-l border-slate-200">{item.quantity}</td>
+                                        <td className="py-0.5 px-1 text-center font-black text-slate-800 text-base border-l border-slate-300">{item.quantity}</td>
                                         {isQuotation ? (
-                                            <td className="py-1.5 px-2 text-center font-mono text-slate-600 border-l border-slate-200">
+                                            <td className="py-0.5 px-1 text-center font-mono text-slate-700 border-l border-slate-300 text-sm">
                                                 {item.price.toLocaleString()}
                                             </td>
                                         ) : (
-                                            <td className="py-1.5 px-2 text-center font-bold text-slate-600 border-l border-slate-200">
+                                            <td className="py-0.5 px-1 text-center font-bold text-slate-700 border-l border-slate-300 text-xs">
                                                 {numberToArabicWords(item.quantity)}
                                             </td>
                                         )}
-                                        <td className="py-1.5 px-2 font-bold text-slate-800 text-right border-l border-slate-200">{item.product.name}</td>
-                                        <td className="py-1.5 px-2 text-center text-slate-600 font-medium break-words border-l border-slate-200">{item.product.type || '-'}</td>
-                                        <td className="py-1.5 px-2 text-center text-slate-500 font-mono">{item.product.thickness || '-'}</td>
+                                        <td className="py-0.5 px-1 font-bold text-slate-800 text-right border-l border-slate-300 text-sm leading-tight">{item.product.name}</td>
+                                        <td className="py-0.5 px-1 text-center text-slate-700 font-medium break-words border-l border-slate-300 text-sm">{item.product.type || '-'}</td>
+                                        <td className="py-0.5 px-1 text-center text-slate-600 font-mono text-xs">{item.product.thickness || '-'}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -367,18 +367,6 @@ export default function InvoiceDetails() {
                             </div>
                         </div>
                     )}
-
-                    {/* Footer Signatures */}
-                    <div className="relative z-10 mt-12 pt-4 flex justify-around text-center text-sm text-slate-500 print:mt-8">
-                        <div className="w-1/3">
-                            <p className="font-bold text-slate-800 mb-14">مدير المبيعات</p>
-                            <div className="border-b-2 border-slate-300 border-dashed w-3/4 mx-auto"></div>
-                        </div>
-                        <div className="w-1/3">
-                            <p className="font-bold text-slate-800 mb-14">مدير الحسابات</p>
-                            <div className="border-b-2 border-slate-300 border-dashed w-3/4 mx-auto"></div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
