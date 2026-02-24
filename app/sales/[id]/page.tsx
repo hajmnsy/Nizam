@@ -296,34 +296,34 @@ export default function InvoiceDetails() {
                     <div className="relative z-10 mb-8">
                         <table className="w-full text-right border border-slate-300">
                             <thead>
-                                <tr className="border-b-2 border-slate-300 text-slate-700 bg-slate-50 print:bg-slate-100">
-                                    <th className="py-2 px-2 w-[15%] text-center font-bold border-l border-slate-300">الكمية</th>
+                                <tr className="border-b-2 border-slate-300 text-slate-800 bg-slate-50 print:bg-slate-100">
+                                    <th className="py-2 px-2 w-[15%] text-center font-bold text-lg border-l border-slate-300">الكمية</th>
                                     {isQuotation ? (
-                                        <th className="py-2 px-2 w-[25%] text-center font-bold border-l border-slate-300">السعر الإفرادي</th>
+                                        <th className="py-2 px-2 w-[25%] text-center font-bold text-lg border-l border-slate-300">السعر الإفرادي</th>
                                     ) : (
-                                        <th className="py-2 px-2 w-[25%] text-center font-bold border-l border-slate-300">كتابة</th>
+                                        <th className="py-2 px-2 w-[25%] text-center font-bold text-lg border-l border-slate-300">كتابة</th>
                                     )}
-                                    <th className="py-2 px-2 w-[35%] font-bold text-right border-l border-slate-300">المنتج</th>
-                                    <th className="py-2 px-2 w-[10%] text-center font-bold border-l border-slate-300">النوع</th>
-                                    <th className="py-2 px-2 w-[15%] text-center font-bold">السماكة</th>
+                                    <th className="py-2 px-2 w-[35%] font-bold text-lg text-right border-l border-slate-300">المنتج</th>
+                                    <th className="py-2 px-2 w-[10%] text-center font-bold text-lg border-l border-slate-300">النوع</th>
+                                    <th className="py-2 px-2 w-[15%] text-center font-bold text-lg">السماكة</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-300">
                                 {sale.items.map((item, index) => (
                                     <tr key={item.id} className="group">
-                                        <td className="py-0.5 px-1 text-center font-black text-slate-800 text-base border-l border-slate-300">{item.quantity}</td>
+                                        <td className="py-0.5 px-1 text-center font-black text-slate-900 text-base border-l border-slate-300">{item.quantity}</td>
                                         {isQuotation ? (
-                                            <td className="py-0.5 px-1 text-center font-mono text-slate-800 font-bold border-l border-slate-300 text-sm">
+                                            <td className="py-0.5 px-1 text-center font-mono text-slate-900 font-black border-l border-slate-300 text-base">
                                                 {item.price.toLocaleString()}
                                             </td>
                                         ) : (
-                                            <td className="py-0.5 px-1 text-center font-bold text-slate-800 border-l border-slate-300 text-sm leading-tight">
+                                            <td className="py-0.5 px-1 text-center font-black text-slate-900 border-l border-slate-300 text-base leading-tight">
                                                 {numberToArabicWords(item.quantity)}
                                             </td>
                                         )}
-                                        <td className="py-0.5 px-1 font-bold text-slate-800 text-right border-l border-slate-300 text-sm leading-tight">{item.product.name}</td>
-                                        <td className="py-0.5 px-1 text-center text-slate-800 font-bold break-words border-l border-slate-300 text-sm">{item.product.type || '-'}</td>
-                                        <td className="py-0.5 px-1 text-center text-slate-800 font-bold font-mono text-sm">{item.product.thickness || '-'}</td>
+                                        <td className="py-0.5 px-1 font-black text-slate-900 text-right border-l border-slate-300 text-base leading-tight">{item.product.name}</td>
+                                        <td className="py-0.5 px-1 text-center text-slate-900 font-black break-words border-l border-slate-300 text-base">{item.product.type || '-'}</td>
+                                        <td className="py-0.5 px-1 text-center text-slate-900 font-black font-mono text-base">{item.product.thickness || '-'}</td>
                                     </tr>
                                 ))}
                             </tbody>
