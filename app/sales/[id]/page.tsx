@@ -260,22 +260,21 @@ export default function InvoiceDetails() {
 
                     {/* Header */}
                     <div className="relative z-10 pb-2 mb-2 print:pb-0 print:mb-0 flex justify-between items-center h-auto">
-                        <div className="w-1/3 text-right space-y-0.5 mt-1 print:mt-0">
-                            <h2 className="text-xl font-black text-slate-800">{settings?.companyName || 'لا يوجد اسم للشركة'}</h2>
+                        <div className="w-1/4 text-right space-y-0.5 mt-1 print:mt-0">
                             <div className="flex flex-col items-start gap-0.5 text-slate-600 font-medium text-sm">
                                 <div className="flex items-center gap-1.5"><Phone size={14} className="text-slate-500" /> <span className="font-bold text-slate-700">م. محمد إسماعيل</span></div>
                                 <span dir="ltr" className="font-bold text-slate-700 pr-5">{settings?.phone || '-'}</span>
                             </div>
                             {settings?.vatRate > 0 && <p className="text-[10px] text-slate-400 border border-slate-200 inline-block px-1.5 py-0.5 rounded-sm font-bold mt-1">الرقم الضريبي متوفر</p>}
                         </div>
-                        <div className="w-1/3 flex justify-center items-center">
+                        <div className="w-1/2 flex justify-center items-center">
                             {settings?.logoUrl ? (
-                                <img src={settings.logoUrl} alt="Logo" className="h-28 print:h-20 object-contain mix-blend-multiply print:mix-blend-normal" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                <img src={settings.logoUrl} alt="Logo" className="h-32 print:h-28 w-full object-contain mix-blend-multiply print:mix-blend-normal" onError={(e) => (e.currentTarget.style.display = 'none')} />
                             ) : (
-                                <img src="/emblem.png" alt="Logo" className="h-28 w-28 print:h-20 print:w-20 object-contain mix-blend-multiply print:mix-blend-normal" />
+                                <img src="/emblem.png" alt="Logo" className="h-32 w-32 print:h-28 print:w-28 object-contain mix-blend-multiply print:mix-blend-normal" />
                             )}
                         </div>
-                        <div className="w-1/3 text-left space-y-0.5 print:space-y-0 mt-1 print:mt-0">
+                        <div className="w-1/4 text-left space-y-0.5 print:space-y-0 mt-1 print:mt-0">
                             {isQuotation && (
                                 <h1 className="text-2xl font-black text-slate-800 tracking-tight">
                                     عرض سعر

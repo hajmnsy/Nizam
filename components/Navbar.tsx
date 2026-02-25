@@ -112,17 +112,12 @@ export default function Navbar() {
                         {/* Logo */}
                         <Link href="/" className="flex items-center gap-3">
                             {settings?.logoUrl ? (
-                                <img src={settings.logoUrl} alt="Logo" className="h-10 w-auto object-contain rounded-lg" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                <img src={settings.logoUrl} alt="Logo" className="h-14 w-auto object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
                             ) : (
                                 <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
                                     <Rocket className="text-white" size={24} strokeWidth={2.5} />
                                 </div>
                             )}
-                            <div className="hidden lg:flex flex-col">
-                                <span className="font-black text-xl text-slate-800 tracking-tight leading-none">
-                                    {settings?.companyName || 'النظام الإداري'}
-                                </span>
-                            </div>
                         </Link>
 
                         {/* Desktop Navigation */}
