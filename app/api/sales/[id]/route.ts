@@ -147,12 +147,13 @@ export async function PUT(
                 });
 
                 let adjustedPaidAmount = newPaidAmount;
+                let actualRemainingAmount = Math.max(0, actualNewTotal - adjustedPaidAmount);
                 const finalStatus = actualRemainingAmount === 0 && targetStatus === 'CREDIT' ? 'PAID' : targetStatus;
 
                 if (finalStatus === 'PAID') adjustedPaidAmount = actualNewTotal;
                 else if (finalStatus === 'CREDIT' && newRemainingAmount === 0) adjustedPaidAmount = actualNewTotal;
 
-                const actualRemainingAmount = Math.max(0, actualNewTotal - adjustedPaidAmount);
+                actualRemainingAmount = Math.max(0, actualNewTotal - adjustedPaidAmount);
 
                 // Invoice Number logic
                 let newInvoiceNumber = originalSale.invoiceNumber;

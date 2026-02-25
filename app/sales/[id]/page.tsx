@@ -51,6 +51,7 @@ interface SaleItem {
 
 interface Sale {
     id: number
+    invoiceNumber?: number | null
     customer: string
     total: number
     discount: number
