@@ -281,7 +281,9 @@ export default function InvoiceDetails() {
                                 </h1>
                             )}
                             <div>
-                                <p className="text-slate-400 text-xs font-bold">رقم إذن الإستلام</p>
+                                <p className="text-slate-400 text-xs font-bold">
+                                    {isQuotation ? 'رقم عرض السعر' : 'رقم إذن الإستلام'}
+                                </p>
                                 <p className="font-mono text-lg font-bold text-slate-700 leading-tight">{sale.id}</p>
                             </div>
                             <div className="text-xs text-slate-600 font-medium">
