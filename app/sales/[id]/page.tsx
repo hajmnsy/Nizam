@@ -270,9 +270,9 @@ export default function InvoiceDetails() {
                         </div>
                         <div className="w-1/2 flex justify-center items-center">
                             {settings?.logoUrl ? (
-                                <img src={settings.logoUrl} alt="Logo" className="h-32 print:h-28 w-full object-contain mix-blend-multiply print:mix-blend-normal" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                <img src={settings.logoUrl} alt="Logo" className="h-32 print:h-28 w-full object-contain mix-blend-multiply print:contrast-125 print:grayscale" onError={(e) => (e.currentTarget.style.display = 'none')} />
                             ) : (
-                                <img src="/emblem.png" alt="Logo" className="h-32 w-32 print:h-28 print:w-28 object-contain mix-blend-multiply print:mix-blend-normal" />
+                                <img src="/emblem.png" alt="Logo" className="h-32 w-32 print:h-28 print:w-28 object-contain mix-blend-multiply print:contrast-125 print:grayscale" />
                             )}
                         </div>
                         <div className="w-1/4 text-left space-y-0.5 print:space-y-0 mt-1 print:mt-0">
