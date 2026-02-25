@@ -295,40 +295,59 @@ export default function InvoiceDetails() {
 
                     {/* Items Table */}
                     <div className="relative z-10 mb-4 print:mb-2">
-                        <table className="w-full text-right border border-slate-300">
-                            <thead>
-                                <tr className="border-b-2 border-slate-300 text-slate-800 bg-slate-50 print:bg-slate-100">
-                                    <th className="py-1 px-2 w-[15%] text-center font-bold text-lg border-l border-slate-300">الكمية</th>
-                                    {isQuotation ? (
-                                        <th className="py-2 px-2 w-[25%] text-center font-bold text-lg border-l border-slate-300">السعر الإفرادي</th>
-                                    ) : (
-                                        <th className="py-2 px-2 w-[25%] text-center font-bold text-lg border-l border-slate-300">كتابة</th>
-                                    )}
-                                    <th className="py-2 px-2 w-[35%] font-bold text-lg text-right border-l border-slate-300">المنتج</th>
-                                    <th className="py-2 px-2 w-[15%] text-center font-bold text-lg border-l border-slate-300">السماكة</th>
-                                    <th className="py-2 px-2 w-[10%] text-center font-bold text-lg">النوع</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-300">
-                                {sale.items.map((item, index) => (
-                                    <tr key={item.id} className="group">
-                                        <td className="py-0.5 px-1 text-center font-black text-slate-900 text-base border-l border-slate-300">{item.quantity}</td>
-                                        {isQuotation ? (
+                        {isQuotation ? (
+                            <table className="w-full text-right border border-slate-300">
+                                <thead>
+                                    <tr className="border-b-2 border-slate-300 text-slate-800 bg-slate-50 print:bg-slate-100">
+                                        <th className="py-1 px-2 w-[10%] text-center font-bold text-lg border-l border-slate-300">العدد</th>
+                                        <th className="py-2 px-2 w-[35%] font-bold text-lg text-right border-l border-slate-300">المنتج</th>
+                                        <th className="py-2 px-2 w-[15%] text-center font-bold text-lg border-l border-slate-300">السماكة</th>
+                                        <th className="py-2 px-2 w-[20%] text-center font-bold text-lg border-l border-slate-300">السعر الإفرادي</th>
+                                        <th className="py-2 px-2 w-[20%] text-center font-bold text-lg">سعر الكمية</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-300">
+                                    {sale.items.map((item, index) => (
+                                        <tr key={item.id} className="group">
+                                            <td className="py-0.5 px-1 text-center font-black text-slate-900 text-base border-l border-slate-300">{item.quantity}</td>
+                                            <td className="py-0.5 px-1 font-black text-slate-900 text-right border-l border-slate-300 text-base leading-tight">{item.product.name}</td>
+                                            <td className="py-0.5 px-1 text-center text-slate-900 font-black font-mono text-base border-l border-slate-300">{item.product.thickness || '-'}</td>
                                             <td className="py-0.5 px-1 text-center font-mono text-slate-900 font-black border-l border-slate-300 text-base">
                                                 {item.price.toLocaleString()}
                                             </td>
-                                        ) : (
+                                            <td className="py-0.5 px-1 text-center font-mono text-slate-900 font-black text-base">
+                                                {((item.product?.price || item.price) * item.quantity).toLocaleString()}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <table className="w-full text-right border border-slate-300">
+                                <thead>
+                                    <tr className="border-b-2 border-slate-300 text-slate-800 bg-slate-50 print:bg-slate-100">
+                                        <th className="py-1 px-2 w-[15%] text-center font-bold text-lg border-l border-slate-300">الكمية</th>
+                                        <th className="py-2 px-2 w-[25%] text-center font-bold text-lg border-l border-slate-300">كتابة</th>
+                                        <th className="py-2 px-2 w-[35%] font-bold text-lg text-right border-l border-slate-300">المنتج</th>
+                                        <th className="py-2 px-2 w-[15%] text-center font-bold text-lg border-l border-slate-300">السماكة</th>
+                                        <th className="py-2 px-2 w-[10%] text-center font-bold text-lg">النوع</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-300">
+                                    {sale.items.map((item, index) => (
+                                        <tr key={item.id} className="group">
+                                            <td className="py-0.5 px-1 text-center font-black text-slate-900 text-base border-l border-slate-300">{item.quantity}</td>
                                             <td className="py-0.5 px-1 text-center font-black text-slate-900 border-l border-slate-300 text-base leading-tight">
                                                 {numberToArabicWords(item.quantity)}
                                             </td>
-                                        )}
-                                        <td className="py-0.5 px-1 font-black text-slate-900 text-right border-l border-slate-300 text-base leading-tight">{item.product.name}</td>
-                                        <td className="py-0.5 px-1 text-center text-slate-900 font-black font-mono text-base border-l border-slate-300">{item.product.thickness || '-'}</td>
-                                        <td className="py-0.5 px-1 text-center text-slate-900 font-black break-words text-base">{item.product.type || '-'}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                            <td className="py-0.5 px-1 font-black text-slate-900 text-right border-l border-slate-300 text-base leading-tight">{item.product.name}</td>
+                                            <td className="py-0.5 px-1 text-center text-slate-900 font-black font-mono text-base border-l border-slate-300">{item.product.thickness || '-'}</td>
+                                            <td className="py-0.5 px-1 text-center text-slate-900 font-black break-words text-base">{item.product.type || '-'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
 
                     {/* Totals Section */}
