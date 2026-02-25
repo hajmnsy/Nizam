@@ -303,8 +303,8 @@ export default function InvoiceDetails() {
                                         <th className="py-2 px-2 w-[25%] text-center font-bold text-lg border-l border-slate-300">كتابة</th>
                                     )}
                                     <th className="py-2 px-2 w-[35%] font-bold text-lg text-right border-l border-slate-300">المنتج</th>
-                                    <th className="py-2 px-2 w-[10%] text-center font-bold text-lg border-l border-slate-300">النوع</th>
-                                    <th className="py-2 px-2 w-[15%] text-center font-bold text-lg">السماكة</th>
+                                    <th className="py-2 px-2 w-[15%] text-center font-bold text-lg border-l border-slate-300">السماكة</th>
+                                    <th className="py-2 px-2 w-[10%] text-center font-bold text-lg">النوع</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-300">
@@ -321,8 +321,8 @@ export default function InvoiceDetails() {
                                             </td>
                                         )}
                                         <td className="py-0.5 px-1 font-black text-slate-900 text-right border-l border-slate-300 text-base leading-tight">{item.product.name}</td>
-                                        <td className="py-0.5 px-1 text-center text-slate-900 font-black break-words border-l border-slate-300 text-base">{item.product.type || '-'}</td>
-                                        <td className="py-0.5 px-1 text-center text-slate-900 font-black font-mono text-base">{item.product.thickness || '-'}</td>
+                                        <td className="py-0.5 px-1 text-center text-slate-900 font-black font-mono text-base border-l border-slate-300">{item.product.thickness || '-'}</td>
+                                        <td className="py-0.5 px-1 text-center text-slate-900 font-black break-words text-base">{item.product.type || '-'}</td>
                                     </tr>
                                 ))}
                             </tbody>
