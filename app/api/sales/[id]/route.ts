@@ -67,12 +67,20 @@ export async function PUT(
                 })
             }
 
+            // Determine new invoice number
+            let newInvoiceNumber = sale.invoiceNumber;
+            if (!newInvoiceNumber) {
+                const maxInvoice = await prisma.sale.aggregate({ _max: { invoiceNumber: true } });
+                newInvoiceNumber = (maxInvoice._max.invoiceNumber || 0) + 1;
+            }
+
             const updatedSale = await prisma.sale.update({
                 where: { id },
                 data: {
                     status: 'PAID',
                     paidAmount: sale.total - sale.discount,
-                    remainingAmount: 0
+                    remainingAmount: 0,
+                    invoiceNumber: newInvoiceNumber
                 }
             })
 
@@ -124,8 +132,6 @@ export async function PUT(
 
                 // Calculate discount proportion
                 const discountRatio = newSubtotal > 0 && discount > 0 ? discount / newSubtotal : 0;
-
-                // Prepare new items and calculate the actual total based on rounded unit prices
                 let actualNewTotal = 0;
                 const newItemsData = items.map((item: any) => {
                     const originalItemTotal = item.price * item.quantity;
@@ -133,7 +139,6 @@ export async function PUT(
                     const newUnitPrice = parseFloat(((originalItemTotal - itemDiscount) / item.quantity).toFixed(2));
 
                     actualNewTotal += newUnitPrice * item.quantity;
-
                     return {
                         productId: parseInt(item.productId),
                         quantity: parseInt(item.quantity),
@@ -141,12 +146,20 @@ export async function PUT(
                     };
                 });
 
-                // Adjust paidAmount based on the actual new total if it was meant to be exactly full
                 let adjustedPaidAmount = newPaidAmount;
-                if (targetStatus === 'PAID') adjustedPaidAmount = actualNewTotal;
-                else if (targetStatus === 'CREDIT' && newRemainingAmount === 0) adjustedPaidAmount = actualNewTotal;
+                const finalStatus = actualRemainingAmount === 0 && targetStatus === 'CREDIT' ? 'PAID' : targetStatus;
+
+                if (finalStatus === 'PAID') adjustedPaidAmount = actualNewTotal;
+                else if (finalStatus === 'CREDIT' && newRemainingAmount === 0) adjustedPaidAmount = actualNewTotal;
 
                 const actualRemainingAmount = Math.max(0, actualNewTotal - adjustedPaidAmount);
+
+                // Invoice Number logic
+                let newInvoiceNumber = originalSale.invoiceNumber;
+                if (!newInvoiceNumber && finalStatus !== 'QUOTATION') {
+                    const maxInvoice = await tx.sale.aggregate({ _max: { invoiceNumber: true } });
+                    newInvoiceNumber = (maxInvoice._max.invoiceNumber || 0) + 1;
+                }
 
                 // Create new items and update sale main data
                 const newSale = await tx.sale.update({
@@ -157,7 +170,8 @@ export async function PUT(
                         discount: discount || 0,
                         paidAmount: adjustedPaidAmount,
                         remainingAmount: actualRemainingAmount,
-                        status: actualRemainingAmount === 0 && targetStatus === 'CREDIT' ? 'PAID' : targetStatus,
+                        status: finalStatus,
+                        invoiceNumber: newInvoiceNumber,
                         items: {
                             create: newItemsData
                         }
@@ -165,7 +179,7 @@ export async function PUT(
                     include: { items: true }
                 })
 
-                // If new status is PAID or CREDIT, deduct the new quantities from stock
+                // DEDUCT NEW QUANTITIES
                 if (newSale.status === 'PAID' || newSale.status === 'CREDIT') {
                     for (const newItem of items) {
                         await tx.product.update({

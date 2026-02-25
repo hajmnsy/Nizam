@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 
 interface Sale {
     id: number
+    invoiceNumber?: number
     customer: string
     total: number
     paidAmount?: number
@@ -100,7 +101,7 @@ export default function SalesList() {
                         <table className="w-full text-right">
                             <thead className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
                                 <tr>
-                                    <th className="p-4">رقم الفاتورة</th>
+                                    <th className="p-4">{tab === 'QUOTATION' ? 'الرمز' : 'رقم الفاتورة'}</th>
                                     <th className="p-4">العميل</th>
                                     <th className="p-4">التاريخ</th>
                                     <th className="p-4">الإجمالي</th>
@@ -124,7 +125,9 @@ export default function SalesList() {
                                 ) : (
                                     sales.map(sale => (
                                         <tr key={sale.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="p-4 font-mono font-bold text-slate-700">#{sale.id}</td>
+                                            <td className="p-4 font-mono font-bold text-slate-700">
+                                                {tab === 'QUOTATION' ? '-' : `#${sale.invoiceNumber || sale.id}`}
+                                            </td>
                                             <td className="p-4 font-bold text-slate-800">{sale.customer || 'عميل نقدي'}</td>
                                             <td className="p-4 text-gray-600 text-sm">
                                                 {new Date(sale.createdAt).toLocaleDateString('ar-SD')}

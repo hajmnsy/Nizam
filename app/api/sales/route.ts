@@ -52,15 +52,27 @@ export async function POST(request: Request) {
         else if (status === 'CREDIT' && remainingAmount === 0) adjustedPaidAmount = actualNewTotal;
 
         const actualRemainingAmount = Math.max(0, actualNewTotal - adjustedPaidAmount);
+        const finalStatus = actualRemainingAmount === 0 && status === 'CREDIT' ? 'PAID' : status;
+
+        let invoiceNumber = null;
+        if (finalStatus !== 'QUOTATION') {
+            const maxInvoice = await prisma.sale.aggregate({
+                _max: {
+                    invoiceNumber: true
+                }
+            });
+            invoiceNumber = (maxInvoice._max.invoiceNumber || 0) + 1;
+        }
 
         const sale = await prisma.sale.create({
             data: {
+                invoiceNumber: invoiceNumber,
                 customer: json.customer || 'Customer',
                 total: actualNewTotal,
                 discount: discount,
                 paidAmount: adjustedPaidAmount,
                 remainingAmount: actualRemainingAmount,
-                status: actualRemainingAmount === 0 && status === 'CREDIT' ? 'PAID' : status,
+                status: finalStatus,
                 items: {
                     create: newItemsData
                 }
@@ -68,10 +80,10 @@ export async function POST(request: Request) {
             include: {
                 items: true
             }
-        })
+        });
 
         // Update stock ONLY if not a quotation
-        if (status !== 'QUOTATION') {
+        if (finalStatus !== 'QUOTATION') {
             for (const item of json.items) {
                 const updatedProduct = await prisma.product.update({
                     where: { id: parseInt(item.productId) },

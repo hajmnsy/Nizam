@@ -280,12 +280,14 @@ export default function InvoiceDetails() {
                                     عرض سعر
                                 </h1>
                             )}
-                            <div>
-                                <p className="text-slate-400 text-xs font-bold">
-                                    {isQuotation ? 'رقم عرض السعر' : 'رقم إذن الإستلام'}
-                                </p>
-                                <p className="font-mono text-lg font-bold text-slate-700 leading-tight">{sale.id}</p>
-                            </div>
+                            {!isQuotation && (
+                                <div>
+                                    <p className="text-slate-400 text-xs font-bold">
+                                        رقم إذن الإستلام
+                                    </p>
+                                    <p className="font-mono text-lg font-bold text-slate-700 leading-tight">{sale.invoiceNumber || sale.id}</p>
+                                </div>
+                            )}
                             <div className="text-xs text-slate-600 font-medium">
                                 <div>التاريخ: <span className="text-slate-700">{new Date(sale.createdAt).toLocaleDateString('en-GB')}</span></div>
                                 <div>العميل: <span className="text-slate-700 font-bold">{sale.customer}</span></div>

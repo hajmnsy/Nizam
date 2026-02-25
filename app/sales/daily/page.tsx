@@ -20,6 +20,7 @@ interface SaleItem {
 
 interface Sale {
     id: number
+    invoiceNumber?: number
     customer: string
     total: number
     paidAmount?: number
@@ -230,7 +231,7 @@ export default function DailyReport() {
                                         <tbody>
                                             {sales.map(s => (
                                                 <tr key={s.id} className="border-b border-slate-100">
-                                                    <td className="p-3 font-mono font-bold text-slate-700">#{s.id}</td>
+                                                    <td className="p-3 font-mono font-bold text-slate-700">#{s.invoiceNumber || s.id}</td>
                                                     <td className="p-3">
                                                         {s.status === 'PAID' ? (
                                                             <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs font-bold border border-emerald-100">مسددة</span>

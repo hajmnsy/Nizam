@@ -33,6 +33,7 @@ model Product {
 
 model Sale {
   id              Int        @id @default(autoincrement())
+  invoiceNumber   Int?       @unique
   customer        String?
   total           Float
   paidAmount      Float      @default(0)
