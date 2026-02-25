@@ -169,6 +169,11 @@ export default function EditSale() {
         setCart(prev => prev.map(item => item.productId === id ? { ...item, quantity: qty } : item))
     }
 
+    const updatePrice = (id: number, price: number) => {
+        if (price < 0) return
+        setCart(prev => prev.map(item => item.productId === id ? { ...item, price: price } : item))
+    }
+
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
     const finalTotal = subtotal - (parseFloat(discount) || 0)
 
@@ -397,13 +402,25 @@ export default function EditSale() {
                                                             <Plus size={14} />
                                                         </button>
                                                     </div>
-                                                    <div className="flex flex-col items-end">
-                                                        {discountRatio > 0 && (
-                                                            <span className="text-xs text-gray-400 line-through">{itemOriginalTotal.toLocaleString()}</span>
-                                                        )}
-                                                        <span className="font-bold text-blue-600">
-                                                            {itemDiscountedTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                                                        </span>
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <div className="flex items-center gap-1 border border-slate-200 rounded px-2 py-0.5 bg-gray-50/80">
+                                                            <span className="text-xs text-gray-500 font-bold">السعر:</span>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                value={item.price}
+                                                                onChange={(e) => updatePrice(item.productId, parseFloat(e.target.value) || 0)}
+                                                                className="w-20 text-left text-sm font-bold bg-transparent outline-none text-blue-700 font-mono"
+                                                            />
+                                                        </div>
+                                                        <div className="flex flex-col items-end mt-1">
+                                                            {discountRatio > 0 && (
+                                                                <span className="text-xs text-gray-400 line-through">{itemOriginalTotal.toLocaleString()}</span>
+                                                            )}
+                                                            <span className="font-bold text-blue-600">
+                                                                {itemDiscountedTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
