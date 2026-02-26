@@ -319,7 +319,7 @@ export default function InvoiceDetails() {
                                                 {item.price.toLocaleString()}
                                             </td>
                                             <td className="py-0.5 px-1 text-center font-mono text-slate-900 font-black text-base">
-                                                {((item.product?.price || item.price) * item.quantity).toLocaleString()}
+                                                {(item.price * item.quantity).toLocaleString()}
                                             </td>
                                         </tr>
                                     ))}
@@ -362,14 +362,14 @@ export default function InvoiceDetails() {
                                         <tr>
                                             <td className="py-2 px-4">المجموع الفرعي</td>
                                             <td className="py-2 px-4 font-mono text-left text-slate-800">
-                                                {sale.items.reduce((sum, item) => sum + ((item.product?.price || item.price) * item.quantity), 0).toLocaleString()}
+                                                {sale.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString()}
                                             </td>
                                         </tr>
                                         {sale.discount > 0 && (
                                             <tr>
                                                 <td className="py-2 px-4 text-red-500">الخصم</td>
                                                 <td className="py-2 px-4 font-mono text-red-500 text-left">
-                                                    -{(sale.items.reduce((sum, item) => sum + ((item.product?.price || item.price) * item.quantity), 0) - sale.total).toLocaleString()}
+                                                    -{(sale.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) - sale.total).toLocaleString()}
                                                 </td>
                                             </tr>
                                         )}
