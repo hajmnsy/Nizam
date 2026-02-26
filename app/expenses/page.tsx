@@ -15,11 +15,11 @@ interface Expense {
 }
 
 const CATEGORIES = [
-    { id: 'توريدات', label: 'شراء خامات', color: 'bg-emerald-100 text-emerald-700' },
-    { id: 'عتالة وترحيل', label: 'مصاريف تشغيلية', color: 'bg-blue-100 text-blue-700' },
-    { id: 'عام', label: 'إيجار وكهرباء', color: 'bg-amber-100 text-amber-700' },
-    { id: 'الفطور', label: 'صيانة ومعدات', color: 'bg-rose-100 text-rose-700' },
-    { id: 'صدقة', label: 'نثريات وضيافة', color: 'bg-purple-100 text-purple-700' },
+    { id: 'توريدات', label: 'توريدات', color: 'bg-emerald-100 text-emerald-700' },
+    { id: 'عتالة وترحيل', label: 'عتالة وترحيل', color: 'bg-blue-100 text-blue-700' },
+    { id: 'عام', label: 'إيجار وكهرباء (عام)', color: 'bg-amber-100 text-amber-700' },
+    { id: 'الفطور', label: 'الفطور', color: 'bg-rose-100 text-rose-700' },
+    { id: 'صدقة', label: 'صدقة', color: 'bg-purple-100 text-purple-700' },
 ]
 
 export default function ExpensesPage() {
