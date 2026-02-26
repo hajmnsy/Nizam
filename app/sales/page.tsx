@@ -20,20 +20,30 @@ interface Sale {
 }
 
 export default function SalesList() {
+    // Default to today in YYYY-MM-DD local format
+    const getTodayLocal = () => {
+        const d = new Date()
+        const offset = d.getTimezoneOffset()
+        const local = new Date(d.getTime() - (offset * 60 * 1000))
+        return local.toISOString().split('T')[0]
+    }
+
     const [sales, setSales] = useState<Sale[]>([])
     const [loading, setLoading] = useState(true)
     const [tab, setTab] = useState<'PAID' | 'CREDIT' | 'QUOTATION'>('PAID')
+    const [date, setDate] = useState<string>(getTodayLocal())
 
     useEffect(() => {
         setLoading(true)
-        fetch(`/api/sales?status=${tab}`)
+        const dateQuery = date ? `&date=${date}` : ''
+        fetch(`/api/sales?status=${tab}${dateQuery}`)
             .then(res => res.json())
             .then(data => {
                 setSales(data)
                 setLoading(false)
             })
             .catch(console.error)
-    }, [tab])
+    }, [tab, date])
 
     return (
         <main className="min-h-screen bg-slate-50">
@@ -65,35 +75,53 @@ export default function SalesList() {
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex gap-2 mb-6 border-b border-gray-200">
-                    <button
-                        onClick={() => setTab('PAID')}
-                        className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${tab === 'PAID'
-                            ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                            }`}
-                    >
-                        الفواتير المسددة
-                    </button>
-                    <button
-                        onClick={() => setTab('CREDIT')}
-                        className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${tab === 'CREDIT'
-                            ? 'border-amber-500 text-amber-700 bg-amber-50'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                            }`}
-                    >
-                        المبيعات الآجلة
-                    </button>
-                    <button
-                        onClick={() => setTab('QUOTATION')}
-                        className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${tab === 'QUOTATION'
-                            ? 'border-blue-500 text-blue-700 bg-blue-50'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                            }`}
-                    >
-                        عروض الأسعار
-                    </button>
+                {/* Tabs & Filters */}
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 border-b border-gray-200">
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setTab('PAID')}
+                            className={`px-6 py-3 font-bold text-sm transition-all border-b-2 -mb-[1px] ${tab === 'PAID'
+                                ? 'border-emerald-500 text-emerald-700 bg-emerald-50'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}
+                        >
+                            الفواتير المسددة
+                        </button>
+                        <button
+                            onClick={() => setTab('CREDIT')}
+                            className={`px-6 py-3 font-bold text-sm transition-all border-b-2 -mb-[1px] ${tab === 'CREDIT'
+                                ? 'border-amber-500 text-amber-700 bg-amber-50'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}
+                        >
+                            المبيعات الآجلة
+                        </button>
+                        <button
+                            onClick={() => setTab('QUOTATION')}
+                            className={`px-6 py-3 font-bold text-sm transition-all border-b-2 -mb-[1px] ${tab === 'QUOTATION'
+                                ? 'border-blue-500 text-blue-700 bg-blue-50'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}
+                        >
+                            عروض الأسعار
+                        </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-2 sm:mb-0 sm:pb-2">
+                        <span className="text-sm font-bold text-slate-600 font-sans">تاريخ العرض:</span>
+                        <input
+                            type="date"
+                            value={date}
+                            onChange={(e) => setDate(e.target.value)}
+                            className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                            onClick={() => setDate('')}
+                            className={`text-xs px-2 py-1.5 rounded-lg border font-bold transition-all ${date === '' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 hover:bg-slate-100 border-slate-300'}`}
+                        >
+                            الكل
+                        </button>
+                    </div>
                 </div>
 
                 <Card className="overflow-hidden border border-slate-200 shadow-sm">
