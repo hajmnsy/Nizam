@@ -15,12 +15,11 @@ interface Expense {
 }
 
 const CATEGORIES = [
-    { id: 'تشغيلية', label: 'مصاريف تشغيلية', color: 'bg-blue-100 text-blue-700' },
-    { id: 'خامات', label: 'شراء خامات', color: 'bg-emerald-100 text-emerald-700' },
-    { id: 'رواتب', label: 'رواتب وأجور', color: 'bg-purple-100 text-purple-700' },
-    { id: 'إيجار', label: 'إيجار وكهرباء', color: 'bg-amber-100 text-amber-700' },
-    { id: 'صيانة', label: 'صيانة ومعدات', color: 'bg-rose-100 text-rose-700' },
-    { id: 'نثريات', label: 'نثريات وضيافة', color: 'bg-gray-100 text-gray-700' },
+    { id: 'توريدات', label: 'شراء خامات', color: 'bg-emerald-100 text-emerald-700' },
+    { id: 'عتالة وترحيل', label: 'مصاريف تشغيلية', color: 'bg-blue-100 text-blue-700' },
+    { id: 'عام', label: 'إيجار وكهرباء', color: 'bg-amber-100 text-amber-700' },
+    { id: 'الفطور', label: 'صيانة ومعدات', color: 'bg-rose-100 text-rose-700' },
+    { id: 'صدقة', label: 'نثريات وضيافة', color: 'bg-purple-100 text-purple-700' },
 ]
 
 export default function ExpensesPage() {
@@ -30,7 +29,7 @@ export default function ExpensesPage() {
         description: '',
         amount: '',
         date: new Date().toISOString().split('T')[0],
-        category: 'تشغيلية'
+        category: 'توريدات'
     })
     const [submitting, setSubmitting] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
@@ -69,7 +68,7 @@ export default function ExpensesPage() {
                     description: '',
                     amount: '',
                     date: new Date().toISOString().split('T')[0],
-                    category: 'تشغيلية'
+                    category: 'توريدات'
                 })
                 fetchExpenses()
             }
