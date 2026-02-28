@@ -20,6 +20,7 @@ const CATEGORIES = [
     { id: 'عام', label: 'إيجار وكهرباء (عام)', color: 'bg-amber-100 text-amber-700' },
     { id: 'الفطور', label: 'الفطور', color: 'bg-rose-100 text-rose-700' },
     { id: 'صدقة', label: 'صدقة', color: 'bg-purple-100 text-purple-700' },
+    { id: 'الرواتب', label: 'الرواتب', color: 'bg-indigo-100 text-indigo-700' },
 ]
 
 export default function ExpensesPage() {
