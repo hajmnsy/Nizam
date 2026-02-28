@@ -130,12 +130,9 @@ export async function GET(request: Request) {
         }
 
         if (dateParam) {
-            // Create start and end date objects for the specified date
-            const startDate = new Date(dateParam)
-            startDate.setUTCHours(0, 0, 0, 0)
-
-            const endDate = new Date(dateParam)
-            endDate.setUTCHours(23, 59, 59, 999)
+            // Create start and end date objects for the specified date in Sudan timezone (+02:00)
+            const startDate = new Date(`${dateParam}T00:00:00.000+02:00`)
+            const endDate = new Date(`${dateParam}T23:59:59.999+02:00`)
 
             whereClause.createdAt = {
                 gte: startDate,
