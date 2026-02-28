@@ -69,7 +69,13 @@ export default function DailyReport() {
 
     // Calculations
     const totalSales = sales.reduce((sum, s) => sum + s.total, 0)
-    const totalPaid = sales.reduce((sum, s) => sum + (s.paidAmount || 0), 0)
+    const totalPaid = sales.reduce((sum, s) => {
+        // Fallback for legacy invoices created before the Partial Payment feature
+        if (s.status === 'PAID' && (s.paidAmount === null || s.paidAmount === undefined)) {
+            return sum + s.total;
+        }
+        return sum + (s.paidAmount || 0);
+    }, 0)
     const totalRemaining = sales.reduce((sum, s) => sum + (s.remainingAmount || 0), 0)
 
     // Items aggregate
