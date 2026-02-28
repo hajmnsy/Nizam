@@ -5,6 +5,7 @@ import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import { Trash2, Plus, Wallet, Receipt, Calendar, Filter, Tag, Package } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 
 interface Expense {
     id: number
@@ -107,7 +108,7 @@ export default function ExpensesPage() {
             <Navbar />
             <div className="container mx-auto p-4 max-w-6xl animate-fade-in-up">
                 {/* Header */}
-                <div className="flex justify-between items-end mb-8">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
                     <div>
                         <h1 className="text-3xl font-black text-slate-800 flex items-center gap-2">
                             <Wallet className="text-red-500" />
@@ -115,6 +116,12 @@ export default function ExpensesPage() {
                         </h1>
                         <p className="text-gray-500 mt-1">تتبع النفقات حسب التصنيف لمراقبة الميزانية</p>
                     </div>
+                    <Link href="/expenses/report">
+                        <Button className="bg-slate-800 hover:bg-slate-900 text-white flex items-center gap-2">
+                            <Receipt size={18} />
+                            استخراج تقرير مفصل
+                        </Button>
+                    </Link>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
