@@ -133,7 +133,7 @@ export default function SalesList() {
                                     <th className="p-4">العميل</th>
                                     <th className="p-4">التاريخ</th>
                                     <th className="p-4">الإجمالي</th>
-                                    <th className="p-4">عدد الأصناف</th>
+                                    <th className="p-4">تفاصيل الأصناف</th>
                                     <th className="p-4">الحالة</th>
                                     <th className="p-4">إجراءات</th>
                                 </tr>
@@ -165,7 +165,15 @@ export default function SalesList() {
                                                 </span>
                                             </td>
                                             <td className="p-4 font-bold text-slate-800">{sale.total.toLocaleString()}ج</td>
-                                            <td className="p-4 text-gray-600">{sale.items.length}</td>
+                                            <td className="p-4">
+                                                <div className="flex flex-col gap-1 max-w-[250px]">
+                                                    {sale.items.map((item: any, i: number) => (
+                                                        <span key={i} className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded border border-slate-200 w-fit whitespace-normal text-right leading-tight">
+                                                            <span className="font-bold text-blue-600 text-sm">{item.quantity}</span> × {item.product?.name || 'محذوف'} {item.product?.thickness ? `(${item.product.thickness}mm)` : ''}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </td>
                                             <td className="p-4">
                                                 {sale.status === 'PAID' ? (
                                                     <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 w-fit">
