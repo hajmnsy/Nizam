@@ -63,6 +63,10 @@ export default function DailyReport() {
         fetchSales(date)
     }, [date])
 
+    const [printAggregated, setPrintAggregated] = useState(true)
+    const [printInvoices, setPrintInvoices] = useState(true)
+    const [printItemized, setPrintItemized] = useState(true)
+
     const handlePrint = () => {
         window.print()
     }
@@ -106,7 +110,7 @@ export default function DailyReport() {
 
             <div className="container mx-auto p-4 max-w-5xl print:max-w-none print:w-full print:p-0">
                 {/* Header Actions - hidden in print */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 print:hidden">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4 print:hidden">
                     <div className="flex items-center gap-4">
                         <Link href="/sales" className="text-gray-500 hover:text-blue-600 flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded text-sm font-bold">
                             <ArrowLeft size={16} />
@@ -122,21 +126,40 @@ export default function DailyReport() {
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border shadow-sm">
-                            <CalendarIcon size={18} className="text-gray-400" />
-                            <input
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                className="bg-transparent border-none outline-none font-bold text-slate-700"
-                            />
+                    <div className="flex flex-col gap-3 items-end">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border shadow-sm">
+                                <CalendarIcon size={18} className="text-gray-400" />
+                                <input
+                                    type="date"
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    className="bg-transparent border-none outline-none font-bold text-slate-700"
+                                />
+                            </div>
+                            <Button onClick={handlePrint} className="flex items-center gap-2 shadow-sm font-bold">
+                                <Printer size={18} />
+                                طباعة التقرير
+                            </Button>
                         </div>
-                        <Button onClick={handlePrint} className="flex items-center gap-2 shadow-sm font-bold">
-                            <Printer size={18} />
-                            طباعة التقرير
-                        </Button>
                     </div>
+                </div>
+
+                {/* Print Options */}
+                <div className="bg-white border rounded-lg p-3 mb-6 flex gap-6 print:hidden items-center shadow-sm">
+                    <span className="font-bold text-slate-600 text-sm">تضمين في الطباعة:</span>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium text-sm">
+                        <input type="checkbox" checked={printAggregated} onChange={e => setPrintAggregated(e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
+                        ملخص الأصناف
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium text-sm">
+                        <input type="checkbox" checked={printInvoices} onChange={e => setPrintInvoices(e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
+                        سجل الفواتير
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium text-sm">
+                        <input type="checkbox" checked={printItemized} onChange={e => setPrintItemized(e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
+                        تفاصيل الأصناف الفردية
+                    </label>
                 </div>
 
                 {/* Printable Report Area */}
@@ -191,7 +214,7 @@ export default function DailyReport() {
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 {/* Aggregated Items Table */}
-                                <div>
+                                <div className={!printAggregated ? 'print:hidden' : ''}>
                                     <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">ملخص الأصناف المباعة</h3>
                                     <table className="w-full text-right border-collapse text-sm">
                                         <thead className="bg-slate-100 print:bg-slate-50">
@@ -223,7 +246,7 @@ export default function DailyReport() {
                                 </div>
 
                                 {/* Invoices List */}
-                                <div>
+                                <div className={!printInvoices ? 'print:hidden' : ''}>
                                     <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">سجل الفواتير ({sales.length})</h3>
                                     <table className="w-full text-right border-collapse text-sm">
                                         <thead className="bg-slate-100 print:bg-slate-50">
@@ -257,7 +280,7 @@ export default function DailyReport() {
                             </div>
 
                             {/* Detailed Individual Items Table */}
-                            <div className="mt-8 break-before-page print:mt-12">
+                            <div className={`mt-8 break-before-page print:mt-12 ${!printItemized ? 'print:hidden' : ''}`}>
                                 <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">تفاصيل مبيعات الأصناف (مفصل بالفاتورة)</h3>
                                 <table className="w-full text-right border-collapse text-sm">
                                     <thead className="bg-slate-100 print:bg-slate-50">
