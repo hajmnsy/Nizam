@@ -255,6 +255,41 @@ export default function DailyReport() {
                                     </table>
                                 </div>
                             </div>
+
+                            {/* Detailed Individual Items Table */}
+                            <div className="mt-8 break-before-page print:mt-12">
+                                <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">تفاصيل مبيعات الأصناف (مفصل بالفاتورة)</h3>
+                                <table className="w-full text-right border-collapse text-sm">
+                                    <thead className="bg-slate-100 print:bg-slate-50">
+                                        <tr>
+                                            <th className="p-3 border-b-2 border-slate-200">رقم الفاتورة</th>
+                                            <th className="p-3 border-b-2 border-slate-200">الوقت</th>
+                                            <th className="p-3 border-b-2 border-slate-200">المنتج</th>
+                                            <th className="p-3 border-b-2 border-slate-200 text-center">النوع</th>
+                                            <th className="p-3 border-b-2 border-slate-200 text-center">السماكة</th>
+                                            <th className="p-3 border-b-2 border-slate-200 text-center">الكمية</th>
+                                            <th className="p-3 border-b-2 border-slate-200 text-left">إجمالي الصنف</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {sales.flatMap(sale =>
+                                            sale.items.map((item, idx) => (
+                                                <tr key={`${sale.id}-${idx}`} className="hover:bg-slate-50 transition-colors">
+                                                    <td className="p-3 font-mono font-bold text-slate-700">#{sale.invoiceNumber || sale.id}</td>
+                                                    <td className="p-3 font-mono text-slate-500 text-xs text-right">
+                                                        {new Date(sale.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                                                    </td>
+                                                    <td className="p-3 font-bold text-slate-700">{item.product.name}</td>
+                                                    <td className="p-3 text-center text-slate-500">{item.product.type || '-'}</td>
+                                                    <td className="p-3 text-center text-slate-500 text-xs" dir="ltr">{item.product.thickness ? `${item.product.thickness} mm` : '-'}</td>
+                                                    <td className="p-3 text-center font-mono text-blue-600 font-bold bg-blue-50/50 print:bg-transparent">{item.quantity}</td>
+                                                    <td className="p-3 text-left font-mono font-bold text-slate-800">{(item.price * item.quantity).toLocaleString()}</td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </>
                     )}
                 </div>
@@ -273,6 +308,6 @@ export default function DailyReport() {
                     }
                 }
             `}</style>
-        </main>
+        </main >
     )
 }
