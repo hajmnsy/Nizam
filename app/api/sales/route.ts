@@ -27,31 +27,19 @@ export async function POST(request: Request) {
         paidAmount = Math.min(paidAmount, total);
         const remainingAmount = Math.max(0, total - paidAmount);
 
-        // Calculate discount proportion
-        const discountRatio = subtotal > 0 && discount > 0 ? discount / subtotal : 0;
-
-        // Prepare new items and calculate the actual total based on rounded unit prices
-        let actualNewTotal = 0;
-        const newItemsData = json.items.map((item: any) => {
-            const originalItemTotal = item.price * item.quantity;
-            const itemDiscount = originalItemTotal * discountRatio;
-            const newUnitPrice = parseFloat(((originalItemTotal - itemDiscount) / item.quantity).toFixed(2));
-
-            actualNewTotal += newUnitPrice * item.quantity;
-
-            return {
-                productId: parseInt(item.productId),
-                quantity: parseInt(item.quantity),
-                price: newUnitPrice
-            };
-        });
+        // Use the exact custom prices from the client
+        const newItemsData = json.items.map((item: any) => ({
+            productId: parseInt(item.productId),
+            quantity: parseInt(item.quantity),
+            price: parseFloat(item.price)
+        }));
 
         // Adjust paidAmount based on the actual new total if it was meant to be exactly full
         let adjustedPaidAmount = paidAmount;
-        if (status === 'PAID') adjustedPaidAmount = actualNewTotal;
-        else if (status === 'CREDIT' && remainingAmount === 0) adjustedPaidAmount = actualNewTotal;
+        if (status === 'PAID') adjustedPaidAmount = total;
+        else if (status === 'CREDIT' && remainingAmount === 0) adjustedPaidAmount = total;
 
-        const actualRemainingAmount = Math.max(0, actualNewTotal - adjustedPaidAmount);
+        const actualRemainingAmount = Math.max(0, total - adjustedPaidAmount);
         const finalStatus = actualRemainingAmount === 0 && status === 'CREDIT' ? 'PAID' : status;
 
         let invoiceNumber = null;
@@ -68,7 +56,7 @@ export async function POST(request: Request) {
             data: {
                 invoiceNumber: invoiceNumber,
                 customer: json.customer || 'Customer',
-                total: actualNewTotal,
+                total: total,
                 discount: discount,
                 paidAmount: adjustedPaidAmount,
                 remainingAmount: actualRemainingAmount,

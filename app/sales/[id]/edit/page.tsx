@@ -85,7 +85,7 @@ export default function EditSale() {
                 const populatedCart = saleData.items.map((item: any) => ({
                     productId: item.productId,
                     name: item.product.name,
-                    price: item.product.price, // Use original product price, not discounted item price
+                    price: item.price, // Use exactly what was saved to the invoice item
                     quantity: item.quantity,
                     weight: item.product.weightPerUnit,
                     thickness: item.product.thickness

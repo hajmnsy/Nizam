@@ -130,30 +130,21 @@ export async function PUT(
                     where: { saleId: id }
                 })
 
-                // Calculate discount proportion
-                const discountRatio = newSubtotal > 0 && discount > 0 ? discount / newSubtotal : 0;
-                let actualNewTotal = 0;
-                const newItemsData = items.map((item: any) => {
-                    const originalItemTotal = item.price * item.quantity;
-                    const itemDiscount = originalItemTotal * discountRatio;
-                    const newUnitPrice = parseFloat(((originalItemTotal - itemDiscount) / item.quantity).toFixed(2));
-
-                    actualNewTotal += newUnitPrice * item.quantity;
-                    return {
-                        productId: parseInt(item.productId),
-                        quantity: parseInt(item.quantity),
-                        price: newUnitPrice
-                    };
-                });
+                // Use exact custom item prices from the client
+                const newItemsData = items.map((item: any) => ({
+                    productId: parseInt(item.productId),
+                    quantity: parseInt(item.quantity),
+                    price: parseFloat(item.price)
+                }));
 
                 let adjustedPaidAmount = newPaidAmount;
-                let actualRemainingAmount = Math.max(0, actualNewTotal - adjustedPaidAmount);
+                let actualRemainingAmount = Math.max(0, newTotal - adjustedPaidAmount);
                 const finalStatus = actualRemainingAmount === 0 && targetStatus === 'CREDIT' ? 'PAID' : targetStatus;
 
-                if (finalStatus === 'PAID') adjustedPaidAmount = actualNewTotal;
-                else if (finalStatus === 'CREDIT' && newRemainingAmount === 0) adjustedPaidAmount = actualNewTotal;
+                if (finalStatus === 'PAID') adjustedPaidAmount = newTotal;
+                else if (finalStatus === 'CREDIT' && newRemainingAmount === 0) adjustedPaidAmount = newTotal;
 
-                actualRemainingAmount = Math.max(0, actualNewTotal - adjustedPaidAmount);
+                actualRemainingAmount = Math.max(0, newTotal - adjustedPaidAmount);
 
                 // Invoice Number logic
                 let newInvoiceNumber = originalSale.invoiceNumber;
@@ -167,7 +158,7 @@ export async function PUT(
                     where: { id },
                     data: {
                         customer: customer,
-                        total: actualNewTotal,
+                        total: newTotal,
                         discount: discount || 0,
                         paidAmount: adjustedPaidAmount,
                         remainingAmount: actualRemainingAmount,
