@@ -72,6 +72,7 @@ export default function InvoiceDetails() {
     const [showPaymentModal, setShowPaymentModal] = useState(false)
     const [paymentAmount, setPaymentAmount] = useState('')
     const [paying, setPaying] = useState(false)
+    const [printAsQuotation, setPrintAsQuotation] = useState(false)
     const componentRef = useRef(null)
 
     const handlePrint = () => {
@@ -172,7 +173,8 @@ export default function InvoiceDetails() {
     if (loading) return <div className="p-8 text-center text-gray-500">جاري التحميل...</div>
     if (!sale) return <div className="p-8 text-center text-red-500">الفاتورة غير موجودة</div>
 
-    const isQuotation = sale.status === 'QUOTATION'
+    const isActualQuotation = sale.status === 'QUOTATION'
+    const isQuotation = isActualQuotation || printAsQuotation
     const vatAmount = settings?.vatRate ? (sale.total * settings.vatRate) / 100 : 0
     const finalTotalWithVat = sale.total + vatAmount
 
@@ -218,10 +220,35 @@ export default function InvoiceDetails() {
                             <Printer size={16} />
                             طباعة
                         </Button>
+                        {!isActualQuotation && (
+                            <Button
+                                onClick={() => {
+                                    setPrintAsQuotation(true)
+                                    setTimeout(() => window.print(), 100)
+                                }}
+                                variant="outline"
+                                className="flex items-center gap-2"
+                            >
+                                <Printer size={16} />
+                                طباعة كعرض سعر
+                            </Button>
+                        )}
                     </div>
                 </div>
 
-                {isQuotation && (
+                {printAsQuotation && !isActualQuotation && (
+                    <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg flex justify-between items-center print:hidden">
+                        <div className="flex items-center gap-2">
+                            <Clock size={20} />
+                            <span className="font-bold">وضع طباعة عرض السعر مفعل.</span>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => setPrintAsQuotation(false)}>
+                            إلغاء وضع عرض السعر
+                        </Button>
+                    </div>
+                )}
+
+                {isActualQuotation && (
                     <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg flex items-center gap-2 print:hidden">
                         <Clock size={20} />
                         <span className="font-bold">هذا "عرض سعر" (مسودة).</span>
@@ -251,7 +278,7 @@ export default function InvoiceDetails() {
                 </style>
                 <div ref={componentRef} className="bg-white p-10 rounded-xl shadow-xl print:shadow-none print:p-0 relative overflow-hidden mt-6 print:m-0 mx-auto max-w-[210mm] min-h-[297mm] print:min-h-0 ring-1 ring-slate-200 print:ring-0">
                     {/* Watermark for Quotation */}
-                    {isQuotation && (
+                    {isActualQuotation && (
                         <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none z-0">
                             <span className="text-[200px] font-black -rotate-45 text-amber-900 px-12 py-6 border-8 border-amber-900 rounded-[3rem]">
                                 مسودة
