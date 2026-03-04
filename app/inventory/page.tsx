@@ -4,7 +4,7 @@ import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import { ArrowLeft, Edit, Plus, Trash2, Search, Save, X, Loader2, Settings } from 'lucide-react'
+import { ArrowLeft, Edit, Plus, Trash2, Search, Save, X, Loader2, Settings, DollarSign, Package } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
 
@@ -25,6 +25,7 @@ export default function Inventory() {
     const [editingId, setEditingId] = useState<number | null>(null)
     const [editForm, setEditForm] = useState({ quantity: 0, price: 0 })
     const [saving, setSaving] = useState(false)
+    const [exchangeRate, setExchangeRate] = useState<number>(0)
 
     useEffect(() => {
         fetchProducts()
@@ -116,6 +117,63 @@ export default function Inventory() {
                         </Link>
                     </div>
                 </div>
+
+                {/* Total Value Summary Card */}
+                {!loading && products.length > 0 && (
+                    <Card className="mb-6 bg-white border border-slate-200 shadow-sm p-6 overflow-hidden relative">
+                        {/* Decorative Background Icon */}
+                        <div className="absolute left-0 top-0 opacity-5 pointer-events-none -translate-x-1/4 -translate-y-1/4">
+                            <Package size={200} />
+                        </div>
+
+                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+                            {/* Value in SDG */}
+                            <div className="flex flex-col items-center md:items-start text-center md:text-right w-full md:w-auto">
+                                <span className="text-sm font-bold text-slate-500 mb-1 flex items-center gap-2">
+                                    إجمالي قيمة المخزون الحالية
+                                </span>
+                                <div className="text-3xl font-black text-slate-800">
+                                    {(products.reduce((sum, p) => sum + (p.quantity * p.price), 0)).toLocaleString()} <span className="text-lg text-slate-500 font-bold">ج.س</span>
+                                </div>
+                            </div>
+
+                            {/* Divider on desktop */}
+                            <div className="hidden md:block w-px h-16 bg-slate-200"></div>
+
+                            {/* Exchange Rate Input */}
+                            <div className="flex flex-col items-center flex-1 max-w-sm w-full">
+                                <label className="text-xs font-bold text-slate-500 mb-2">سعر صرف الدولار اليوم</label>
+                                <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 w-full focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all">
+                                    <DollarSign size={20} className="text-emerald-500" />
+                                    <input
+                                        type="number"
+                                        placeholder="أدخل سعر الصرف هنا..."
+                                        value={exchangeRate || ''}
+                                        onChange={(e) => setExchangeRate(Number(e.target.value))}
+                                        className="bg-transparent border-none outline-none font-bold text-emerald-700 w-full text-center"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Value in USD */}
+                            {exchangeRate > 0 && (
+                                <>
+                                    {/* Divider on desktop */}
+                                    <div className="hidden md:block w-px h-16 bg-slate-200"></div>
+
+                                    <div className="flex flex-col items-center md:items-end text-center md:text-left w-full md:w-auto bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 md:border-none md:bg-transparent md:p-0">
+                                        <span className="text-sm font-bold text-emerald-600 mb-1 flex items-center gap-1">
+                                            القيمة التقريبية بالدولار
+                                        </span>
+                                        <div className="text-3xl font-black text-emerald-700 font-mono">
+                                            ${(products.reduce((sum, p) => sum + (p.quantity * p.price), 0) / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </Card>
+                )}
 
                 <Card className="overflow-hidden border border-slate-200 shadow-sm">
                     <div className="overflow-x-auto">
