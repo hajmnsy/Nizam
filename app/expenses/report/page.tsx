@@ -6,9 +6,6 @@ import Button from '@/components/ui/Button'
 import { FileText, Printer, ArrowLeft, Download, Filter } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useReactToPrint } from 'react-to-print'
-import * as XLSX from 'xlsx'
-import { saveAs } from 'file-saver'
 
 interface Expense {
     id: number
@@ -44,13 +41,9 @@ export default function ExpensesReportPage() {
     const [startDate, setStartDate] = useState(getDaysAgo(9)) // 10 days inclusive
     const [endDate, setEndDate] = useState(getDaysAgo(0))
 
-    const componentRef = useRef<HTMLDivElement>(null)
-
-    const handlePrint = useReactToPrint({
-        // @ts-ignore
-        content: () => componentRef.current,
-        documentTitle: `تقرير_المصروفات_${startDate}_الى_${endDate}`,
-    })
+    const handlePrint = () => {
+        window.print()
+    }
 
     const fetchExpenses = () => {
         setLoading(true)
@@ -110,70 +103,7 @@ export default function ExpensesReportPage() {
 
     const grandTotal = sortedDates.reduce((sum, d) => sum + calculateDailyTotal(d), 0)
 
-    const handleExportExcel = () => {
-        const rows = []
 
-        // Header Date Info
-        rows.push([`المدفوعات من تاريخ ${new Date(startDate).toLocaleDateString('ar-SD')} إلى ${new Date(endDate).toLocaleDateString('ar-SD')}`])
-        rows.push([])
-
-        // Headers
-        const headerRow = ['الجملة', ...COLUMNS.map(c => c.label), 'التاريخ']
-        rows.push(headerRow)
-
-        // Data Rows
-        sortedDates.forEach(dateStr => {
-            const rowData: any[] = []
-
-            // Grand Total cell
-            rowData.push(calculateDailyTotal(dateStr).toLocaleString() || '-')
-
-            // Category columns
-            COLUMNS.forEach(col => {
-                if (col.id === 'سعر الصرف') {
-                    rowData.push('')
-                    return
-                }
-                const items = grouped[dateStr][col.id]
-                if (items && items.length > 0) {
-                    // Concatenate amounts and descriptions
-                    const cellText = items.map(item => `${item.amount.toLocaleString()} - ${item.description}`).join('\n')
-                    rowData.push(cellText)
-                } else {
-                    rowData.push('-')
-                }
-            })
-
-            // Date cell
-            rowData.push(new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric' }))
-
-            rows.push(rowData)
-        })
-
-        // Footer Totals
-        const footerRow = ['الجملة', ...COLUMNS.map(c => c.id === 'سعر الصرف' ? '-' : calculateColumnTotal(c.id).toLocaleString()), grandTotal.toLocaleString()]
-        rows.push(footerRow)
-
-        // Create workbook
-        const wb = XLSX.utils.book_new()
-        const ws = XLSX.utils.aoa_to_sheet(rows)
-
-        // Adjust column widths (rough estimate)
-        const wscols = [
-            { wch: 15 }, // الجملة
-            ...COLUMNS.map(() => ({ wch: 25 })), // Categories (wider for multi-line)
-            { wch: 10 } // التاريخ
-        ]
-        ws['!cols'] = wscols
-
-        // RTL Direction
-        ws['!dir'] = 'rtl'
-
-        XLSX.utils.book_append_sheet(wb, ws, "تقرير المصروفات")
-        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-        saveAs(blob, `تقرير_المنصرفات_${startDate}_${endDate}.xlsx`)
-    }
 
 
     return (
@@ -198,13 +128,12 @@ export default function ExpensesReportPage() {
                     </div>
 
                     <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-                        <Button onClick={handleExportExcel} variant="outline" className="flex items-center gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 whitespace-nowrap">
-                            <Download size={16} />
-                            تصدير Excel
-                        </Button>
-                        <Button onClick={handlePrint} variant="outline" className="flex items-center gap-2 border-slate-300 whitespace-nowrap">
+                        <Button onClick={handlePrint} variant="outline" className="flex items-center gap-2 border-slate-300 whitespace-nowrap hidden sm:flex">
                             <Printer size={16} />
-                            طباعة التقرير
+                            استخراج كـ PDF
+                        </Button>
+                        <Button onClick={handlePrint} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white sm:hidden whitespace-nowrap">
+                            <Printer size={16} /> طباعة / PDF
                         </Button>
                     </div>
                 </div>
@@ -246,7 +175,7 @@ export default function ExpensesReportPage() {
                 </style>
 
                 {/* Printable Document Area */}
-                <div ref={componentRef} className="bg-white p-4 sm:p-8 rounded-xl shadow-sm ring-1 ring-slate-200 print:shadow-none print:ring-0 overflow-x-auto min-h-[500px]">
+                <div className="bg-white p-4 sm:p-8 rounded-xl shadow-sm ring-1 ring-slate-200 print:shadow-none print:ring-0 print:p-0 overflow-x-auto min-h-[500px] print:min-h-0">
 
                     {/* Document Header */}
                     <div className="text-center mb-6">
