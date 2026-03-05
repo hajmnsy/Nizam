@@ -239,8 +239,9 @@ export default function DailyReport() {
                                                 <th className="p-3 border-b-2 border-slate-200 text-center">النوع</th>
                                                 <th className="p-3 border-b-2 border-slate-200 text-center">السماكة</th>
                                                 <th className="p-3 border-b-2 border-slate-200 text-center">الكمية المباعة</th>
+                                                {exchangeRate > 0 && <th className="p-3 border-b-2 border-slate-200 text-center text-teal-700">متوسط سعر الحبة ($)</th>}
                                                 <th className="p-3 border-b-2 border-slate-200 text-left">إجمالي (ج.س)</th>
-                                                {exchangeRate > 0 && <th className="p-3 border-b-2 border-slate-200 text-left text-emerald-700">القيمة ($)</th>}
+                                                {exchangeRate > 0 && <th className="p-3 border-b-2 border-slate-200 text-left text-emerald-700">إجمالي ($)</th>}
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -250,6 +251,11 @@ export default function DailyReport() {
                                                     <td className="p-3 text-center text-slate-500">{item.type || '-'}</td>
                                                     <td className="p-3 text-center text-slate-500 text-xs" dir="ltr">{item.thickness ? `${item.thickness} mm` : '-'}</td>
                                                     <td className="p-3 text-center font-mono text-slate-600 bg-slate-50 print:bg-transparent">{item.qty}</td>
+                                                    {exchangeRate > 0 && (
+                                                        <td className="p-3 text-center font-mono font-bold text-teal-700 bg-teal-50/30 print:bg-transparent">
+                                                            {((item.totalVal / item.qty) / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </td>
+                                                    )}
                                                     <td className="p-3 text-left font-mono font-bold text-slate-800">{item.totalVal.toLocaleString()}</td>
                                                     {exchangeRate > 0 && (
                                                         <td className="p-3 text-left font-mono font-bold text-emerald-700 bg-emerald-50/30 print:bg-transparent">
@@ -261,6 +267,7 @@ export default function DailyReport() {
                                             <tr className="bg-slate-50 print:bg-transparent font-black">
                                                 <td className="p-3 text-left" colSpan={3}>الإجمالي</td>
                                                 <td className="p-3 text-center font-mono text-blue-600">{aggregatedItems.reduce((sum, item) => sum + item.qty, 0)}</td>
+                                                {exchangeRate > 0 && <td className="p-3"></td>}
                                                 <td className="p-3 text-left font-mono text-blue-600">{totalSales.toLocaleString()}</td>
                                                 {exchangeRate > 0 && (
                                                     <td className="p-3 text-left font-mono text-emerald-700">
@@ -318,6 +325,7 @@ export default function DailyReport() {
                                             <th className="p-3 border-b-2 border-slate-200 text-center">النوع</th>
                                             <th className="p-3 border-b-2 border-slate-200 text-center">السماكة</th>
                                             <th className="p-3 border-b-2 border-slate-200 text-center">الكمية</th>
+                                            {exchangeRate > 0 && <th className="p-3 border-b-2 border-slate-200 text-center text-teal-700">سعر الحبة ($)</th>}
                                             <th className="p-3 border-b-2 border-slate-200 text-left">إجمالي (ج.س)</th>
                                             {exchangeRate > 0 && <th className="p-3 border-b-2 border-slate-200 text-left text-emerald-700">إجمالي ($)</th>}
                                         </tr>
@@ -334,6 +342,11 @@ export default function DailyReport() {
                                                     <td className="p-3 text-center text-slate-500">{item.product.type || '-'}</td>
                                                     <td className="p-3 text-center text-slate-500 text-xs" dir="ltr">{item.product.thickness ? `${item.product.thickness} mm` : '-'}</td>
                                                     <td className="p-3 text-center font-mono text-blue-600 font-bold bg-blue-50/50 print:bg-transparent">{item.quantity}</td>
+                                                    {exchangeRate > 0 && (
+                                                        <td className="p-3 text-center font-mono font-bold text-teal-700 bg-teal-50/30 print:bg-transparent">
+                                                            {(item.price / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </td>
+                                                    )}
                                                     <td className="p-3 text-left font-mono font-bold text-slate-800">{(item.price * item.quantity).toLocaleString()}</td>
                                                     {exchangeRate > 0 && (
                                                         <td className="p-3 text-left font-mono font-bold text-emerald-700 bg-emerald-50/30 print:bg-transparent">
