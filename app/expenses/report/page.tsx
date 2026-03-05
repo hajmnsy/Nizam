@@ -40,7 +40,6 @@ export default function ExpensesReportPage() {
 
     const [startDate, setStartDate] = useState(getDaysAgo(9)) // 10 days inclusive
     const [endDate, setEndDate] = useState(getDaysAgo(0))
-    const [exchangeRate, setExchangeRate] = useState<number>(0)
 
     const handlePrint = () => {
         window.print()
@@ -91,10 +90,15 @@ export default function ExpensesReportPage() {
     const sortedDates = Array.from(datesSet).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
 
     const calculateDailyTotal = (dateStr: string) => {
-        return Object.values(grouped[dateStr]).flat().reduce((sum, e) => sum + e.amount, 0)
+        // Exclude 'سعر الصرف' from the total expense calculation since it's just a rate indicator
+        return Object.values(grouped[dateStr])
+            .flat()
+            .filter(e => e.category !== 'سعر الصرف')
+            .reduce((sum, e) => sum + e.amount, 0)
     }
 
     const calculateColumnTotal = (colId: string) => {
+        if (colId === 'سعر الصرف') return 0 // Doesn't make sense to sum exchange rates
         let total = 0
         sortedDates.forEach(dateStr => {
             total += grouped[dateStr][colId]?.reduce((sum, e) => sum + e.amount, 0) || 0
@@ -103,6 +107,14 @@ export default function ExpensesReportPage() {
     }
 
     const grandTotal = sortedDates.reduce((sum, d) => sum + calculateDailyTotal(d), 0)
+
+    let grandTotalUSD = 0
+    sortedDates.forEach(d => {
+        const dailyRate = grouped[d]['سعر الصرف']?.[0]?.amount || 0
+        if (dailyRate > 0) {
+            grandTotalUSD += calculateDailyTotal(d) / dailyRate
+        }
+    })
 
 
 
@@ -160,19 +172,6 @@ export default function ExpensesReportPage() {
                                 className="border border-slate-300 rounded-lg px-3 py-2 w-full text-sm font-bold text-slate-700"
                             />
                         </div>
-                        <div className="w-full sm:w-auto">
-                            <label className="text-xs font-bold text-slate-500 mb-1 block">سعر الصرف</label>
-                            <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-2 py-2 w-full focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all bg-emerald-50/30">
-                                <DollarSign size={16} className="text-emerald-500" />
-                                <input
-                                    type="number"
-                                    placeholder="اختياري"
-                                    value={exchangeRate || ''}
-                                    onChange={(e) => setExchangeRate(Number(e.target.value))}
-                                    className="bg-transparent border-none outline-none text-sm font-bold text-emerald-700 w-full"
-                                />
-                            </div>
-                        </div>
                         <Button onClick={fetchExpenses} className="bg-slate-800 text-white w-full sm:w-auto whitespace-nowrap flex items-center gap-2">
                             <Filter size={16} /> عرض التقرير
                         </Button>
@@ -214,59 +213,68 @@ export default function ExpensesReportPage() {
                                 </tr>
                             </thead>
                             <tbody className="font-bold text-slate-800">
-                                {sortedDates.map((dateStr, index) => (
-                                    <tr key={dateStr} className="border-2 border-slate-800">
-                                        <td className="py-3 px-2 border-2 border-slate-800 text-base">
-                                            <div className="flex flex-col items-center justify-center">
-                                                <span>{calculateDailyTotal(dateStr).toLocaleString()}</span>
-                                                {exchangeRate > 0 && (
-                                                    <span className="text-emerald-600 font-black text-xs mt-1 block tracking-wider print:text-black">
-                                                        ${(calculateDailyTotal(dateStr) / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
+                                {sortedDates.map((dateStr, index) => {
+                                    const dailyRate = grouped[dateStr]['سعر الصرف']?.[0]?.amount || 0;
+                                    const dailyTotal = calculateDailyTotal(dateStr);
 
-                                        {COLUMNS.map(col => {
-                                            if (col.id === 'سعر الصرف') {
-                                                return <td key={col.id} className="py-3 px-2 border-2 border-slate-800 bg-slate-50/50"></td>
-                                            }
-
-                                            const items = grouped[dateStr][col.id]
-
-                                            // Render multiple items in a single cell
-                                            return (
-                                                <td key={col.id} className="py-2 px-2 border-2 border-slate-800 align-top">
-                                                    {items && items.length > 0 ? (
-                                                        <div className="flex flex-col gap-1 text-[13px] leading-tight">
-                                                            {items.map(item => (
-                                                                <div key={item.id} className="flex flex-col text-right">
-                                                                    <span className="font-black text-slate-900">{item.amount.toLocaleString()}</span>
-                                                                    <span className="text-slate-600 font-medium break-words">{item.description}</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-slate-300">-</span>
+                                    return (
+                                        <tr key={dateStr} className="border-2 border-slate-800">
+                                            <td className="py-3 px-2 border-2 border-slate-800 text-base">
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <span>{dailyTotal.toLocaleString()}</span>
+                                                    {dailyRate > 0 && dailyTotal > 0 && (
+                                                        <span className="text-emerald-600 font-black text-xs mt-1 block tracking-wider print:text-black">
+                                                            ${(dailyTotal / dailyRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </span>
                                                     )}
-                                                </td>
-                                            )
-                                        })}
+                                                </div>
+                                            </td>
 
-                                        <td className="py-3 px-2 border-2 border-slate-800 whitespace-nowrap font-black">
-                                            {new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric' })}
-                                        </td>
-                                    </tr>
-                                ))}
+                                            {COLUMNS.map(col => {
+                                                if (col.id === 'سعر الصرف') {
+                                                    return (
+                                                        <td key={col.id} className="py-3 px-2 border-2 border-slate-800 bg-slate-50/50 bg-amber-50/50 text-amber-700">
+                                                            {dailyRate > 0 ? dailyRate.toLocaleString() : '-'}
+                                                        </td>
+                                                    )
+                                                }
+
+                                                const items = grouped[dateStr][col.id]
+
+                                                // Render multiple items in a single cell
+                                                return (
+                                                    <td key={col.id} className="py-2 px-2 border-2 border-slate-800 align-top">
+                                                        {items && items.length > 0 ? (
+                                                            <div className="flex flex-col gap-1 text-[13px] leading-tight">
+                                                                {items.map(item => (
+                                                                    <div key={item.id} className="flex flex-col text-right">
+                                                                        <span className="font-black text-slate-900">{item.amount.toLocaleString()}</span>
+                                                                        <span className="text-slate-600 font-medium break-words">{item.description}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-slate-300">-</span>
+                                                        )}
+                                                    </td>
+                                                )
+                                            })}
+
+                                            <td className="py-3 px-2 border-2 border-slate-800 whitespace-nowrap font-black">
+                                                {new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric' })}
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
 
                                 {/* Grand Total Footer */}
                                 <tr className="border-2 border-slate-800 bg-slate-50 font-black text-slate-900 text-base">
                                     <td className="py-3 px-2 border-2 border-slate-800">
                                         <div className="flex flex-col items-center justify-center">
                                             <span>{grandTotal.toLocaleString()}</span>
-                                            {exchangeRate > 0 && (
+                                            {grandTotalUSD > 0 && (
                                                 <span className="text-emerald-600 font-black text-sm mt-1 block tracking-wider print:text-black">
-                                                    ${(grandTotal / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    ${grandTotalUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </span>
                                             )}
                                         </div>
