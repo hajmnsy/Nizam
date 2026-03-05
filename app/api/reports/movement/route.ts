@@ -19,36 +19,67 @@ export async function GET(request: Request) {
         // Ensure endDate covers the whole day
         endDate.setHours(23, 59, 59, 999)
 
-        // 1. Calculate Opening Balance (All history BEFORE startDate)
-        const pastSales = await prisma.sale.aggregate({
-            where: {
-                createdAt: { lt: startDate }
-            },
-            _sum: { paidAmount: true, total: true }
-        });
+        // Fetch Settings to check for manual Initial Balance
+        const setting = await prisma.setting.findUnique({ where: { id: 'default' } })
+        const hasInitialBalance = setting && setting.initialBalanceDate;
+        const initialDate = hasInitialBalance ? new Date(setting.initialBalanceDate!) : undefined;
 
-        // For older records before paidAmount was introduced, if paidAmount is 0 but it's PAID status, fallback to total (as done in daily report)
-        const pastLegacyPaidSales = await prisma.sale.aggregate({
-            where: {
-                createdAt: { lt: startDate },
-                status: 'PAID',
-                paidAmount: 0 // assuming old records have 0 or null. Schema says default 0.
-            },
-            _sum: { total: true }
-        });
+        // 1. Calculate Opening Balance
+        let openingBalance = 0;
 
-        // Summing up actual paid amounts + legacy paid totals
-        const totalPastReceipts = (pastSales._sum.paidAmount || 0) + (pastLegacyPaidSales._sum.total || 0);
+        if (hasInitialBalance && initialDate && startDate > initialDate) {
+            // If report starts AFTER the initial balance date:
+            // Calculate movement BETWEEN initialDate and startDate, then add to the initialBalance.
+            const pastSales = await prisma.sale.aggregate({
+                where: { createdAt: { gte: initialDate, lt: startDate } },
+                _sum: { paidAmount: true, total: true }
+            });
 
-        const pastExpenses = await prisma.expense.aggregate({
-            where: {
-                date: { lt: startDate }
-            },
-            _sum: { amount: true }
-        });
-        const totalPastExpenses = pastExpenses._sum.amount || 0;
+            const pastLegacyPaidSales = await prisma.sale.aggregate({
+                where: { createdAt: { gte: initialDate, lt: startDate }, status: 'PAID', paidAmount: 0 },
+                _sum: { total: true }
+            });
 
-        const openingBalance = totalPastReceipts - totalPastExpenses;
+            const totalPastReceipts = (pastSales._sum.paidAmount || 0) + (pastLegacyPaidSales._sum.total || 0);
+
+            const pastExpenses = await prisma.expense.aggregate({
+                where: { date: { gte: initialDate, lt: startDate } },
+                _sum: { amount: true }
+            });
+
+            openingBalance = (setting.initialBalance || 0) + totalPastReceipts - (pastExpenses._sum.amount || 0);
+
+        } else if (hasInitialBalance && initialDate && startDate <= initialDate) {
+            // If the report starts ON or BEFORE the initial date:
+            // The opening balance is exactly the initial balance. (It assumes they are viewing the start point).
+            openingBalance = setting.initialBalance || 0;
+        } else {
+            // Legacy behavior: No initial balance set, calculate all history BEFORE startDate
+            const pastSales = await prisma.sale.aggregate({
+                where: { createdAt: { lt: startDate } },
+                _sum: { paidAmount: true, total: true }
+            });
+
+            const pastLegacyPaidSales = await prisma.sale.aggregate({
+                where: {
+                    createdAt: { lt: startDate },
+                    status: 'PAID',
+                    paidAmount: 0 // assuming old records have 0 or null. Schema says default 0.
+                },
+                _sum: { total: true }
+            });
+
+            const totalPastReceipts = (pastSales._sum.paidAmount || 0) + (pastLegacyPaidSales._sum.total || 0);
+
+            const pastExpenses = await prisma.expense.aggregate({
+                where: {
+                    date: { lt: startDate }
+                },
+                _sum: { amount: true }
+            });
+
+            openingBalance = totalPastReceipts - (pastExpenses._sum.amount || 0);
+        }
 
         // 2. Fetch data WITHIN the date range
         const salesInPeriod = await prisma.sale.findMany({

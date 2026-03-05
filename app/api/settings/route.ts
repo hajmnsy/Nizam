@@ -32,7 +32,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { companyName, phone, vatRate, address, logoUrl } = body
+        const { companyName, phone, vatRate, address, logoUrl, initialBalance, initialBalanceDate } = body
 
         const setting = await prisma.setting.upsert({
             where: { id: 'default' },
@@ -41,7 +41,9 @@ export async function POST(request: Request) {
                 phone,
                 vatRate: parseFloat(vatRate as string),
                 address,
-                logoUrl
+                logoUrl,
+                initialBalance: parseFloat((initialBalance || 0) as string),
+                initialBalanceDate: initialBalanceDate ? new Date(initialBalanceDate) : null
             },
             create: {
                 id: 'default',
@@ -49,7 +51,9 @@ export async function POST(request: Request) {
                 phone,
                 vatRate: parseFloat((vatRate || 0) as string),
                 address,
-                logoUrl
+                logoUrl,
+                initialBalance: parseFloat((initialBalance || 0) as string),
+                initialBalanceDate: initialBalanceDate ? new Date(initialBalanceDate) : null
             }
         })
 

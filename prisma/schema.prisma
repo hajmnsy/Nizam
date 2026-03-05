@@ -72,13 +72,15 @@ model User {
 }
 
 model Setting {
-  id          String   @id @default("default")
-  companyName String   @default("اسم الشركة")
-  phone       String?
-  vatRate     Float    @default(0)
-  address     String?
-  logoUrl     String?
-  updatedAt   DateTime @updatedAt
+  id                 String    @id @default("default")
+  companyName        String    @default("اسم الشركة")
+  phone              String?
+  vatRate            Float     @default(0)
+  address            String?
+  logoUrl            String?
+  initialBalance     Float     @default(0)
+  initialBalanceDate DateTime?
+  updatedAt          DateTime  @updatedAt
 }
 
 model Notification {

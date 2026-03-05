@@ -19,7 +19,9 @@ export default function SettingsPage() {
         phone: '',
         address: '',
         vatRate: 0,
-        logoUrl: ''
+        logoUrl: '',
+        initialBalance: 0,
+        initialBalanceDate: ''
     })
 
     useEffect(() => {
@@ -40,7 +42,9 @@ export default function SettingsPage() {
                                     phone: data.phone || '',
                                     address: data.address || '',
                                     vatRate: data.vatRate || 0,
-                                    logoUrl: data.logoUrl || ''
+                                    logoUrl: data.logoUrl || '',
+                                    initialBalance: data.initialBalance || 0,
+                                    initialBalanceDate: data.initialBalanceDate ? new Date(data.initialBalanceDate).toISOString().split('T')[0] : ''
                                 })
                             }
                             setLoading(false)
@@ -178,6 +182,38 @@ export default function SettingsPage() {
                                             />
                                         </div>
                                         <p className="text-xs text-slate-500 mt-2">اجعلها 0 إذا كنت لا تطبق ضرائب</p>
+                                    </div>
+                                </Card>
+
+                                <Card className="space-y-6 border-slate-200 shadow-sm border-t-4 border-t-amber-500">
+                                    <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800 border-b pb-4">
+                                        <Receipt className="text-amber-500" />
+                                        الرصيد الافتتاحي للنظام
+                                    </h2>
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">رصيد الصندوق المرحل</label>
+                                        <div className="relative">
+                                            <span className="absolute right-3 top-3.5 font-bold text-slate-500">ج.س</span>
+                                            <Input
+                                                name="initialBalance"
+                                                type="number"
+                                                value={formData.initialBalance}
+                                                onChange={handleChange}
+                                                className="h-12 pr-12 font-mono text-lg"
+                                            />
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-2">المبلغ الذي سيبدأ منه تقرير حركة المقبوضات</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">تاريخ الرصيد الافتتاحي</label>
+                                        <Input
+                                            name="initialBalanceDate"
+                                            type="date"
+                                            value={formData.initialBalanceDate}
+                                            onChange={handleChange}
+                                            className="h-12 text-slate-700 font-bold"
+                                        />
+                                        <p className="text-xs text-slate-500 mt-2">تاريخ بداية حساب التقارير من هذا الرصيد</p>
                                     </div>
                                 </Card>
 
