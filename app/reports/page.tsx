@@ -131,6 +131,20 @@ export default function Reports() {
                                     </div>
                                 </Card>
                             </Link>
+
+                            <Link href="/reports/movement" className="block">
+                                <Card className="border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 bg-indigo-200 text-indigo-700 rounded-full group-hover:scale-110 transition-transform">
+                                            <Activity size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-indigo-800 font-bold text-lg">حركة المقبوضات والمصروفات</h3>
+                                            <p className="text-indigo-600 text-sm">عرض وطباعة كشف الحركة العام</p>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </Link>
                         </div>
 
                         {/* 2. Sales Chart (Center - spanning 2 cols) */}
