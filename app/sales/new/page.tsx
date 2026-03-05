@@ -142,8 +142,9 @@ export default function NewSale() {
     const [paidAmountInput, setPaidAmountInput] = useState<string>('')
 
     const totalWeight = cart.reduce((sum, item) => sum + (item.weight * item.quantity), 0)
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-    const finalTotal = subtotal - (parseFloat(discount) || 0)
+    // Round subtotal explicitly at the item level summation to prevent carrying floating points
+    const subtotal = cart.reduce((sum, item) => sum + Math.round(item.price * item.quantity), 0)
+    const finalTotal = Math.round(subtotal - (parseFloat(discount) || 0))
 
     const handleSubmit = async (status: 'PAID' | 'QUOTATION' | 'CREDIT' = 'PAID') => {
         if (cart.length === 0) return alert('الرجاء إضافة منتجات للفاتورة')
@@ -328,8 +329,8 @@ export default function NewSale() {
                                         cart.map(item => {
                                             const discountVal = parseFloat(discount) || 0;
                                             const discountRatio = subtotal > 0 && discountVal > 0 ? discountVal / subtotal : 0;
-                                            const itemOriginalTotal = item.price * item.quantity;
-                                            const itemDiscount = itemOriginalTotal * discountRatio;
+                                            const itemOriginalTotal = Math.round(item.price * item.quantity);
+                                            const itemDiscount = Math.round(itemOriginalTotal * discountRatio);
                                             const itemDiscountedTotal = itemOriginalTotal - itemDiscount;
 
                                             return (

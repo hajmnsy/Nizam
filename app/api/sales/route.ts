@@ -11,27 +11,27 @@ export async function POST(request: Request) {
         const status = json.status || 'PAID'
         const discount = parseFloat(json.discount || '0')
 
-        // Calculate total
-        const subtotal = json.items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
-        const total = subtotal - discount
+        // Calculate total cleanly with rounding at the item level
+        const subtotal = json.items.reduce((sum: number, item: any) => sum + Math.round(item.price * item.quantity), 0)
+        const total = Math.round(subtotal - discount)
 
         // Calculate paid and remaining
         let paidAmount = total;
         if (status === 'QUOTATION') {
             paidAmount = 0;
         } else if (json.paidAmount !== undefined && json.paidAmount !== null) {
-            paidAmount = parseFloat(json.paidAmount);
+            paidAmount = Math.round(parseFloat(json.paidAmount));
         }
 
         // Ensure paidAmount does not exceed total
-        paidAmount = Math.min(paidAmount, total);
-        const remainingAmount = Math.max(0, total - paidAmount);
+        paidAmount = Math.round(Math.min(paidAmount, total));
+        const remainingAmount = Math.round(Math.max(0, total - paidAmount));
 
-        // Use the exact custom prices from the client
+        // Use the exact custom prices from the client, but rounded!
         const newItemsData = json.items.map((item: any) => ({
             productId: parseInt(item.productId),
             quantity: parseInt(item.quantity),
-            price: parseFloat(item.price)
+            price: Math.round(parseFloat(item.price))
         }));
 
         // Adjust paidAmount based on the actual new total if it was meant to be exactly full
