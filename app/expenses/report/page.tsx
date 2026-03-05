@@ -3,7 +3,7 @@
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { FileText, Printer, ArrowLeft, Download, Filter } from 'lucide-react'
+import { FileText, Printer, ArrowLeft, Download, Filter, DollarSign } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 
@@ -40,6 +40,7 @@ export default function ExpensesReportPage() {
 
     const [startDate, setStartDate] = useState(getDaysAgo(9)) // 10 days inclusive
     const [endDate, setEndDate] = useState(getDaysAgo(0))
+    const [exchangeRate, setExchangeRate] = useState<number>(0)
 
     const handlePrint = () => {
         window.print()
@@ -159,6 +160,19 @@ export default function ExpensesReportPage() {
                                 className="border border-slate-300 rounded-lg px-3 py-2 w-full text-sm font-bold text-slate-700"
                             />
                         </div>
+                        <div className="w-full sm:w-auto">
+                            <label className="text-xs font-bold text-slate-500 mb-1 block">سعر الصرف</label>
+                            <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-2 py-2 w-full focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all bg-emerald-50/30">
+                                <DollarSign size={16} className="text-emerald-500" />
+                                <input
+                                    type="number"
+                                    placeholder="اختياري"
+                                    value={exchangeRate || ''}
+                                    onChange={(e) => setExchangeRate(Number(e.target.value))}
+                                    className="bg-transparent border-none outline-none text-sm font-bold text-emerald-700 w-full"
+                                />
+                            </div>
+                        </div>
                         <Button onClick={fetchExpenses} className="bg-slate-800 text-white w-full sm:w-auto whitespace-nowrap flex items-center gap-2">
                             <Filter size={16} /> عرض التقرير
                         </Button>
@@ -203,7 +217,14 @@ export default function ExpensesReportPage() {
                                 {sortedDates.map((dateStr, index) => (
                                     <tr key={dateStr} className="border-2 border-slate-800">
                                         <td className="py-3 px-2 border-2 border-slate-800 text-base">
-                                            {calculateDailyTotal(dateStr).toLocaleString()}
+                                            <div className="flex flex-col items-center justify-center">
+                                                <span>{calculateDailyTotal(dateStr).toLocaleString()}</span>
+                                                {exchangeRate > 0 && (
+                                                    <span className="text-emerald-600 font-black text-xs mt-1 block tracking-wider print:text-black">
+                                                        ${(calculateDailyTotal(dateStr) / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
 
                                         {COLUMNS.map(col => {
@@ -240,7 +261,16 @@ export default function ExpensesReportPage() {
 
                                 {/* Grand Total Footer */}
                                 <tr className="border-2 border-slate-800 bg-slate-50 font-black text-slate-900 text-base">
-                                    <td className="py-3 px-2 border-2 border-slate-800">{grandTotal.toLocaleString()}</td>
+                                    <td className="py-3 px-2 border-2 border-slate-800">
+                                        <div className="flex flex-col items-center justify-center">
+                                            <span>{grandTotal.toLocaleString()}</span>
+                                            {exchangeRate > 0 && (
+                                                <span className="text-emerald-600 font-black text-sm mt-1 block tracking-wider print:text-black">
+                                                    ${(grandTotal / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
                                     {COLUMNS.map(col => (
                                         <td key={col.id} className="py-3 px-2 border-2 border-slate-800">
                                             {col.id === 'سعر الصرف' ? '-' : calculateColumnTotal(col.id).toLocaleString()}
