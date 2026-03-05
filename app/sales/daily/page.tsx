@@ -67,6 +67,7 @@ export default function DailyReport() {
     const [printAggregated, setPrintAggregated] = useState(true)
     const [printInvoices, setPrintInvoices] = useState(true)
     const [printItemized, setPrintItemized] = useState(true)
+    const [printSummaryBoxes, setPrintSummaryBoxes] = useState(true)
 
     const handlePrint = () => {
         window.print()
@@ -157,8 +158,12 @@ export default function DailyReport() {
                 </div>
 
                 {/* Print Options */}
-                <div className="bg-white border rounded-lg p-3 mb-6 flex gap-6 print:hidden items-center shadow-sm">
+                <div className="bg-white border rounded-lg p-3 mb-6 flex flex-wrap gap-6 print:hidden items-center shadow-sm">
                     <span className="font-bold text-slate-600 text-sm">تضمين في الطباعة:</span>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium text-sm">
+                        <input type="checkbox" checked={printSummaryBoxes} onChange={e => setPrintSummaryBoxes(e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
+                        الإجمالي والتحصيل
+                    </label>
                     <label className="flex items-center gap-2 cursor-pointer font-medium text-sm">
                         <input type="checkbox" checked={printAggregated} onChange={e => setPrintAggregated(e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
                         ملخص الأصناف
@@ -196,7 +201,7 @@ export default function DailyReport() {
                     ) : (
                         <>
                             {/* Key Metrics */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-2">
+                            <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-2 ${!printSummaryBoxes ? 'print:hidden' : ''}`}>
                                 <div className="bg-blue-50 border border-blue-100 p-6 rounded-xl print:border-slate-300 print:bg-transparent">
                                     <div className="flex items-center gap-3 mb-2">
                                         <TrendingUp className="text-blue-500" size={24} />
