@@ -42,8 +42,8 @@ export async function POST(request: Request) {
                 vatRate: parseFloat(vatRate as string),
                 address,
                 logoUrl,
-                initialBalance: parseFloat((initialBalance || 0) as string),
-                initialBalanceDate: initialBalanceDate ? new Date(initialBalanceDate) : null
+                initialBalance: isNaN(parseFloat((initialBalance || 0) as string)) ? 0 : parseFloat((initialBalance || 0) as string),
+                initialBalanceDate: (initialBalanceDate && initialBalanceDate.trim() !== '') ? new Date(initialBalanceDate) : null
             },
             create: {
                 id: 'default',
@@ -52,8 +52,8 @@ export async function POST(request: Request) {
                 vatRate: parseFloat((vatRate || 0) as string),
                 address,
                 logoUrl,
-                initialBalance: parseFloat((initialBalance || 0) as string),
-                initialBalanceDate: initialBalanceDate ? new Date(initialBalanceDate) : null
+                initialBalance: isNaN(parseFloat((initialBalance || 0) as string)) ? 0 : parseFloat((initialBalance || 0) as string),
+                initialBalanceDate: (initialBalanceDate && initialBalanceDate.trim() !== '') ? new Date(initialBalanceDate) : null
             }
         })
 
