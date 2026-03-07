@@ -77,7 +77,7 @@ model Setting {
   phone              String?
   vatRate            Float     @default(0)
   address            String?
-  logoUrl            String?
+  logoUrl            String?   @db.Text
   initialBalance     Float     @default(0)
   initialBalanceDate DateTime?
   updatedAt          DateTime  @updatedAt
