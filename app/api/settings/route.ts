@@ -34,27 +34,35 @@ export async function POST(request: Request) {
         const body = await request.json()
         const { companyName, phone, vatRate, address, logoUrl, initialBalance, initialBalanceDate } = body
 
+        const updateData: any = {}
+        const createData: any = { id: 'default', companyName: companyName || 'اسم الشركة' }
+
+        if (companyName !== undefined) { updateData.companyName = companyName; createData.companyName = companyName; }
+        if (phone !== undefined) { updateData.phone = phone; createData.phone = phone; }
+        if (address !== undefined) { updateData.address = address; createData.address = address; }
+        if (logoUrl !== undefined) { updateData.logoUrl = logoUrl; createData.logoUrl = logoUrl; }
+
+        if (vatRate !== undefined) {
+            updateData.vatRate = parseFloat(vatRate as string);
+            createData.vatRate = parseFloat(vatRate as string);
+        }
+
+        if (initialBalance !== undefined && initialBalance !== '') {
+            const parsedBalance = isNaN(parseFloat(initialBalance as string)) ? 0 : parseFloat(initialBalance as string);
+            updateData.initialBalance = parsedBalance;
+            createData.initialBalance = parsedBalance;
+        }
+
+        if (initialBalanceDate !== undefined) {
+            const parsedDate = (initialBalanceDate && initialBalanceDate.trim() !== '') ? new Date(initialBalanceDate) : null;
+            updateData.initialBalanceDate = parsedDate;
+            createData.initialBalanceDate = parsedDate;
+        }
+
         const setting = await prisma.setting.upsert({
             where: { id: 'default' },
-            update: {
-                companyName,
-                phone,
-                vatRate: parseFloat(vatRate as string),
-                address,
-                logoUrl,
-                initialBalance: isNaN(parseFloat((initialBalance || 0) as string)) ? 0 : parseFloat((initialBalance || 0) as string),
-                initialBalanceDate: (initialBalanceDate && initialBalanceDate.trim() !== '') ? new Date(initialBalanceDate) : null
-            },
-            create: {
-                id: 'default',
-                companyName: companyName || 'اسم الشركة',
-                phone,
-                vatRate: parseFloat((vatRate || 0) as string),
-                address,
-                logoUrl,
-                initialBalance: isNaN(parseFloat((initialBalance || 0) as string)) ? 0 : parseFloat((initialBalance || 0) as string),
-                initialBalanceDate: (initialBalanceDate && initialBalanceDate.trim() !== '') ? new Date(initialBalanceDate) : null
-            }
+            update: updateData,
+            create: createData,
         })
 
         return NextResponse.json(setting)
