@@ -76,13 +76,15 @@ export default function SettingsPage() {
                 body: JSON.stringify(formData)
             })
 
+            const resultData = await res.json().catch(() => null);
+
             if (res.ok) {
                 setMessage({ type: 'success', text: 'تم حفظ الإعدادات بنجاح!' })
             } else {
-                setMessage({ type: 'error', text: 'حدث خطأ أثناء الحفظ.' })
+                setMessage({ type: 'error', text: resultData?.details || resultData?.error || 'حدث خطأ أثناء الحفظ.' })
             }
-        } catch (error) {
-            setMessage({ type: 'error', text: 'حدث خطأ في الاتصال بالخادم.' })
+        } catch (error: any) {
+            setMessage({ type: 'error', text: error?.message || 'حدث خطأ في الاتصال بالخادم.' })
         } finally {
             setSaving(false)
         }

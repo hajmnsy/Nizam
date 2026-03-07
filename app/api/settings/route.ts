@@ -66,8 +66,10 @@ export async function POST(request: Request) {
         })
 
         return NextResponse.json(setting)
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error updating settings:', error)
-        return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 })
+        console.error('Error Details:', error?.message || error)
+        console.error('Failed Payload Body:', await request.clone().text().catch(() => 'Could not read body'))
+        return NextResponse.json({ error: 'Failed to update settings', details: error?.message }, { status: 500 })
     }
 }
