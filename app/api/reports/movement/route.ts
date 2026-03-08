@@ -20,9 +20,9 @@ export async function GET(request: Request) {
         endDate.setHours(23, 59, 59, 999)
 
         // Fetch Settings to check for manual Initial Balance
-        const setting = await prisma.setting.findUnique({ where: { id: 'default' } })
+        const setting: any = await prisma.setting.findUnique({ where: { id: 'default' } })
         const hasInitialBalance = setting && setting.initialBalanceDate;
-        const initialDate = hasInitialBalance ? new Date(setting.initialBalanceDate!) : undefined;
+        const initialDate = hasInitialBalance ? new Date(setting.initialBalanceDate) : undefined;
 
         // 1. Calculate Opening Balance
         let openingBalance = 0;
@@ -152,8 +152,8 @@ export async function GET(request: Request) {
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Movement Report Error:', error)
-        return NextResponse.json({ error: 'Failed' }, { status: 500 })
+        return NextResponse.json({ error: 'Failed', details: error?.message, stack: error?.stack }, { status: 500 })
     }
 }
