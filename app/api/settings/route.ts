@@ -5,15 +5,6 @@ export const dynamic = 'force-dynamic'
 
 export const maxDuration = 60; // Max execution time
 
-// Configure API body parser to allow larger payloads for base64 images
-export const config = {
-    api: {
-        bodyParser: {
-            sizeLimit: '10mb',
-        },
-    },
-}
-
 export async function GET() {
     try {
         let setting = await prisma.setting.findUnique({

@@ -1,14 +1,6 @@
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Max execution time
 
-// Configure API body parser to allow larger payloads for image uploads
-export const config = {
-    api: {
-        bodyParser: false, // We use formData, so disable default body parser
-        sizeLimit: '10mb',
-    },
-}
-
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
