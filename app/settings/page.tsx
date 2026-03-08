@@ -6,6 +6,7 @@ import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import { Save, Settings2, Building2, Phone, Receipt, Loader2, Image as ImageIcon, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import imageCompression from 'browser-image-compression'
 
 export default function SettingsPage() {
     const router = useRouter()
@@ -234,10 +235,17 @@ export default function SettingsPage() {
                                                     const file = e.target.files?.[0];
                                                     if (!file) return;
 
-                                                    const uploadData = new FormData();
-                                                    uploadData.append('file', file);
-
                                                     try {
+                                                        // Compress image to ensure it's under 1MB so Vercel doesn't reject the payload
+                                                        const compressedFile = await imageCompression(file, {
+                                                            maxSizeMB: 0.5,
+                                                            maxWidthOrHeight: 800,
+                                                            useWebWorker: true
+                                                        });
+
+                                                        const uploadData = new FormData();
+                                                        uploadData.append('file', compressedFile);
+
                                                         const res = await fetch('/api/upload', {
                                                             method: 'POST',
                                                             body: uploadData
@@ -250,7 +258,7 @@ export default function SettingsPage() {
                                                         }
                                                     } catch (err) {
                                                         console.error(err);
-                                                        alert('حدث خطأ أثناء رفع الصورة');
+                                                        alert('حدث خطأ أثناء ضغط أو رفع الصورة');
                                                     }
                                                 }}
                                                 className="block w-full text-sm text-slate-500
