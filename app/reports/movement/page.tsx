@@ -3,7 +3,8 @@
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { ArrowLeft, Printer, Calendar as CalendarIcon, Loader2 } from 'lucide-react'
+import Input from '@/components/ui/Input'
+import { ArrowLeft, Printer, Calendar as CalendarIcon, Loader2, Save } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -47,6 +48,12 @@ export default function CashFlowMovement() {
     const [reportData, setReportData] = useState<ReportData | null>(null)
     const [loading, setLoading] = useState(false)
 
+    // Initial Balance State
+    const [initialBalance, setInitialBalance] = useState<number>(0)
+    const [initialBalanceDate, setInitialBalanceDate] = useState<string>('')
+    const [savingBalance, setSavingBalance] = useState(false)
+    const [balanceMessage, setBalanceMessage] = useState({ type: '', text: '' })
+
     const fetchReport = () => {
         setLoading(true)
         fetch(`/api/reports/movement?startDate=${startDate}&endDate=${endDate}`)
@@ -63,8 +70,42 @@ export default function CashFlowMovement() {
 
     // Fetch on initial load
     useEffect(() => {
+        fetch('/api/settings')
+            .then(res => res.json())
+            .then(data => {
+                if (data && !data.error) {
+                    setInitialBalance(data.initialBalance || 0)
+                    if (data.initialBalanceDate) {
+                        setInitialBalanceDate(new Date(data.initialBalanceDate).toISOString().split('T')[0])
+                    }
+                }
+            })
+            .catch(console.error)
+
         fetchReport()
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+    const handleSaveBalance = async () => {
+        setSavingBalance(true)
+        setBalanceMessage({ type: '', text: '' })
+        try {
+            const res = await fetch('/api/settings/balance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initialBalance, initialBalanceDate })
+            })
+            if (res.ok) {
+                setBalanceMessage({ type: 'success', text: 'تم الحفظ وسيتم تحديث التقرير' })
+                setTimeout(() => setBalanceMessage({ type: '', text: '' }), 3000)
+                fetchReport() // refresh the report right away with the new balance
+            } else {
+                setBalanceMessage({ type: 'error', text: 'فشل الحفظ' })
+            }
+        } catch (error) {
+            setBalanceMessage({ type: 'error', text: 'فشل الاتصال بالخادم' })
+        }
+        setSavingBalance(false)
+    }
 
     const handlePrint = () => {
         window.print()
@@ -95,6 +136,42 @@ export default function CashFlowMovement() {
                         </Button>
                     </div>
                 </div>
+
+                {/* Initial Balance Form - hidden in print */}
+                <Card className="mb-6 p-4 bg-amber-50 shadow-sm border-amber-200 print:hidden">
+                    <div className="flex flex-col md:flex-row items-end gap-4">
+                        <div className="flex-1 min-w-[200px]">
+                            <label className="block text-sm font-bold text-slate-700 mb-2 whitespace-nowrap">الرصيد الافتتاحي (ج.س):</label>
+                            <Input
+                                type="number"
+                                value={initialBalance}
+                                onChange={(e) => setInitialBalance(parseFloat(e.target.value) || 0)}
+                                className="h-10 font-bold bg-white"
+                            />
+                        </div>
+                        <div className="flex-1 min-w-[200px]">
+                            <label className="block text-sm font-bold text-slate-700 mb-2 whitespace-nowrap">تاريخ الرصيد الافتتاحي:</label>
+                            <Input
+                                type="date"
+                                value={initialBalanceDate}
+                                onChange={(e) => setInitialBalanceDate(e.target.value)}
+                                className="h-10 font-bold bg-white"
+                            />
+                        </div>
+                        <Button
+                            onClick={handleSaveBalance}
+                            disabled={savingBalance}
+                            className="bg-amber-600 hover:bg-amber-700 flex-none h-10 px-6 font-bold flex items-center justify-center"
+                        >
+                            {savingBalance ? <Loader2 className="animate-spin" size={18} /> : <span>حفظ وتحديث</span>}
+                        </Button>
+                    </div>
+                    {balanceMessage.text && (
+                        <p className={`text-sm mt-3 font-bold ${balanceMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+                            {balanceMessage.text}
+                        </p>
+                    )}
+                </Card>
 
                 {/* Filters - hidden in print */}
                 <Card className="mb-8 p-4 bg-white shadow-sm border-slate-200 print:hidden flex flex-wrap items-end gap-4">
