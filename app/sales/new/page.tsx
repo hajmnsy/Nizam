@@ -367,7 +367,25 @@ export default function NewSale() {
                                                             >
                                                                 <Minus size={14} />
                                                             </button>
-                                                            <span className="w-8 text-center text-sm font-bold border-x py-1">{item.quantity}</span>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                value={item.quantity === 0 ? '' : item.quantity} // Allow emptying the field temporarily
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    if (val === '') {
+                                                                        updateQuantity(item.productId, 0); // Temporary state before they type the rest
+                                                                    } else {
+                                                                        updateQuantity(item.productId, parseInt(val) || 1);
+                                                                    }
+                                                                }}
+                                                                onBlur={(e) => {
+                                                                    if (!e.target.value || parseInt(e.target.value) < 1) {
+                                                                        updateQuantity(item.productId, 1); // Reset to 1 if left empty or 0
+                                                                    }
+                                                                }}
+                                                                className="w-12 text-center text-sm font-bold border-x py-1 outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                            />
                                                             <button
                                                                 onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                                                                 className="px-2 py-1 hover:bg-gray-100 text-blue-600"
