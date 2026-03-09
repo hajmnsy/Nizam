@@ -102,6 +102,23 @@ export default function ExpensesPage() {
         return CATEGORIES.find(c => c.id === cat)?.color || 'bg-gray-100 text-gray-600'
     }
 
+    // Group expenses by date
+    const groupedExpenses = filteredExpenses.reduce((groups, expense) => {
+        const dateStr = new Date(expense.date).toLocaleDateString('ar-SD')
+        if (!groups[dateStr]) {
+            groups[dateStr] = []
+        }
+        groups[dateStr].push(expense)
+        return groups
+    }, {} as Record<string, Expense[]>)
+
+    // Sort dates descending automatically based on the first item's true Date object
+    const sortedDates = Object.keys(groupedExpenses).sort((a, b) => {
+        const dateA = new Date(groupedExpenses[a][0].date).getTime()
+        const dateB = new Date(groupedExpenses[b][0].date).getTime()
+        return dateB - dateA
+    })
+
     if (loading) return <div className="p-8 text-center text-gray-500">جاري التحميل...</div>
 
     return (
@@ -220,33 +237,40 @@ export default function ExpensesPage() {
                         </div>
 
                         {/* List */}
-                        <div className="space-y-3">
-                            {filteredExpenses.map(expense => (
-                                <div key={expense.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow flex justify-between items-center group">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`p-3 rounded-full ${getCategoryColor(expense.category)}`}>
-                                            <Tag size={18} />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-slate-800">{expense.description}</h3>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                                <Calendar size={12} />
-                                                {new Date(expense.date).toLocaleDateString('ar-SD')}
-                                                <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                                                <span>{CATEGORIES.find(c => c.id === expense.category)?.label || expense.category}</span>
+                        <div className="space-y-6">
+                            {sortedDates.map(dateStr => (
+                                <div key={dateStr} className="space-y-3">
+                                    <h3 className="sticky top-[88px] w-full z-10 bg-slate-100 backdrop-blur-md bg-opacity-90 py-2 px-4 rounded-lg font-black text-slate-700 shadow-sm border border-slate-200 flex items-center gap-2">
+                                        <Calendar size={18} className="text-slate-500" />
+                                        {dateStr}
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {groupedExpenses[dateStr].map(expense => (
+                                            <div key={expense.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow flex justify-between items-center group ml-4 relative before:content-[''] before:absolute before:-right-4 before:top-1/2 before:w-3 before:h-[2px] before:bg-slate-200">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`p-3 rounded-full ${getCategoryColor(expense.category)}`}>
+                                                        <Tag size={18} />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-bold text-slate-800">{expense.description}</h3>
+                                                        <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                                            <span>{CATEGORIES.find(c => c.id === expense.category)?.label || expense.category}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <span className="font-bold text-lg text-slate-800">
+                                                        {expense.amount.toLocaleString()}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => handleDelete(expense.id)}
+                                                        className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <span className="font-bold text-lg text-slate-800">
-                                            {expense.amount.toLocaleString()}
-                                        </span>
-                                        <button
-                                            onClick={() => handleDelete(expense.id)}
-                                            className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+                                        ))}
                                     </div>
                                 </div>
                             ))}
