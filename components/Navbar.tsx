@@ -87,6 +87,7 @@ export default function Navbar() {
         { name: 'المبيعات', path: '/sales' },
         { name: 'المصروفات', path: '/expenses' },
         { name: 'التقارير', path: '/reports' },
+        { name: 'حاسبة الأسعار', path: '/pricing' },
         { name: 'الإعدادات', path: '/settings' },
     ]
 
