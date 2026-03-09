@@ -287,19 +287,64 @@ export default function CashFlowMovement() {
                                 <tbody>
                                     {reportData.data.map((row, idx) => (
                                         <tr key={idx}>
-                                            <td className="border border-black p-2" dir="ltr">{row.date.replace('-', '/')}</td>
-                                            <td className="border border-black p-2">{row.receipts > 0 ? row.receipts.toLocaleString() : '-'}</td>
-                                            <td className="border border-black p-2">{row.expenses > 0 ? row.expenses.toLocaleString() : '-'}</td>
-                                            <td className="border border-black p-2 font-black">{row.runningBalance.toLocaleString()}</td>
+                                            <td className="border border-black p-2 align-top" dir="ltr">{row.date.replace('-', '/')}</td>
+                                            <td className="border border-black p-2 align-top">
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <span>{row.receipts > 0 ? row.receipts.toLocaleString() : '-'}</span>
+                                                    {exchangeRate > 0 && row.receipts > 0 && (
+                                                        <span className="text-emerald-600 font-bold text-xs mt-1 block tracking-wider print:text-black">
+                                                            ${(row.receipts / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="border border-black p-2 align-top">
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <span>{row.expenses > 0 ? row.expenses.toLocaleString() : '-'}</span>
+                                                    {exchangeRate > 0 && row.expenses > 0 && (
+                                                        <span className="text-emerald-600 font-bold text-xs mt-1 block tracking-wider print:text-black">
+                                                            ${(row.expenses / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="border border-black p-2 font-black align-top">
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <span>{row.runningBalance.toLocaleString()}</span>
+                                                    {exchangeRate > 0 && (
+                                                        <span className="text-emerald-600 font-black text-xs mt-1 block tracking-wider print:text-black">
+                                                            ${(row.runningBalance / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
 
                                     {/* Footer Row */}
-                                    <tr className="border-t-[3px] border-t-black"> {/* Thicker top border for grand total logic if needed, but standard in image is just border */}
-                                        <td className="border border-black p-2 font-black">الجملة</td>
-                                        <td className="border border-black p-2 font-black">{reportData.totals?.receipts ? reportData.totals.receipts.toLocaleString() : '0'}</td>
-                                        <td className="border border-black p-2 font-black">{reportData.totals?.expenses ? reportData.totals.expenses.toLocaleString() : '0'}</td>
-                                        <td className="border border-black p-2 bg-gray-100 print:bg-transparent"> {/* Empty or final balance? Image shows it spanning but basically empty underneath the last running balance */}</td>
+                                    <tr className="border-t-[3px] border-t-black">
+                                        <td className="border border-black p-2 font-black align-top">الجملة</td>
+                                        <td className="border border-black p-2 font-black align-top">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <span>{reportData.totals?.receipts ? reportData.totals.receipts.toLocaleString() : '0'}</span>
+                                                {exchangeRate > 0 && reportData.totals?.receipts > 0 && (
+                                                    <span className="text-emerald-600 font-black text-xs mt-1 block tracking-wider print:text-black">
+                                                        ${(reportData.totals.receipts / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="border border-black p-2 font-black align-top">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <span>{reportData.totals?.expenses ? reportData.totals.expenses.toLocaleString() : '0'}</span>
+                                                {exchangeRate > 0 && reportData.totals?.expenses > 0 && (
+                                                    <span className="text-emerald-600 font-black text-xs mt-1 block tracking-wider print:text-black">
+                                                        ${(reportData.totals.expenses / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="border border-black p-2 bg-gray-100 print:bg-transparent"></td>
                                     </tr>
                                 </tbody>
                             </table>
