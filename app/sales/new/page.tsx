@@ -45,13 +45,16 @@ export default function NewSale() {
     const [loading, setLoading] = useState(false)
     const [activeCategory, setActiveCategory] = useState<string>('')
     const [searchTerm, setSearchTerm] = useState('')
+    const [exchangeRate, setExchangeRate] = useState<number>(0)
 
     useEffect(() => {
         Promise.all([
             fetch('/api/products').then(res => res.json()),
-            fetch('/api/categories').then(res => res.json())
-        ]).then(([productsData, categoriesData]) => {
+            fetch('/api/categories').then(res => res.json()),
+            fetch('/api/exchange-rate').then(res => res.json())
+        ]).then(([productsData, categoriesData, exchangeRateData]) => {
             setProducts(productsData)
+            setExchangeRate(exchangeRateData.rate || 0)
 
             // Filter out specific categories
             const hiddenCategories = ['قطاعات', 'مسطحات', 'مواسير', 'سيخ']
@@ -281,7 +284,16 @@ export default function NewSale() {
                                                                 {product.quantity}
                                                             </span>
                                                         </td>
-                                                        <td className="p-3 font-bold text-slate-800">{product.price.toLocaleString()}</td>
+                                                        <td className="p-3">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold text-slate-800">{product.price.toLocaleString()}</span>
+                                                                {exchangeRate > 0 && product.price > 0 && (
+                                                                    <span className="text-[11px] font-black text-emerald-600 tracking-wider">
+                                                                        ${(product.price / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </td>
                                                         <td className="p-3">
                                                             <button
                                                                 onClick={() => addToCart(product)}
@@ -406,7 +418,14 @@ export default function NewSale() {
                                     <div className="flex justify-between items-center bg-slate-900 text-white p-4 rounded-xl shadow-lg">
                                         <div>
                                             <span className="font-bold block text-xs opacity-70">الإجمالي النهائي</span>
-                                            <span className="font-bold text-2xl">{finalTotal.toLocaleString()} <span className="text-sm font-normal text-gray-400">ج.س</span></span>
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-2xl">{finalTotal.toLocaleString()} <span className="text-sm font-normal text-gray-400">ج.س</span></span>
+                                                {exchangeRate > 0 && finalTotal > 0 && (
+                                                    <span className="text-emerald-400 font-bold text-sm tracking-wider">
+                                                        ${(finalTotal / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         {(parseFloat(discount) > 0) && (
                                             <div className="text-right">

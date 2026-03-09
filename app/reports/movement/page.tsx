@@ -55,6 +55,7 @@ export default function CashFlowMovement() {
     const [initialBalanceDate, setInitialBalanceDate] = useState<string>('')
     const [savingBalance, setSavingBalance] = useState(false)
     const [balanceMessage, setBalanceMessage] = useState({ type: '', text: '' })
+    const [exchangeRate, setExchangeRate] = useState<number>(0)
 
     const fetchReport = () => {
         setLoading(true)
@@ -77,14 +78,19 @@ export default function CashFlowMovement() {
 
     // Fetch on initial load
     useEffect(() => {
-        fetch('/api/settings')
-            .then(res => res.json())
-            .then(data => {
-                if (data && !data.error) {
-                    setInitialBalance(data.initialBalance || 0)
-                    if (data.initialBalanceDate) {
-                        setInitialBalanceDate(new Date(data.initialBalanceDate).toISOString().split('T')[0])
+        Promise.all([
+            fetch('/api/settings').then(res => res.json()),
+            fetch('/api/exchange-rate').then(res => res.json())
+        ])
+            .then(([settingsData, exchangeRateData]) => {
+                if (settingsData && !settingsData.error) {
+                    setInitialBalance(settingsData.initialBalance || 0)
+                    if (settingsData.initialBalanceDate) {
+                        setInitialBalanceDate(new Date(settingsData.initialBalanceDate).toISOString().split('T')[0])
                     }
+                }
+                if (exchangeRateData && exchangeRateData.rate > 0) {
+                    setExchangeRate(exchangeRateData.rate)
                 }
             })
             .catch(console.error)
@@ -210,6 +216,37 @@ export default function CashFlowMovement() {
                         {loading ? <Loader2 className="animate-spin" size={20} /> : 'تحديث البيانات'}
                     </Button>
                 </Card>
+
+                {/* Summary Cards - hidden in print */}
+                {reportData && !reportData.error && reportData.data && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 print:hidden">
+                        <Card className="bg-white p-6 border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                            <span className="text-sm font-bold text-slate-500 mb-1">إجمالي المقبوضات</span>
+                            <span className="text-2xl font-black text-slate-800">{reportData.totals?.receipts ? reportData.totals.receipts.toLocaleString() : '0'}</span>
+                            {exchangeRate > 0 && (
+                                <span className="text-sm font-bold text-emerald-600 mt-1">${((reportData.totals?.receipts || 0) / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            )}
+                        </Card>
+                        <Card className="bg-white p-6 border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                            <span className="text-sm font-bold text-slate-500 mb-1">إجمالي المصروفات</span>
+                            <span className="text-2xl font-black text-slate-800">{reportData.totals?.expenses ? reportData.totals.expenses.toLocaleString() : '0'}</span>
+                            {exchangeRate > 0 && (
+                                <span className="text-sm font-bold text-emerald-600 mt-1">${((reportData.totals?.expenses || 0) / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            )}
+                        </Card>
+                        <Card className="bg-slate-900 p-6 shadow-md flex flex-col items-center justify-center text-center">
+                            <span className="text-sm font-bold text-slate-400 mb-1">الرصيد النهائي</span>
+                            <span className="text-2xl font-black text-white">
+                                {reportData.data.length > 0 ? reportData.data[reportData.data.length - 1].runningBalance.toLocaleString() : (reportData.openingBalance?.toLocaleString() || '0')}
+                            </span>
+                            {exchangeRate > 0 && (
+                                <span className="text-sm font-bold text-emerald-400 mt-1">
+                                    ${((reportData.data.length > 0 ? reportData.data[reportData.data.length - 1].runningBalance : (reportData.openingBalance || 0)) / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                            )}
+                        </Card>
+                    </div>
+                )}
 
                 {/* Printable Report Document */}
                 {reportData && !reportData.error && reportData.data && (

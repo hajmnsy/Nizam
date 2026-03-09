@@ -32,12 +32,19 @@ export default function Inventory() {
     }, [])
 
     const fetchProducts = () => {
-        fetch('/api/products')
-            .then(res => res.json())
-            .then(data => {
-                setProducts(data)
-                setLoading(false)
-            })
+        Promise.all([
+            fetch('/api/products').then(res => res.json()),
+            fetch('/api/exchange-rate').then(res => res.json())
+        ]).then(([productsData, exchangeRateData]) => {
+            setProducts(productsData)
+            if (exchangeRateData.rate > 0) {
+                setExchangeRate(exchangeRateData.rate);
+            }
+            setLoading(false)
+        }).catch(err => {
+            console.error(err);
+            setLoading(false);
+        });
     }
 
     const handleDelete = async (id: number) => {
