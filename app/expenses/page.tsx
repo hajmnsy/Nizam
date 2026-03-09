@@ -226,7 +226,7 @@ export default function ExpensesPage() {
                                     >
                                         الكل
                                     </button>
-                                    {CATEGORIES.slice(0, 3).map(cat => (
+                                    {CATEGORIES.map(cat => (
                                         <button
                                             key={cat.id}
                                             onClick={() => setSelectedCategory(cat.id)}
