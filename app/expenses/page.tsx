@@ -3,7 +3,7 @@
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { Trash2, Plus, Wallet, Receipt, Calendar, Filter, Tag, Package } from 'lucide-react'
+import { Trash2, Plus, Wallet, Receipt, Calendar as CalendarIcon, Filter, Tag, Package } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
@@ -26,23 +26,32 @@ const CATEGORIES = [
 ]
 
 export default function ExpensesPage() {
+    const getTodayLocal = () => {
+        const d = new Date()
+        const offset = d.getTimezoneOffset()
+        const local = new Date(d.getTime() - (offset * 60 * 1000))
+        return local.toISOString().split('T')[0]
+    }
+
+    const [date, setDate] = useState(getTodayLocal())
     const [expenses, setExpenses] = useState<Expense[]>([])
     const [loading, setLoading] = useState(true)
     const [newExpense, setNewExpense] = useState({
         description: '',
         amount: '',
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayLocal(),
         category: 'توريدات'
     })
     const [submitting, setSubmitting] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
 
     useEffect(() => {
-        fetchExpenses()
-    }, [])
+        fetchExpenses(date)
+    }, [date])
 
-    const fetchExpenses = () => {
-        fetch('/api/expenses')
+    const fetchExpenses = (selectedDate: string) => {
+        setLoading(true)
+        fetch(`/api/expenses?date=${selectedDate}`)
             .then(res => res.json())
             .then(data => {
                 setExpenses(Array.isArray(data) ? data : [])
@@ -70,10 +79,10 @@ export default function ExpensesPage() {
                 setNewExpense({
                     description: '',
                     amount: '',
-                    date: new Date().toISOString().split('T')[0],
+                    date: date,
                     category: 'توريدات'
                 })
-                fetchExpenses()
+                fetchExpenses(date)
             }
         } catch (error) {
             console.error(error)
@@ -102,23 +111,6 @@ export default function ExpensesPage() {
         return CATEGORIES.find(c => c.id === cat)?.color || 'bg-gray-100 text-gray-600'
     }
 
-    // Group expenses by date
-    const groupedExpenses = filteredExpenses.reduce((groups, expense) => {
-        const dateStr = new Date(expense.date).toLocaleDateString('ar-SD')
-        if (!groups[dateStr]) {
-            groups[dateStr] = []
-        }
-        groups[dateStr].push(expense)
-        return groups
-    }, {} as Record<string, Expense[]>)
-
-    // Sort dates descending automatically based on the first item's true Date object
-    const sortedDates = Object.keys(groupedExpenses).sort((a, b) => {
-        const dateA = new Date(groupedExpenses[a][0].date).getTime()
-        const dateB = new Date(groupedExpenses[b][0].date).getTime()
-        return dateB - dateA
-    })
-
     if (loading) return <div className="p-8 text-center text-gray-500">جاري التحميل...</div>
 
     return (
@@ -126,20 +118,31 @@ export default function ExpensesPage() {
             <Navbar />
             <div className="container mx-auto p-4 max-w-6xl animate-fade-in-up">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <div>
                         <h1 className="text-3xl font-black text-slate-800 flex items-center gap-2">
                             <Wallet className="text-red-500" />
                             إدارة المصروفات
                         </h1>
-                        <p className="text-gray-500 mt-1">تتبع النفقات حسب التصنيف لمراقبة الميزانية</p>
+                        <p className="text-gray-500 mt-1">تتبع النفقات حسب التاريخ والتصنيف لمراقبة الميزانية</p>
                     </div>
-                    <Link href="/expenses/report">
-                        <Button className="bg-slate-800 hover:bg-slate-900 text-white flex items-center gap-2">
-                            <Receipt size={18} />
-                            استخراج تقرير مفصل
-                        </Button>
-                    </Link>
+                    <div className="flex flex-col sm:flex-row gap-3 items-end sm:items-center">
+                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border shadow-sm">
+                            <CalendarIcon size={18} className="text-gray-400" />
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                className="bg-transparent border-none outline-none font-bold text-slate-700 w-full sm:w-auto"
+                            />
+                        </div>
+                        <Link href="/expenses/report">
+                            <Button className="bg-slate-800 hover:bg-slate-900 text-white flex items-center gap-2 h-full py-2">
+                                <Receipt size={18} />
+                                استخراج تقرير مفصل
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -237,50 +240,44 @@ export default function ExpensesPage() {
                         </div>
 
                         {/* List */}
-                        <div className="space-y-6">
-                            {sortedDates.map(dateStr => (
-                                <div key={dateStr} className="space-y-3">
-                                    <h3 className="sticky top-[88px] w-full z-10 bg-slate-100 backdrop-blur-md bg-opacity-90 py-2 px-4 rounded-lg font-black text-slate-700 shadow-sm border border-slate-200 flex items-center gap-2">
-                                        <Calendar size={18} className="text-slate-500" />
-                                        {dateStr}
-                                    </h3>
-                                    <div className="space-y-3">
-                                        {groupedExpenses[dateStr].map(expense => (
-                                            <div key={expense.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow flex justify-between items-center group ml-4 relative before:content-[''] before:absolute before:-right-4 before:top-1/2 before:w-3 before:h-[2px] before:bg-slate-200">
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`p-3 rounded-full ${getCategoryColor(expense.category)}`}>
-                                                        <Tag size={18} />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-bold text-slate-800">{expense.description}</h3>
-                                                        <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                                            <span>{CATEGORIES.find(c => c.id === expense.category)?.label || expense.category}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-4">
-                                                    <span className="font-bold text-lg text-slate-800">
-                                                        {expense.amount.toLocaleString()}
-                                                    </span>
-                                                    <button
-                                                        onClick={() => handleDelete(expense.id)}
-                                                        className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
+                        {loading ? (
+                            <div className="p-12 text-center text-gray-500 font-bold">جاري تحميل مصروفات اليوم...</div>
+                        ) : (
+                            <div className="space-y-3">
+                                {filteredExpenses.map(expense => (
+                                    <div key={expense.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow flex justify-between items-center group">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`p-3 rounded-full ${getCategoryColor(expense.category)}`}>
+                                                <Tag size={18} />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-slate-800">{expense.description}</h3>
+                                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                                    <span>{CATEGORIES.find(c => c.id === expense.category)?.label || expense.category}</span>
                                                 </div>
                                             </div>
-                                        ))}
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <span className="font-bold text-lg text-slate-800">
+                                                {expense.amount.toLocaleString()}
+                                            </span>
+                                            <button
+                                                onClick={() => handleDelete(expense.id)}
+                                                className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                            {filteredExpenses.length === 0 && (
-                                <div className="text-center py-12 text-gray-400">
-                                    <Package size={48} className="mx-auto mb-2 opacity-50" />
-                                    <p>لا توجد مصروفات في هذا التصنيف</p>
-                                </div>
-                            )}
-                        </div>
+                                ))}
+                                {filteredExpenses.length === 0 && (
+                                    <div className="text-center py-12 text-gray-400 bg-white rounded-xl border border-dashed border-gray-300">
+                                        <Package size={48} className="mx-auto mb-2 opacity-50" />
+                                        <p className="font-bold">لا توجد مصروفات مسجلة في هذا اليوم</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

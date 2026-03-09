@@ -9,9 +9,22 @@ export async function GET(request: Request) {
         const startDateParam = searchParams.get('startDate')
         const endDateParam = searchParams.get('endDate')
 
+        const dateParam = searchParams.get('date')
+
         let whereClause: any = {}
 
-        if (startDateParam && endDateParam) {
+        if (dateParam) {
+            const specificDate = new Date(dateParam)
+            specificDate.setUTCHours(0, 0, 0, 0)
+
+            const nextDay = new Date(specificDate)
+            nextDay.setUTCHours(23, 59, 59, 999)
+
+            whereClause.date = {
+                gte: specificDate,
+                lte: nextDay
+            }
+        } else if (startDateParam && endDateParam) {
             const startDate = new Date(startDateParam)
             startDate.setUTCHours(0, 0, 0, 0)
 
