@@ -288,7 +288,12 @@ export default function InvoiceDetails() {
 
                     {/* Header */}
                     <div className="relative z-10 pb-2 mb-2 print:pb-0 print:mb-0 flex justify-between items-center h-auto">
-                        <div className="w-1/4 text-right space-y-0.5 mt-1 print:mt-0">
+                        <div className="w-1/4 text-right space-y-2 mt-1 print:mt-0">
+                            {settings?.companyName && (
+                                <h2 className="text-2xl print:text-xl font-black text-slate-900 tracking-tight">
+                                    {settings.companyName}
+                                </h2>
+                            )}
                             <div className="flex flex-col items-start gap-0.5 text-slate-600 font-medium text-sm">
                                 <div className="flex items-center gap-1.5"><Phone size={14} className="text-slate-500" /> <span className="font-bold text-slate-700">م. محمد إسماعيل</span></div>
                                 <span dir="ltr" className="font-bold text-slate-700 pr-5">{settings?.phone || '-'}</span>
@@ -300,11 +305,6 @@ export default function InvoiceDetails() {
                                 <img src={settings.logoUrl} alt="Logo" className="h-28 print:h-24 max-w-full w-auto object-contain mix-blend-multiply print:contrast-125 print:grayscale" onError={(e) => (e.currentTarget.style.display = 'none')} />
                             ) : (
                                 <img src="/emblem.png" alt="Logo" className="h-28 w-28 print:h-24 print:w-24 object-contain mix-blend-multiply print:contrast-125 print:grayscale" />
-                            )}
-                            {settings?.companyName && (
-                                <h2 className="text-2xl print:text-xl font-black text-slate-900 tracking-tight text-center">
-                                    {settings.companyName}
-                                </h2>
                             )}
                         </div>
                         <div className="w-1/4 text-left space-y-0.5 print:space-y-0 mt-1 print:mt-0">
