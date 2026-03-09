@@ -295,11 +295,16 @@ export default function InvoiceDetails() {
                             </div>
                             {settings?.vatRate > 0 && <p className="text-[10px] text-slate-400 border border-slate-200 inline-block px-1.5 py-0.5 rounded-sm font-bold mt-1">الرقم الضريبي متوفر</p>}
                         </div>
-                        <div className="w-1/2 flex justify-center items-center">
+                        <div className="w-1/2 flex flex-col justify-center items-center gap-2">
                             {settings?.logoUrl ? (
-                                <img src={settings.logoUrl} alt="Logo" className="h-32 print:h-28 w-full object-contain mix-blend-multiply print:contrast-125 print:grayscale" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                <img src={settings.logoUrl} alt="Logo" className="h-28 print:h-24 max-w-full w-auto object-contain mix-blend-multiply print:contrast-125 print:grayscale" onError={(e) => (e.currentTarget.style.display = 'none')} />
                             ) : (
-                                <img src="/emblem.png" alt="Logo" className="h-32 w-32 print:h-28 print:w-28 object-contain mix-blend-multiply print:contrast-125 print:grayscale" />
+                                <img src="/emblem.png" alt="Logo" className="h-28 w-28 print:h-24 print:w-24 object-contain mix-blend-multiply print:contrast-125 print:grayscale" />
+                            )}
+                            {settings?.companyName && (
+                                <h2 className="text-2xl print:text-xl font-black text-slate-900 tracking-tight text-center">
+                                    {settings.companyName}
+                                </h2>
                             )}
                         </div>
                         <div className="w-1/4 text-left space-y-0.5 print:space-y-0 mt-1 print:mt-0">
