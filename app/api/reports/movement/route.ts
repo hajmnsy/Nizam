@@ -43,7 +43,10 @@ export async function GET(request: Request) {
             const totalPastReceipts = (pastSales._sum.paidAmount || 0) + (pastLegacyPaidSales._sum.total || 0);
 
             const pastExpenses = await prisma.expense.aggregate({
-                where: { date: { gte: initialDate, lt: startDate } },
+                where: {
+                    date: { gte: initialDate, lt: startDate },
+                    category: { not: 'سعر الصرف' }
+                },
                 _sum: { amount: true }
             });
 
@@ -73,7 +76,8 @@ export async function GET(request: Request) {
 
             const pastExpenses = await prisma.expense.aggregate({
                 where: {
-                    date: { lt: startDate }
+                    date: { lt: startDate },
+                    category: { not: 'سعر الصرف' }
                 },
                 _sum: { amount: true }
             });
@@ -91,7 +95,8 @@ export async function GET(request: Request) {
 
         const expensesInPeriod = await prisma.expense.findMany({
             where: {
-                date: { gte: startDate, lte: endDate }
+                date: { gte: startDate, lte: endDate },
+                category: { not: 'سعر الصرف' }
             },
             select: { date: true, amount: true }
         });
