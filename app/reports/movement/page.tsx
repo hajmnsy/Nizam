@@ -24,6 +24,8 @@ interface ReportData {
         receipts: number
         expenses: number
     }
+    error?: string
+    details?: string
 }
 
 export default function CashFlowMovement() {
@@ -59,7 +61,12 @@ export default function CashFlowMovement() {
         fetch(`/api/reports/movement?startDate=${startDate}&endDate=${endDate}`)
             .then(res => res.json())
             .then(data => {
-                setReportData(data)
+                if (data.error) {
+                    console.error('API Error:', data.error, data.details);
+                    setReportData(null);
+                } else {
+                    setReportData(data);
+                }
                 setLoading(false)
             })
             .catch(err => {
@@ -205,7 +212,7 @@ export default function CashFlowMovement() {
                 </Card>
 
                 {/* Printable Report Document */}
-                {reportData && (
+                {reportData && !reportData.error && reportData.data && (
                     <div className="bg-white rounded border border-slate-200 p-12 print:border-none print:shadow-none print:p-0 font-sans mx-auto shadow-sm min-h-[800px] printable-doc">
                         {/* Title Section matching the image perfectly */}
                         <div className="text-center mb-8 flex flex-col items-center justify-center space-y-3 report-header">
@@ -225,7 +232,7 @@ export default function CashFlowMovement() {
                                         d.setDate(d.getDate() - 1);
                                         return d.toLocaleDateString('en-CA').replace(/-/g, '/');
                                     })()}
-                                </span> <span className="mr-8">{reportData.openingBalance.toLocaleString()}</span>
+                                </span> <span className="mr-8">{reportData.openingBalance ? reportData.openingBalance.toLocaleString() : '0'}</span>
                             </h3>
                         </div>
 
@@ -253,8 +260,8 @@ export default function CashFlowMovement() {
                                     {/* Footer Row */}
                                     <tr className="border-t-[3px] border-t-black"> {/* Thicker top border for grand total logic if needed, but standard in image is just border */}
                                         <td className="border border-black p-2 font-black">الجملة</td>
-                                        <td className="border border-black p-2 font-black">{reportData.totals.receipts.toLocaleString()}</td>
-                                        <td className="border border-black p-2 font-black">{reportData.totals.expenses.toLocaleString()}</td>
+                                        <td className="border border-black p-2 font-black">{reportData.totals?.receipts ? reportData.totals.receipts.toLocaleString() : '0'}</td>
+                                        <td className="border border-black p-2 font-black">{reportData.totals?.expenses ? reportData.totals.expenses.toLocaleString() : '0'}</td>
                                         <td className="border border-black p-2 bg-gray-100 print:bg-transparent"> {/* Empty or final balance? Image shows it spanning but basically empty underneath the last running balance */}</td>
                                     </tr>
                                 </tbody>
