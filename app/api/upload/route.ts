@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // Max execution time
+
 
 import { NextResponse } from 'next/server'
 

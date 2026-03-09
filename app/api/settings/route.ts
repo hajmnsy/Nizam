@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-export const maxDuration = 60; // Max execution time
+
 
 export async function GET() {
     try {
