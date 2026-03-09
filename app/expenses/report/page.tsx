@@ -18,7 +18,7 @@ interface Expense {
 // Fixed categories matching the 10-day report columns from user request
 const COLUMNS = [
     { id: 'صدقة', label: 'صدقة' },
-    { id: 'عام', label: 'عام' },
+    { id: 'عام', label: 'عام', color: 'bg-indigo-100 text-indigo-600' },
     { id: 'عتالة وترحيل', label: 'عتالة وترحيل' },
     { id: 'الرواتب', label: 'الرواتب' },
     { id: 'سعر الصرف', label: 'سعر الصرف' }, // Always empty for manual entry

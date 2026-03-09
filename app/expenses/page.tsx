@@ -18,7 +18,7 @@ interface Expense {
 const CATEGORIES = [
     { id: 'توريدات', label: 'توريدات', color: 'bg-emerald-100 text-emerald-700' },
     { id: 'عتالة وترحيل', label: 'عتالة وترحيل', color: 'bg-blue-100 text-blue-700' },
-    { id: 'عام', label: 'إيجار وكهرباء (عام)', color: 'bg-amber-100 text-amber-700' },
+    { id: 'عام', label: 'عام', color: 'bg-indigo-100 text-indigo-600' },
     { id: 'الفطور', label: 'الفطور', color: 'bg-rose-100 text-rose-700' },
     { id: 'صدقة', label: 'صدقة', color: 'bg-purple-100 text-purple-700' },
     { id: 'الرواتب', label: 'الرواتب', color: 'bg-indigo-100 text-indigo-700' },
