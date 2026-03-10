@@ -26,3 +26,28 @@ export async function GET(request: Request) {
         return NextResponse.json({ rate: 0, error: 'Failed to fetch exchange rate' }, { status: 500 });
     }
 }
+
+export async function POST(request: Request) {
+    try {
+        const json = await request.json();
+        const rate = parseFloat(json.rate);
+
+        if (isNaN(rate) || rate <= 0) {
+            return NextResponse.json({ error: 'معدل صرف غير صالح' }, { status: 400 });
+        }
+
+        // Save it as an expense record with the category 'سعر الصرف'
+        const newRate = await prisma.expense.create({
+            data: {
+                description: 'تحديث سعر الصرف التلقائي',
+                amount: rate,
+                category: 'سعر الصرف',
+            }
+        });
+
+        return NextResponse.json({ rate: newRate.amount, success: true });
+    } catch (error) {
+        console.error('Exchange Rate Update Error:', error);
+        return NextResponse.json({ error: 'فشل حفظ التحديث' }, { status: 500 });
+    }
+}

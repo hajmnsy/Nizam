@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 export async function PUT(request: Request) {
     try {
         const data = await request.json()
-        const { id, quantity, price } = data
+        const { id, quantity, price, purchasePriceUSD } = data
 
         if (!id) {
             return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
@@ -14,6 +14,7 @@ export async function PUT(request: Request) {
         const updateData: any = {}
         if (quantity !== undefined) updateData.quantity = Number(quantity)
         if (price !== undefined) updateData.price = Number(price)
+        if (purchasePriceUSD !== undefined) updateData.purchasePriceUSD = Number(purchasePriceUSD) || 0
 
         const product = await prisma.product.update({
             where: { id: Number(id) },

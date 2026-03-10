@@ -14,6 +14,7 @@ interface Product {
     type: string | null
     quantity: number
     price: number
+    purchasePriceUSD: number | null
     categoryId: number
     category: { name: string }
 }
@@ -23,7 +24,7 @@ export default function Inventory() {
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
     const [editingId, setEditingId] = useState<number | null>(null)
-    const [editForm, setEditForm] = useState({ quantity: 0, price: 0 })
+    const [editForm, setEditForm] = useState({ quantity: 0, price: 0, purchasePriceUSD: 0 })
     const [saving, setSaving] = useState(false)
     const [exchangeRate, setExchangeRate] = useState<number>(0)
 
@@ -55,7 +56,7 @@ export default function Inventory() {
 
     const startEdit = (product: Product) => {
         setEditingId(product.id)
-        setEditForm({ quantity: product.quantity, price: product.price })
+        setEditForm({ quantity: product.quantity, price: product.price, purchasePriceUSD: product.purchasePriceUSD || 0 })
     }
 
     const cancelEdit = () => {
@@ -71,13 +72,14 @@ export default function Inventory() {
                 body: JSON.stringify({
                     id,
                     quantity: editForm.quantity,
-                    price: editForm.price
+                    price: editForm.price,
+                    purchasePriceUSD: editForm.purchasePriceUSD
                 })
             })
 
             if (res.ok) {
                 setProducts(prev => prev.map(p =>
-                    p.id === id ? { ...p, quantity: editForm.quantity, price: editForm.price } : p
+                    p.id === id ? { ...p, quantity: editForm.quantity, price: editForm.price, purchasePriceUSD: editForm.purchasePriceUSD } : p
                 ))
                 setEditingId(null)
             }
@@ -85,6 +87,19 @@ export default function Inventory() {
             console.error('Failed to save', error)
         } finally {
             setSaving(false)
+        }
+    }
+
+    const saveExchangeRate = async (newRate: number) => {
+        if (newRate <= 0) return;
+        try {
+            await fetch('/api/exchange-rate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rate: newRate })
+            });
+        } catch (err) {
+            console.error("Failed to save exchange rate", err);
         }
     }
 
@@ -157,6 +172,7 @@ export default function Inventory() {
                                         placeholder="أدخل سعر الصرف هنا..."
                                         value={exchangeRate || ''}
                                         onChange={(e) => setExchangeRate(Number(e.target.value))}
+                                        onBlur={(e) => saveExchangeRate(Number(e.target.value))}
                                         className="bg-transparent border-none outline-none font-bold text-emerald-700 w-full text-center"
                                     />
                                 </div>
@@ -189,7 +205,8 @@ export default function Inventory() {
                                 <tr>
                                     <th className="p-4">اسم المنتج</th>
                                     <th className="p-4">الكمية</th>
-                                    <th className="p-4">السعر</th>
+                                    <th className="p-4">سعر الشراء ($)</th>
+                                    <th className="p-4">سعر البيع (ج.س)</th>
                                     <th className="p-4">الحالة</th>
                                     <th className="p-4">إجراءات</th>
                                 </tr>
@@ -224,7 +241,22 @@ export default function Inventory() {
                                                 )}
                                             </td>
 
-                                            {/* Editable Price */}
+                                            {/* Editable Purchase Price */}
+                                            <td className="p-4">
+                                                {editingId === product.id ? (
+                                                    <input
+                                                        type="number"
+                                                        step="any"
+                                                        className="w-24 p-1 border border-emerald-300 rounded text-center focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50 text-emerald-700 font-bold"
+                                                        value={editForm.purchasePriceUSD}
+                                                        onChange={e => setEditForm({ ...editForm, purchasePriceUSD: Number(e.target.value) })}
+                                                    />
+                                                ) : (
+                                                    <span className="text-emerald-700 font-bold">${product.purchasePriceUSD || 0}</span>
+                                                )}
+                                            </td>
+
+                                            {/* Editable Selling Price */}
                                             <td className="p-4">
                                                 {editingId === product.id ? (
                                                     <input
@@ -234,7 +266,7 @@ export default function Inventory() {
                                                         onChange={e => setEditForm({ ...editForm, price: Number(e.target.value) })}
                                                     />
                                                 ) : (
-                                                    <span className="text-slate-700">{product.price.toLocaleString()}</span>
+                                                    <span className="text-slate-700 font-bold">{product.price.toLocaleString()}</span>
                                                 )}
                                             </td>
 
