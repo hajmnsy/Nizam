@@ -33,8 +33,8 @@ export default function Inventory() {
 
     const fetchProducts = () => {
         Promise.all([
-            fetch('/api/products').then(res => res.json()),
-            fetch('/api/exchange-rate').then(res => res.json())
+            fetch('/api/products', { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json())
         ]).then(([productsData, exchangeRateData]) => {
             setProducts(Array.isArray(productsData) ? productsData : []);
             if (exchangeRateData && exchangeRateData.rate > 0) {
