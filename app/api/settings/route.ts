@@ -34,7 +34,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { companyName, phone, vatRate, address, logoUrl, initialBalance, initialBalanceDate } = body
+        const { companyName, phone, vatRate, address, logoUrl, initialBalance, initialBalanceDate, transportCostUSD } = body
 
         const updateData: any = {}
         const createData: any = { id: 'default', companyName: companyName || 'اسم الشركة' }
@@ -47,6 +47,11 @@ export async function POST(request: Request) {
         if (vatRate !== undefined) {
             updateData.vatRate = parseFloat(vatRate as string);
             createData.vatRate = parseFloat(vatRate as string);
+        }
+
+        if (transportCostUSD !== undefined) {
+            updateData.transportCostUSD = parseFloat(transportCostUSD as string);
+            createData.transportCostUSD = parseFloat(transportCostUSD as string);
         }
 
         if (initialBalance !== undefined && initialBalance !== '') {

@@ -21,7 +21,8 @@ export default function SettingsPage() {
         phone: '',
         address: '',
         vatRate: 0,
-        logoUrl: ''
+        logoUrl: '',
+        transportCostUSD: 15
     })
 
     useEffect(() => {
@@ -42,7 +43,8 @@ export default function SettingsPage() {
                                     phone: data.phone || '',
                                     address: data.address || '',
                                     vatRate: data.vatRate || 0,
-                                    logoUrl: data.logoUrl || ''
+                                    logoUrl: data.logoUrl || '',
+                                    transportCostUSD: data.transportCostUSD || 0
                                 })
                             }
                             setLoading(false)
@@ -182,6 +184,23 @@ export default function SettingsPage() {
                                             />
                                         </div>
                                         <p className="text-xs text-slate-500 mt-2">اجعلها 0 إذا كنت لا تطبق ضرائب</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">تكلفة الترحيل المباشرة للطن ($)</label>
+                                        <div className="relative">
+                                            <span className="absolute right-3 top-3.5 font-bold text-slate-500">$</span>
+                                            <Input
+                                                name="transportCostUSD"
+                                                type="number"
+                                                step="0.1"
+                                                min="0"
+                                                value={formData.transportCostUSD}
+                                                onChange={handleChange}
+                                                className="h-12 pr-10 font-mono text-lg"
+                                            />
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-2">تُستخدم لحساب صافي الربح في نقطة البيع (لكل طن)</p>
                                     </div>
                                 </Card>
 

@@ -81,6 +81,7 @@ model Setting {
   logoUrl            String?   @db.Text
   initialBalance     Float     @default(0)
   initialBalanceDate DateTime?
+  transportCostUSD   Float     @default(15)
   updatedAt          DateTime  @updatedAt
 }
 
