@@ -82,8 +82,8 @@ export default function InvoiceDetails() {
     useEffect(() => {
         // Fetch both sale and settings concurrently
         Promise.all([
-            fetch(`/api/sales/${params.id}`).then(res => res.json()),
-            fetch('/api/settings').then(res => res.json())
+            fetch(`/api/sales/${params.id}`, { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/settings', { cache: 'no-store' }).then(res => res.json())
         ])
             .then(([saleData, settingsData]) => {
                 setSale(saleData)

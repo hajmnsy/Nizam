@@ -51,7 +51,7 @@ export default function ExpensesReportPage() {
         if (startDate) qp.append('startDate', startDate)
         if (endDate) qp.append('endDate', endDate)
 
-        fetch(`/api/expenses?${qp.toString()}`)
+        fetch(`/api/expenses?${qp.toString()}`, { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 setExpenses(Array.isArray(data) ? data : [])

@@ -18,7 +18,7 @@ export default function CustomersPage() {
     const [searchTerm, setSearchTerm] = useState('')
 
     useEffect(() => {
-        fetch('/api/customers')
+        fetch('/api/customers', { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 setCustomers(Array.isArray(data) ? data : [])

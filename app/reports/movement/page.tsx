@@ -59,7 +59,7 @@ export default function CashFlowMovement() {
 
     const fetchReport = () => {
         setLoading(true)
-        fetch(`/api/reports/movement?startDate=${startDate}&endDate=${endDate}`)
+        fetch(`/api/reports/movement?startDate=${startDate}&endDate=${endDate}`, { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 if (data.error) {
@@ -79,8 +79,8 @@ export default function CashFlowMovement() {
     // Fetch on initial load
     useEffect(() => {
         Promise.all([
-            fetch('/api/settings').then(res => res.json()),
-            fetch('/api/exchange-rate').then(res => res.json())
+            fetch('/api/settings', { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json())
         ])
             .then(([settingsData, exchangeRateData]) => {
                 if (settingsData && !settingsData.error) {

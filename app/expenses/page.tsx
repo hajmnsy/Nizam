@@ -51,7 +51,7 @@ export default function ExpensesPage() {
 
     const fetchExpenses = (selectedDate: string) => {
         setLoading(true)
-        fetch(`/api/expenses?date=${selectedDate}`)
+        fetch(`/api/expenses?date=${selectedDate}`, { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 setExpenses(Array.isArray(data) ? data : [])

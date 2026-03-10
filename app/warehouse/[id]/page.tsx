@@ -35,7 +35,7 @@ export default function WarehouseOrderDetails() {
     const [processing, setProcessing] = useState(false)
 
     useEffect(() => {
-        fetch(`/api/sales/${params.id}`)
+        fetch(`/api/sales/${params.id}`, { cache: 'no-store' })
             .then(res => res.json())
             .then(data => setOrder(data))
             .catch(console.error)

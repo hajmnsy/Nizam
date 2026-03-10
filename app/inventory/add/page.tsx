@@ -32,7 +32,7 @@ export default function AddProduct() {
     })
 
     useEffect(() => {
-        fetch('/api/categories')
+        fetch('/api/categories', { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 const hiddenCategories = ['قطاعات', 'مسطحات', 'مواسير', 'سيخ']

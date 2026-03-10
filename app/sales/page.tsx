@@ -36,7 +36,7 @@ export default function SalesList() {
     useEffect(() => {
         setLoading(true)
         const dateQuery = date ? `&date=${date}` : ''
-        fetch(`/api/sales?status=${tab}${dateQuery}`)
+        fetch(`/api/sales?status=${tab}${dateQuery}`, { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 setSales(data)

@@ -31,7 +31,7 @@ export default function UsersManagement() {
 
     const fetchCurrentUser = async () => {
         try {
-            const res = await fetch('/api/auth/me')
+            const res = await fetch('/api/auth/me', { cache: 'no-store' })
             const data = await res.json()
             if (data.error || data.role !== 'ADMIN') {
                 router.push('/')
@@ -46,7 +46,7 @@ export default function UsersManagement() {
 
     const fetchUsers = async () => {
         try {
-            const res = await fetch('/api/users')
+            const res = await fetch('/api/users', { cache: 'no-store' })
             const data = await res.json()
             setUsers(Array.isArray(data) ? data : [])
             setLoading(false)

@@ -13,7 +13,7 @@ export default function Reports() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch('/api/reports/analytics')
+        fetch('/api/reports/analytics', { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 setData(data)
@@ -42,7 +42,7 @@ export default function Reports() {
                         <button
                             onClick={async () => {
                                 try {
-                                    const res = await fetch('/api/reports/export')
+                                    const res = await fetch('/api/reports/export', { cache: 'no-store' })
                                     const exportData = await res.json()
 
                                     const wb = XLSX.utils.book_new()

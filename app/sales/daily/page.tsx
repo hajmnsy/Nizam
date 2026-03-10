@@ -46,7 +46,7 @@ export default function DailyReport() {
 
     const fetchSales = (selectedDate: string) => {
         setLoading(true)
-        fetch(`/api/sales?date=${selectedDate}`)
+        fetch(`/api/sales?date=${selectedDate}`, { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 // Ignore quotations

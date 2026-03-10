@@ -14,7 +14,7 @@ export default function PricingCalculator() {
     const [marginPercent, setMarginPercent] = useState<string>('15') // Include all overheads, taxes and net profit
 
     useEffect(() => {
-        fetch('/api/exchange-rate')
+        fetch('/api/exchange-rate', { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 if (data && data.rate) {

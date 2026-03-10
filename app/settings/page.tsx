@@ -25,7 +25,7 @@ export default function SettingsPage() {
     })
 
     useEffect(() => {
-        fetch('/api/auth/me')
+        fetch('/api/auth/me', { cache: 'no-store' })
             .then(res => res.json())
             .then(user => {
                 if (user.error) {
@@ -33,7 +33,7 @@ export default function SettingsPage() {
                 } else {
                     setIsAuthorized(true)
                     // Fetch Settings only if authorized
-                    fetch('/api/settings')
+                    fetch('/api/settings', { cache: 'no-store' })
                         .then(res => res.json())
                         .then(data => {
                             if (data && !data.error) {

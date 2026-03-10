@@ -36,8 +36,8 @@ export default function EditProduct() {
     useEffect(() => {
         // Fetch categories and product data
         Promise.all([
-            fetch('/api/categories').then(res => res.json()),
-            fetch(`/api/products/${params.id}`).then(res => res.json())
+            fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()),
+            fetch(`/api/products/${params.id}`, { cache: 'no-store' }).then(res => res.json())
         ])
             .then(([cats, product]) => {
                 const hiddenCategories = ['قطاعات', 'مسطحات', 'مواسير', 'سيخ']
