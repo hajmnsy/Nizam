@@ -24,6 +24,7 @@ interface Product {
     weightPerUnit: number
     type?: string | null
     thickness?: number | null
+    transportCostUSD?: number | null
     categoryId: number
     category?: Category
 }
@@ -36,6 +37,7 @@ interface CartItem {
     quantity: number
     weight: number
     thickness?: number | null
+    transportCostUSD?: number | null
 }
 
 export default function NewSale() {
@@ -48,20 +50,15 @@ export default function NewSale() {
     const [activeCategory, setActiveCategory] = useState<string>('')
     const [searchTerm, setSearchTerm] = useState('')
     const [exchangeRate, setExchangeRate] = useState<number>(0)
-    const [transportCostUSD, setTransportCostUSD] = useState<number>(15)
 
     useEffect(() => {
         Promise.all([
             fetch('/api/products', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()),
-            fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json()),
-            fetch('/api/settings', { cache: 'no-store' }).then(res => res.json())
-        ]).then(([productsData, categoriesData, exchangeRateData, settingsData]) => {
+            fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json())
+        ]).then(([productsData, categoriesData, exchangeRateData]) => {
             setProducts(Array.isArray(productsData) ? productsData : [])
             setExchangeRate(exchangeRateData.rate || 0)
-            if (settingsData && settingsData.transportCostUSD !== undefined) {
-                setTransportCostUSD(settingsData.transportCostUSD)
-            }
 
             // Filter out specific categories
             if (Array.isArray(categoriesData)) {
@@ -132,6 +129,7 @@ export default function NewSale() {
                 name: product.name,
                 price: product.price,
                 purchasePriceUSD: product.purchasePriceUSD || 0,
+                transportCostUSD: product.transportCostUSD || 15,
                 quantity: 1,
                 weight: product.weightPerUnit,
                 thickness: product.thickness
@@ -360,6 +358,7 @@ export default function NewSale() {
                                             const itemDiscountedTotal = itemOriginalTotal - itemDiscount;
                                             const itemWeight = item.weight || 0;
                                             const itemPPU = item.purchasePriceUSD || 0;
+                                            const itemTransport = item.transportCostUSD || 15;
 
                                             return (
                                                 <div key={item.productId} className="bg-white p-3 rounded-lg border shadow-sm flex flex-col gap-2">
@@ -373,13 +372,13 @@ export default function NewSale() {
                                                             {exchangeRate > 0 && itemPPU > 0 && (
                                                                 <div className="mt-1 flex items-center gap-1">
                                                                     <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200">
-                                                                        صافي الربح: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * transportCostUSD)) * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
+                                                                        صافي الربح: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * itemTransport)) * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
                                                                     </span>
                                                                     <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold border border-blue-200" title="الربح بعد خصم 15% مصاريف وهامش مستهدف">
-                                                                        الربح النهائي: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * transportCostUSD)) * 1.15 * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
+                                                                        الربح النهائي: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * itemTransport)) * 1.15 * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
                                                                     </span>
                                                                     <span className="text-[10px] text-emerald-600 font-bold">
-                                                                        (${((((itemDiscountedTotal / itemQty) / exchangeRate) - (itemPPU + ((itemWeight / 1000) * transportCostUSD))) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })})
+                                                                        (${((((itemDiscountedTotal / itemQty) / exchangeRate) - (itemPPU + ((itemWeight / 1000) * itemTransport))) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })})
                                                                     </span>
                                                                 </div>
                                                             )}

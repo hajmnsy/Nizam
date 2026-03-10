@@ -23,6 +23,7 @@ export default function AddProduct() {
         type: '',
         price: '',
         purchasePriceUSD: '',
+        transportCostUSD: '15',
         length: '',
         thickness: '',
         width: '',
@@ -138,7 +139,7 @@ export default function AddProduct() {
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                             <Input
                                 name="price"
                                 label="سعر البيع (ج.س)"
@@ -155,6 +156,15 @@ export default function AddProduct() {
                                 step="any"
                                 placeholder="0.00"
                                 value={formData.purchasePriceUSD}
+                                onChange={handleChange}
+                            />
+                            <Input
+                                name="transportCostUSD"
+                                label="تكلفة الترحيل ($/طن)"
+                                type="number"
+                                step="any"
+                                placeholder="15"
+                                value={formData.transportCostUSD}
                                 onChange={handleChange}
                             />
                         </div>

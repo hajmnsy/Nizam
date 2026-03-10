@@ -25,6 +25,7 @@ model Product {
   quantity         Int        @default(0)
   price            Float
   purchasePriceUSD Float      @default(0)
+  transportCostUSD Float      @default(15)
   categoryId       Int
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
@@ -81,7 +82,6 @@ model Setting {
   logoUrl            String?   @db.Text
   initialBalance     Float     @default(0)
   initialBalanceDate DateTime?
-  transportCostUSD   Float     @default(15)
   updatedAt          DateTime  @updatedAt
 }
 

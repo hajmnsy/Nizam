@@ -15,6 +15,7 @@ interface Product {
     quantity: number
     price: number
     purchasePriceUSD: number | null
+    transportCostUSD: number | null
     categoryId: number
     category: { name: string }
 }
@@ -24,7 +25,7 @@ export default function Inventory() {
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
     const [editingId, setEditingId] = useState<number | null>(null)
-    const [editForm, setEditForm] = useState({ quantity: 0, price: 0, purchasePriceUSD: 0 })
+    const [editForm, setEditForm] = useState({ quantity: 0, price: 0, purchasePriceUSD: 0, transportCostUSD: 15 })
     const [saving, setSaving] = useState(false)
     const [exchangeRate, setExchangeRate] = useState<number>(0)
 
@@ -56,7 +57,7 @@ export default function Inventory() {
 
     const startEdit = (product: Product) => {
         setEditingId(product.id)
-        setEditForm({ quantity: product.quantity, price: product.price, purchasePriceUSD: product.purchasePriceUSD || 0 })
+        setEditForm({ quantity: product.quantity, price: product.price, purchasePriceUSD: product.purchasePriceUSD || 0, transportCostUSD: product.transportCostUSD || 15 })
     }
 
     const cancelEdit = () => {
@@ -73,13 +74,14 @@ export default function Inventory() {
                     id,
                     quantity: editForm.quantity,
                     price: editForm.price,
-                    purchasePriceUSD: editForm.purchasePriceUSD
+                    purchasePriceUSD: editForm.purchasePriceUSD,
+                    transportCostUSD: editForm.transportCostUSD
                 })
             })
 
             if (res.ok) {
                 setProducts(prev => prev.map(p =>
-                    p.id === id ? { ...p, quantity: editForm.quantity, price: editForm.price, purchasePriceUSD: editForm.purchasePriceUSD } : p
+                    p.id === id ? { ...p, quantity: editForm.quantity, price: editForm.price, purchasePriceUSD: editForm.purchasePriceUSD, transportCostUSD: editForm.transportCostUSD } : p
                 ))
                 setEditingId(null)
             }
@@ -206,6 +208,7 @@ export default function Inventory() {
                                     <th className="p-4">اسم المنتج</th>
                                     <th className="p-4">الكمية</th>
                                     <th className="p-4">سعر الشراء ($)</th>
+                                    <th className="p-4">تكلفة الترحيل ($)</th>
                                     <th className="p-4">سعر البيع (ج.س)</th>
                                     <th className="p-4">الحالة</th>
                                     <th className="p-4">إجراءات</th>
@@ -253,6 +256,21 @@ export default function Inventory() {
                                                     />
                                                 ) : (
                                                     <span className="text-emerald-700 font-bold">${product.purchasePriceUSD || 0}</span>
+                                                )}
+                                            </td>
+
+                                            {/* Editable Transport Cost */}
+                                            <td className="p-4">
+                                                {editingId === product.id ? (
+                                                    <input
+                                                        type="number"
+                                                        step="any"
+                                                        className="w-20 p-1 border border-amber-300 rounded text-center focus:ring-2 focus:ring-amber-500 outline-none bg-amber-50 text-amber-700 font-bold"
+                                                        value={editForm.transportCostUSD}
+                                                        onChange={e => setEditForm({ ...editForm, transportCostUSD: Number(e.target.value) })}
+                                                    />
+                                                ) : (
+                                                    <span className="text-amber-700 font-bold" title="تكلفة الترحيل للمنتج">${product.transportCostUSD || 15}</span>
                                                 )}
                                             </td>
 

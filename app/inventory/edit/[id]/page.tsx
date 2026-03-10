@@ -25,6 +25,7 @@ export default function EditProduct() {
         type: '',
         price: '',
         purchasePriceUSD: '',
+        transportCostUSD: '15',
         length: '',
         thickness: '',
         width: '',
@@ -49,6 +50,7 @@ export default function EditProduct() {
                     type: product.type || '',
                     price: product.price.toString(),
                     purchasePriceUSD: product.purchasePriceUSD?.toString() || '0',
+                    transportCostUSD: product.transportCostUSD?.toString() || '15',
                     length: product.length?.toString() || '',
                     thickness: product.thickness?.toString() || '',
                     width: product.width?.toString() || '',
@@ -179,7 +181,7 @@ export default function EditProduct() {
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                             <Input
                                 name="price"
                                 label="سعر البيع (ج.س)"
@@ -194,6 +196,14 @@ export default function EditProduct() {
                                 type="number"
                                 step="any"
                                 value={formData.purchasePriceUSD}
+                                onChange={handleChange}
+                            />
+                            <Input
+                                name="transportCostUSD"
+                                label="تكلفة الترحيل ($/طن)"
+                                type="number"
+                                step="any"
+                                value={formData.transportCostUSD}
                                 onChange={handleChange}
                             />
                         </div>
