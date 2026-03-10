@@ -55,16 +55,20 @@ export default function NewSale() {
             fetch('/api/categories').then(res => res.json()),
             fetch('/api/exchange-rate').then(res => res.json())
         ]).then(([productsData, categoriesData, exchangeRateData]) => {
-            setProducts(productsData)
+            setProducts(Array.isArray(productsData) ? productsData : [])
             setExchangeRate(exchangeRateData.rate || 0)
 
             // Filter out specific categories
-            const hiddenCategories = ['قطاعات', 'مسطحات', 'مواسير', 'سيخ']
-            const visibleCategories = categoriesData.filter((cat: Category) => !hiddenCategories.includes(cat.name))
+            if (Array.isArray(categoriesData)) {
+                const hiddenCategories = ['قطاعات', 'مسطحات', 'مواسير', 'سيخ']
+                const visibleCategories = categoriesData.filter((cat: Category) => !hiddenCategories.includes(cat.name))
 
-            setCategories(visibleCategories)
-            if (visibleCategories.length > 0) {
-                setActiveCategory(visibleCategories[0].name)
+                setCategories(visibleCategories)
+                if (visibleCategories.length > 0) {
+                    setActiveCategory(visibleCategories[0].name)
+                }
+            } else {
+                setCategories([])
             }
         }).catch(console.error)
     }, [])
@@ -343,10 +347,14 @@ export default function NewSale() {
                                     ) : (
                                         cart.map(item => {
                                             const discountVal = parseFloat(discount) || 0;
-                                            const discountRatio = subtotal > 0 && discountVal > 0 ? discountVal / subtotal : 0;
-                                            const itemOriginalTotal = Math.round(item.price * item.quantity);
+                                            const safeSubtotal = subtotal > 0 ? subtotal : 1;
+                                            const discountRatio = subtotal > 0 && discountVal > 0 ? discountVal / safeSubtotal : 0;
+                                            const itemQty = item.quantity || 1; // avoid division by zero
+                                            const itemOriginalTotal = Math.round((item.price || 0) * (item.quantity === 0 ? 0 : item.quantity));
                                             const itemDiscount = Math.round(itemOriginalTotal * discountRatio);
                                             const itemDiscountedTotal = itemOriginalTotal - itemDiscount;
+                                            const itemWeight = item.weight || 0;
+                                            const itemPPU = item.purchasePriceUSD || 0;
 
                                             return (
                                                 <div key={item.productId} className="bg-white p-3 rounded-lg border shadow-sm flex flex-col gap-2">
@@ -355,15 +363,15 @@ export default function NewSale() {
                                                             <span className="font-bold text-sm line-clamp-1">{item.name}</span>
                                                             {item.thickness && <span className="text-xs text-gray-500">سمك: {item.thickness}مم</span>}
                                                             {discountRatio > 0 && (
-                                                                <span className="text-xs text-green-600 font-bold">السعر بعد الخصم: {(itemDiscountedTotal / item.quantity).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                                                                <span className="text-xs text-green-600 font-bold">السعر بعد الخصم: {(itemDiscountedTotal / itemQty).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                                                             )}
-                                                            {exchangeRate > 0 && item.purchasePriceUSD > 0 && (
+                                                            {exchangeRate > 0 && itemPPU > 0 && (
                                                                 <div className="mt-1 flex items-center gap-1">
                                                                     <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200">
-                                                                        صافي الربح: {(((itemDiscountedTotal / item.quantity) - ((item.purchasePriceUSD + ((item.weight / 1000) * 15)) * exchangeRate)) * item.quantity).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
+                                                                        صافي الربح: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * 15)) * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
                                                                     </span>
                                                                     <span className="text-[10px] text-emerald-600 font-bold">
-                                                                        (${((((itemDiscountedTotal / item.quantity) / exchangeRate) - (item.purchasePriceUSD + ((item.weight / 1000) * 15))) * item.quantity).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })})
+                                                                        (${((((itemDiscountedTotal / itemQty) / exchangeRate) - (itemPPU + ((itemWeight / 1000) * 15))) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })})
                                                                     </span>
                                                                 </div>
                                                             )}
