@@ -9,8 +9,8 @@ export async function GET() {
             orderBy: { createdAt: 'desc' }
         })
         return NextResponse.json(products)
-    } catch (error: any) {
-        return NextResponse.json({ error: error?.message || 'Error fetching products' }, { status: 500 })
+    } catch (error) {
+        return NextResponse.json({ error: 'Error fetching products' }, { status: 500 })
     }
 }
 
