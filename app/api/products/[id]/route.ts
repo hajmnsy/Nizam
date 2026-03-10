@@ -28,6 +28,8 @@ export async function PUT(
 ) {
     try {
         const id = parseInt(params.id)
+        if (isNaN(id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
+
         const json = await request.json()
 
         const product = await prisma.product.update({
@@ -36,6 +38,7 @@ export async function PUT(
                 name: json.name,
                 type: json.type,
                 price: parseFloat(json.price),
+                purchasePriceUSD: parseFloat(json.purchasePriceUSD) || 0,
                 quantity: parseInt(json.quantity),
                 weightPerUnit: parseFloat(json.weightPerUnit),
                 length: parseFloat(json.length),

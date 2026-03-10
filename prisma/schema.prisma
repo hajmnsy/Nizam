@@ -21,10 +21,11 @@ model Product {
   thickness     Float?
   width         Float?
   length        Float?
-  weightPerUnit Float?
-  quantity      Int        @default(0)
-  price         Float
-  categoryId    Int
+  weightPerUnit    Float?
+  quantity         Int        @default(0)
+  price            Float
+  purchasePriceUSD Float      @default(0)
+  categoryId       Int
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   category      Category   @relation(fields: [categoryId], references: [id])

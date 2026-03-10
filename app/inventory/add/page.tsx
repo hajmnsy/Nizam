@@ -22,6 +22,7 @@ export default function AddProduct() {
         name: '',
         type: '',
         price: '',
+        purchasePriceUSD: '',
         length: '',
         thickness: '',
         width: '',
@@ -140,7 +141,7 @@ export default function AddProduct() {
                         <div className="grid grid-cols-2 gap-4">
                             <Input
                                 name="price"
-                                label="السعر"
+                                label="سعر البيع (ج.س)"
                                 type="number"
                                 placeholder="0.00"
                                 value={formData.price}
@@ -148,8 +149,20 @@ export default function AddProduct() {
                                 required
                             />
                             <Input
+                                name="purchasePriceUSD"
+                                label="سعر الشراء الفعلي ($)"
+                                type="number"
+                                step="any"
+                                placeholder="0.00"
+                                value={formData.purchasePriceUSD}
+                                onChange={handleChange}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4">
+                            <Input
                                 name="quantity"
-                                label="الكمية المتاحة"
+                                label="الكمية المتاحة الافتتاحية"
                                 type="number"
                                 value={formData.quantity}
                                 onChange={handleChange}

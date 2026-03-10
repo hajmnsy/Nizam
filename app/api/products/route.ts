@@ -22,6 +22,7 @@ export async function POST(request: Request) {
                 name: json.name,
                 type: json.type,
                 price: parseFloat(json.price),
+                purchasePriceUSD: parseFloat(json.purchasePriceUSD) || 0,
                 quantity: parseInt(json.quantity),
                 weightPerUnit: parseFloat(json.weightPerUnit),
                 length: parseFloat(json.length),

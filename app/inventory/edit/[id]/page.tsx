@@ -24,6 +24,7 @@ export default function EditProduct() {
         name: '',
         type: '',
         price: '',
+        purchasePriceUSD: '',
         length: '',
         thickness: '',
         width: '',
@@ -47,6 +48,7 @@ export default function EditProduct() {
                     name: product.name,
                     type: product.type || '',
                     price: product.price.toString(),
+                    purchasePriceUSD: product.purchasePriceUSD?.toString() || '0',
                     length: product.length?.toString() || '',
                     thickness: product.thickness?.toString() || '',
                     width: product.width?.toString() || '',
@@ -180,12 +182,23 @@ export default function EditProduct() {
                         <div className="grid grid-cols-2 gap-4">
                             <Input
                                 name="price"
-                                label="السعر (ج.س)"
+                                label="سعر البيع (ج.س)"
                                 type="number"
                                 value={formData.price}
                                 onChange={handleChange}
                                 required
                             />
+                            <Input
+                                name="purchasePriceUSD"
+                                label="سعر الشراء الفعلي ($)"
+                                type="number"
+                                step="any"
+                                value={formData.purchasePriceUSD}
+                                onChange={handleChange}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4">
                             <Input
                                 name="quantity"
                                 label="الكمية المتاحة"

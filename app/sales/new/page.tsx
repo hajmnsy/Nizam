@@ -19,6 +19,7 @@ interface Product {
     id: number
     name: string
     price: number
+    purchasePriceUSD: number
     quantity: number
     weightPerUnit: number
     type?: string | null
@@ -31,6 +32,7 @@ interface CartItem {
     productId: number
     name: string
     price: number
+    purchasePriceUSD: number
     quantity: number
     weight: number
     thickness?: number | null
@@ -120,6 +122,7 @@ export default function NewSale() {
                 productId: product.id,
                 name: product.name,
                 price: product.price,
+                purchasePriceUSD: product.purchasePriceUSD || 0,
                 quantity: 1,
                 weight: product.weightPerUnit,
                 thickness: product.thickness
@@ -353,6 +356,16 @@ export default function NewSale() {
                                                             {item.thickness && <span className="text-xs text-gray-500">سمك: {item.thickness}مم</span>}
                                                             {discountRatio > 0 && (
                                                                 <span className="text-xs text-green-600 font-bold">السعر بعد الخصم: {(itemDiscountedTotal / item.quantity).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                                                            )}
+                                                            {exchangeRate > 0 && item.purchasePriceUSD > 0 && (
+                                                                <div className="mt-1 flex items-center gap-1">
+                                                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200">
+                                                                        صافي الربح: {(((itemDiscountedTotal / item.quantity) - ((item.purchasePriceUSD + ((item.weight / 1000) * 15)) * exchangeRate)) * item.quantity).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
+                                                                    </span>
+                                                                    <span className="text-[10px] text-emerald-600 font-bold">
+                                                                        (${((((itemDiscountedTotal / item.quantity) / exchangeRate) - (item.purchasePriceUSD + ((item.weight / 1000) * 15))) * item.quantity).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })})
+                                                                    </span>
+                                                                </div>
                                                             )}
                                                         </div>
                                                         <button onClick={() => removeFromCart(item.productId)} className="text-red-400 hover:text-red-600">
