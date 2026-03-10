@@ -28,6 +28,10 @@ export async function middleware(request: NextRequest) {
     const token = request.cookies.get('session_token')?.value
 
     if (!token) {
+        // Return 401 JSON for API routes instead of HTML redirect
+        if (pathname.startsWith('/api/')) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
         const loginUrl = new URL('/login', request.url)
         return NextResponse.redirect(loginUrl)
     }

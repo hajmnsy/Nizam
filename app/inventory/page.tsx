@@ -36,8 +36,8 @@ export default function Inventory() {
             fetch('/api/products').then(res => res.json()),
             fetch('/api/exchange-rate').then(res => res.json())
         ]).then(([productsData, exchangeRateData]) => {
-            setProducts(productsData)
-            if (exchangeRateData.rate > 0) {
+            setProducts(Array.isArray(productsData) ? productsData : []);
+            if (exchangeRateData && exchangeRateData.rate > 0) {
                 setExchangeRate(exchangeRateData.rate);
             }
             setLoading(false)
