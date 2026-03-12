@@ -12,6 +12,7 @@ interface Product {
     id: number
     name: string
     type: string | null
+    thickness: number | null
     quantity: number
     price: number
     purchasePriceUSD: number | null
@@ -206,6 +207,8 @@ export default function Inventory() {
                             <thead className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
                                 <tr>
                                     <th className="p-4">اسم المنتج</th>
+                                    <th className="p-4 hidden md:table-cell">النوع</th>
+                                    <th className="p-4 hidden sm:table-cell">السماكة</th>
                                     <th className="p-4">الكمية</th>
                                     <th className="p-4">سعر الشراء ($)</th>
                                     <th className="p-4">تكلفة الترحيل ($)</th>
@@ -217,16 +220,24 @@ export default function Inventory() {
                             <tbody className="divide-y divide-slate-100">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={6} className="p-8 text-center text-gray-500">جاري التحميل...</td>
+                                        <td colSpan={9} className="p-8 text-center text-gray-500">جاري التحميل...</td>
                                     </tr>
                                 ) : filteredProducts.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="p-8 text-center text-gray-500">لا توجد منتجات</td>
+                                        <td colSpan={9} className="p-8 text-center text-gray-500">لا توجد منتجات</td>
                                     </tr>
                                 ) : (
                                     filteredProducts.map(product => (
                                         <tr key={product.id} className="hover:bg-slate-50 transition-colors group">
                                             <td className="p-4 font-medium text-slate-800">{product.name}</td>
+                                            
+                                            <td className="p-4 hidden md:table-cell text-sm text-slate-500">
+                                                {product.type || '-'}
+                                            </td>
+                                            
+                                            <td className="p-4 hidden sm:table-cell font-mono text-sm text-slate-500">
+                                                {product.thickness ? `${product.thickness}mm` : '-'}
+                                            </td>
 
                                             {/* Editable Quantity */}
                                             <td className="p-4">
