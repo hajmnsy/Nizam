@@ -11,7 +11,17 @@ export default function PricingCalculator() {
     const [purchasePriceUSD, setPurchasePriceUSD] = useState<string>('')
     const [weightKg, setWeightKg] = useState<string>('')
     const [transportPerTonUSD, setTransportPerTonUSD] = useState<string>('15') // Added slightly more margin to 10$ default as absolute safety
-    const [marginPercent, setMarginPercent] = useState<string>('15') // Include all overheads, taxes and net profit
+    const [marginPercent, setMarginPercent] = useState<string>('15') // Target Net Profit Margin over the calculated direct cost
+
+    // New Operational Variables
+    const [rentExpSDG, setRentExpSDG] = useState<string>('')
+    const [salariesExpSDG, setSalariesExpSDG] = useState<string>('')
+    const [utilitiesExpSDG, setUtilitiesExpSDG] = useState<string>('')
+    const [taxesExpSDG, setTaxesExpSDG] = useState<string>('')
+    
+    // Local processing
+    const [localLaborPerTonSDG, setLocalLaborPerTonSDG] = useState<string>('') // العتالة المحلية للطن
+    const [expectedMonthlySalesVolume, setExpectedMonthlySalesVolume] = useState<string>('1000') // المبيعات المتوقعة شهرياً للقطعة
 
     useEffect(() => {
         fetch('/api/exchange-rate', { cache: 'no-store' })
@@ -33,14 +43,29 @@ export default function PricingCalculator() {
     const rate = exchangeRate || 0
     const margin = parseFloat(marginPercent) || 0
 
-    // 2. Transport cost per piece in USD: (Weight / 1000) * Cost per Ton
+    const rent = parseFloat(rentExpSDG) || 0
+    const salaries = parseFloat(salariesExpSDG) || 0
+    const utils = parseFloat(utilitiesExpSDG) || 0
+    const taxes = parseFloat(taxesExpSDG) || 0
+    const totalMonthlyOverheadSDG = rent + salaries + utils + taxes
+
+    const localLaborPerTon = parseFloat(localLaborPerTonSDG) || 0
+    const monthlyVolume = parseFloat(expectedMonthlySalesVolume) || 1
+
+    // 2. Costs per piece
     const transportPerPieceUSD = weight > 0 ? (weight / 1000) * transPerTon : 0
+    
+    const localLaborPerPieceSDG = weight > 0 ? (weight / 1000) * localLaborPerTon : 0
+    const localLaborPerPieceUSD = rate > 0 ? localLaborPerPieceSDG / rate : 0
 
-    // 3. Total Direct Cost in USD
-    const directCostUSD = priceUSD + transportPerPieceUSD
+    // 3. Overhead distribution
+    const overheadPerPieceSDG = totalMonthlyOverheadSDG / monthlyVolume
+    const overheadPerPieceUSD = rate > 0 ? overheadPerPieceSDG / rate : 0
 
-    // 4. Proposed Selling Price in USD (Cost / (1 - Margin%))
-    // We use the division formula rather than direct multiplication to accurately maintain GROSS margin
+    // 4. Total Direct Cost in USD
+    const directCostUSD = priceUSD + transportPerPieceUSD + localLaborPerPieceUSD + overheadPerPieceUSD
+
+    // 5. Proposed Selling Price in USD (Cost / (1 - Margin%))
     // Formula: Price = Cost / (1 - (Margin / 100))
     const expectedMarginRatio = margin / 100
     // To prevent division by zero or negative prices if user enters margin >= 100
@@ -48,13 +73,13 @@ export default function PricingCalculator() {
 
     const suggestedPriceUSD = directCostUSD > 0 ? directCostUSD / (1 - validMarginRatio) : 0
 
-    // 5. Converting to local currency (SDG)
+    // 6. Converting to local currency (SDG)
     const directCostSDG = directCostUSD * rate
     const suggestedPriceSDG = suggestedPriceUSD * rate
 
-    // 6. Net Profit Analysis per piece
-    const grossProfitUSD = suggestedPriceUSD - directCostUSD
-    const grossProfitSDG = grossProfitUSD * rate
+    // 7. Net Profit Analysis per piece
+    const netProfitUSD = suggestedPriceUSD - directCostUSD
+    const netProfitSDG = netProfitUSD * rate
 
     return (
         <main className="min-h-screen bg-slate-50">
@@ -151,7 +176,7 @@ export default function PricingCalculator() {
 
                                     <div className="space-y-1">
                                         <label className="text-sm font-bold text-slate-700 flex items-center gap-2 text-xs">
-                                            تكلفة الترحيل والعتالة <span className="text-slate-500">(للطن)</span>
+                                            تكلفة الترحيل العالمي <span className="text-slate-500">(للطن)</span>
                                         </label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 right-0 pl-3 pr-3 flex items-center pointer-events-none text-slate-500 bg-slate-100 border-l border-slate-200 rounded-r-lg">
@@ -170,15 +195,99 @@ export default function PricingCalculator() {
                                         </div>
                                     </div>
                                 </div>
+                                
+                                <div className="space-y-1 mt-4">
+                                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2 text-xs">
+                                        تكلفة التنزيل والعتالة المحلية <span className="text-slate-500">(للطن بالجنيه)</span>
+                                    </label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 right-0 pl-3 pr-3 flex items-center pointer-events-none text-emerald-600 bg-emerald-50 border-l border-emerald-200 rounded-r-lg">
+                                            SDG
+                                        </div>
+                                        <Input
+                                            type="number"
+                                            value={localLaborPerTonSDG}
+                                            onChange={e => setLocalLaborPerTonSDG(e.target.value)}
+                                            className="w-full pl-3 pr-14 font-bold font-mono text-emerald-800"
+                                            placeholder="مثال: 50,000"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="border-t pt-6 mt-6">
+                                    <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                        <Target size={18} className="text-amber-500" />
+                                        المنصرفات التشغيلية الثابتة (شهرياً بالجنيه)
+                                    </h2>
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-slate-700">الإيجار</label>
+                                            <Input
+                                                type="number"
+                                                value={rentExpSDG}
+                                                onChange={e => setRentExpSDG(e.target.value)}
+                                                placeholder="0.00"
+                                                className="font-mono text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-slate-700">الرواتب والأجور</label>
+                                            <Input
+                                                type="number"
+                                                value={salariesExpSDG}
+                                                onChange={e => setSalariesExpSDG(e.target.value)}
+                                                placeholder="0.00"
+                                                className="font-mono text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-slate-700">الكهرباء والماء</label>
+                                            <Input
+                                                type="number"
+                                                value={utilitiesExpSDG}
+                                                onChange={e => setUtilitiesExpSDG(e.target.value)}
+                                                placeholder="0.00"
+                                                className="font-mono text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-slate-700">رسوم وضرائب وأخرى</label>
+                                            <Input
+                                                type="number"
+                                                value={taxesExpSDG}
+                                                onChange={e => setTaxesExpSDG(e.target.value)}
+                                                placeholder="0.00"
+                                                className="font-mono text-sm"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-100 space-y-2">
+                                        <label className="text-sm font-bold text-amber-900">
+                                            حجم التوريد/المبيعات المتوقع شهرياً بالقطعة
+                                        </label>
+                                        <p className="text-xs text-amber-700">
+                                            يستخدم هذا الرقم لتوزيع إجمالي المنصرفات الشهرية أعلاه على القطعة الواحدة بشكل عادل.
+                                        </p>
+                                        <Input
+                                            type="number"
+                                            value={expectedMonthlySalesVolume}
+                                            onChange={e => setExpectedMonthlySalesVolume(e.target.value)}
+                                            className="w-full font-bold font-mono text-lg"
+                                            placeholder="1000"
+                                        />
+                                    </div>
+                                </div>
 
                                 <div className="pt-2 border-t mt-4">
                                     <div className="space-y-1">
                                         <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                            نسبة الربح الشاملة المستهدفة (Margin)
+                                            نسبة الربح الصافية المستهدفة (Net Margin)
                                             <div className="group relative cursor-help">
                                                 <Lightbulb size={14} className="text-amber-500" />
                                                 <div className="absolute right-0 top-full mt-1 w-64 bg-slate-800 text-white text-xs p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 font-normal">
-                                                    تمثل هذه النسبة إجمالي المبالغ التقديرية (مصروفات إدارية، رسوم محلية، ضرائب، وصافي الربح).
+                                                    يمثل هذا الرقم هامش الربح الصافي لك بعد تغطية المورد المباشر والمنصرفات التشغيلية أعلاه.
                                                 </div>
                                             </div>
                                         </label>
@@ -209,18 +318,27 @@ export default function PricingCalculator() {
                             <div className="space-y-6">
                                 {/* Total Direct Cost Breakdown */}
                                 <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">تفصيل التكلفة المباشرة (رأس المال)</h3>
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">تفصيل رأس المال والمصروفات (للقطعة)</h3>
                                     <div className="space-y-2 text-sm">
                                         <div className="flex justify-between items-center text-slate-600">
-                                            <span>سعر الصنف (المورد)</span>
+                                            <span>سعر الصنف الاستيرادي</span>
                                             <span className="font-mono font-bold">${priceUSD.toFixed(3)}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-slate-600">
-                                            <span>تكلفة الترحيل (للقطعة حسب الوزن)</span>
+                                            <span>تكلفة الترحيل العالمي</span>
                                             <span className="font-mono font-bold text-amber-600">+ ${transportPerPieceUSD.toFixed(3)}</span>
                                         </div>
+                                        <div className="flex justify-between items-center text-slate-600">
+                                            <span>العتالة والتنزيل المحلي</span>
+                                            <span className="font-mono font-bold text-emerald-600">+ ${localLaborPerPieceUSD.toFixed(3)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-slate-600">
+                                            <span>نصيب القطعة من المنصرفات (<span dir="ltr">{totalMonthlyOverheadSDG.toLocaleString()}</span> ج.س)</span>
+                                            <span className="font-mono font-bold text-purple-600">+ ${overheadPerPieceUSD.toFixed(3)}</span>
+                                        </div>
+                                        
                                         <div className="pt-2 border-t border-dashed flex justify-between items-center bg-slate-50 p-2 rounded font-black text-slate-800 mt-2">
-                                            <span>رأس المال الإجمالي (للقطعة)</span>
+                                            <span>التكلفة الإجمالية للقطعة</span>
                                             <span className="font-mono">${directCostUSD.toFixed(3)}</span>
                                         </div>
                                     </div>
@@ -263,12 +381,12 @@ export default function PricingCalculator() {
                                 {suggestedPriceUSD > 0 && (
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl text-center">
-                                            <p className="text-emerald-800/70 text-xs font-bold mb-1">صافي الربح + المنصرفات</p>
-                                            <p className="font-mono font-black text-emerald-700 text-lg">${grossProfitUSD.toFixed(2)}</p>
+                                            <p className="text-emerald-800/70 text-xs font-bold mb-1">صافي الربح الفعلي</p>
+                                            <p className="font-mono font-black text-emerald-700 text-lg">${netProfitUSD.toFixed(2)}</p>
                                         </div>
                                         <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl text-center">
-                                            <p className="text-emerald-800/70 text-xs font-bold mb-1">الربح بالجنيه اليوم</p>
-                                            <p className="font-mono font-black text-emerald-700 text-lg">{Math.round(grossProfitSDG).toLocaleString()}</p>
+                                            <p className="text-emerald-800/70 text-xs font-bold mb-1">صافي الربح بالجنيه</p>
+                                            <p className="font-mono font-black text-emerald-700 text-lg">{Math.round(netProfitSDG).toLocaleString()}</p>
                                         </div>
                                     </div>
                                 )}
