@@ -4,7 +4,7 @@ import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import { ArrowLeft, Printer, Calendar as CalendarIcon, Loader2, Save } from 'lucide-react'
+import { FileText, Printer, ArrowLeft, Calendar as CalendarIcon, Package, Search, DollarSign, Activity, Settings, Save, Loader2, ChevronRight, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -49,8 +49,23 @@ export default function CashFlowMovement() {
     const [endDate, setEndDate] = useState(getTodayLocal())
     const [reportData, setReportData] = useState<ReportData | null>(null)
     const [loading, setLoading] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
 
-    // Initial Balance State
+    // Date Navigation Helpers
+    const changeStartDate = (days: number) => {
+        if (!startDate) return;
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + days);
+        setStartDate(d.toISOString().split('T')[0]);
+    }
+
+    const changeEndDate = (days: number) => {
+        if (!endDate) return;
+        const d = new Date(endDate);
+        d.setDate(d.getDate() + days);
+        setEndDate(d.toISOString().split('T')[0]);
+    }
+
     const [initialBalance, setInitialBalance] = useState<number>(0)
     const [initialBalanceDate, setInitialBalanceDate] = useState<string>('')
     const [savingBalance, setSavingBalance] = useState(false)
@@ -190,29 +205,61 @@ export default function CashFlowMovement() {
                 <Card className="mb-8 p-4 bg-white shadow-sm border-slate-200 print:hidden flex flex-wrap items-end gap-4">
                     <div className="flex-1 min-w-[200px]">
                         <label className="block text-sm font-bold text-slate-600 mb-2 whitespace-nowrap">من تاريخ:</label>
-                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border focus-within:ring-2 focus-within:ring-blue-500">
-                            <CalendarIcon size={18} className="text-slate-400" />
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="bg-transparent border-none outline-none font-bold text-slate-700 w-full"
-                            />
+                        <div className="flex items-center bg-slate-50 rounded-lg border focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
+                            <button
+                                onClick={() => changeStartDate(1)}
+                                className="p-2.5 text-slate-500 hover:bg-slate-200 transition-colors border-l"
+                                title="اليوم التالى"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                            <div className="flex items-center gap-2 px-3 w-full">
+                                <CalendarIcon size={18} className="text-slate-400" />
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="bg-transparent border-none outline-none font-bold text-slate-700 w-full"
+                                />
+                            </div>
+                            <button
+                                onClick={() => changeStartDate(-1)}
+                                className="p-2.5 text-slate-500 hover:bg-slate-200 transition-colors border-r"
+                                title="اليوم السابق"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
                         </div>
                     </div>
                     <div className="flex-1 min-w-[200px]">
                         <label className="block text-sm font-bold text-slate-600 mb-2 whitespace-nowrap">إلى تاريخ:</label>
-                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border focus-within:ring-2 focus-within:ring-blue-500">
-                            <CalendarIcon size={18} className="text-slate-400" />
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                className="bg-transparent border-none outline-none font-bold text-slate-700 w-full"
-                            />
+                        <div className="flex items-center bg-slate-50 rounded-lg border focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
+                            <button
+                                onClick={() => changeEndDate(1)}
+                                className="p-2.5 text-slate-500 hover:bg-slate-200 transition-colors border-l"
+                                title="اليوم التالى"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                            <div className="flex items-center gap-2 px-3 w-full">
+                                <CalendarIcon size={18} className="text-slate-400" />
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="bg-transparent border-none outline-none font-bold text-slate-700 w-full"
+                                />
+                            </div>
+                            <button
+                                onClick={() => changeEndDate(-1)}
+                                className="p-2.5 text-slate-500 hover:bg-slate-200 transition-colors border-r"
+                                title="اليوم السابق"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
                         </div>
                     </div>
-                    <Button onClick={fetchReport} disabled={loading} className="px-8 flex-none py-2.5">
+                    <Button onClick={fetchReport} disabled={loading} className="px-8 flex-none h-[42px]">
                         {loading ? <Loader2 className="animate-spin" size={20} /> : 'تحديث البيانات'}
                     </Button>
                 </Card>

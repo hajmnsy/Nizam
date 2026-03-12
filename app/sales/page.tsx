@@ -3,7 +3,7 @@
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { Plus, Eye, FileText, CheckCircle, Clock } from 'lucide-react'
+import { Plus, Eye, FileText, CheckCircle, Clock, ChevronRight, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -32,6 +32,17 @@ export default function SalesList() {
     const [loading, setLoading] = useState(true)
     const [tab, setTab] = useState<'PAID' | 'CREDIT' | 'QUOTATION'>('PAID')
     const [date, setDate] = useState<string>(getTodayLocal())
+
+    const changeDateByDays = (days: number) => {
+        if (!date) {
+            setDate(getTodayLocal());
+            return;
+        }
+        const currentDate = new Date(date);
+        currentDate.setDate(currentDate.getDate() + days);
+        const newDateStr = currentDate.toISOString().split('T')[0];
+        setDate(newDateStr);
+    }
 
     useEffect(() => {
         setLoading(true)
@@ -108,13 +119,33 @@ export default function SalesList() {
                     </div>
 
                     <div className="flex items-center gap-2 mb-2 sm:mb-0 sm:pb-2">
-                        <span className="text-sm font-bold text-slate-600 font-sans">تاريخ العرض:</span>
-                        <input
-                            type="date"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                        <span className="text-sm font-bold text-slate-600 font-sans hidden md:inline">تاريخ العرض:</span>
+                        
+                        <div className="flex items-center bg-white rounded-lg border border-slate-300 shadow-sm overflow-hidden">
+                            <button
+                                onClick={() => changeDateByDays(1)}
+                                className="p-1.5 text-gray-500 hover:bg-gray-100 transition-colors border-l border-slate-200"
+                                title="اليوم التالى"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                            
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                className="border-none px-2 py-1.5 text-sm font-bold text-slate-800 outline-none w-32 bg-transparent"
+                            />
+                            
+                            <button
+                                onClick={() => changeDateByDays(-1)}
+                                className="p-1.5 text-gray-500 hover:bg-gray-100 transition-colors border-r border-slate-200"
+                                title="اليوم السابق"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                        </div>
+
                         <button
                             onClick={() => setDate('')}
                             className={`text-xs px-2 py-1.5 rounded-lg border font-bold transition-all ${date === '' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 hover:bg-slate-100 border-slate-300'}`}

@@ -3,7 +3,7 @@
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { Calendar as CalendarIcon, FileText, Printer, ArrowLeft, TrendingUp, HandCoins, AlertCircle, DollarSign } from 'lucide-react'
+import { Calendar as CalendarIcon, FileText, Printer, ArrowLeft, TrendingUp, HandCoins, AlertCircle, DollarSign, ChevronRight, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
 
@@ -43,6 +43,13 @@ export default function DailyReport() {
     const [sales, setSales] = useState<Sale[]>([])
     const [loading, setLoading] = useState(true)
     const [exchangeRate, setExchangeRate] = useState<number>(0)
+
+    const changeDateByDays = (days: number) => {
+        const currentDate = new Date(date);
+        currentDate.setDate(currentDate.getDate() + days);
+        const newDateStr = currentDate.toISOString().split('T')[0];
+        setDate(newDateStr);
+    }
 
     const fetchSales = (selectedDate: string) => {
         setLoading(true)
@@ -130,14 +137,32 @@ export default function DailyReport() {
                     </div>
                     <div className="flex flex-col gap-3 items-end">
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border shadow-sm">
-                                <CalendarIcon size={18} className="text-gray-400" />
-                                <input
-                                    type="date"
-                                    value={date}
-                                    onChange={(e) => setDate(e.target.value)}
-                                    className="bg-transparent border-none outline-none font-bold text-slate-700"
-                                />
+                            <div className="flex items-center bg-white rounded-lg border shadow-sm overflow-hidden">
+                                <button
+                                    onClick={() => changeDateByDays(1)}
+                                    className="p-2 text-gray-500 hover:bg-gray-100 transition-colors border-l"
+                                    title="اليوم التالى"
+                                >
+                                    <ChevronRight size={18} />
+                                </button>
+                                
+                                <div className="flex items-center gap-2 px-3 py-2">
+                                    <CalendarIcon size={18} className="text-gray-400" />
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        className="bg-transparent border-none outline-none font-bold text-slate-700 w-32"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={() => changeDateByDays(-1)}
+                                    className="p-2 text-gray-500 hover:bg-gray-100 transition-colors border-r"
+                                    title="اليوم السابق"
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
                             </div>
                             <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border shadow-sm w-40">
                                 <DollarSign size={18} className="text-emerald-500" />
