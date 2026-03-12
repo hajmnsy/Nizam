@@ -78,6 +78,7 @@ model Setting {
   companyName        String    @default("اسم الشركة")
   phone              String?
   vatRate            Float     @default(0)
+  exchangeRate       Float     @default(0)
   address            String?
   logoUrl            String?   @db.Text
   initialBalance     Float     @default(0)

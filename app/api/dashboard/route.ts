@@ -37,7 +37,9 @@ export async function GET() {
                 }
             }
         })
-        const monthlyExpensesTotal = monthExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+        const monthlyExpensesTotal = monthExpenses
+            .filter((exp: any) => exp.category !== 'سعر الصرف')
+            .reduce((sum, exp) => sum + exp.amount, 0)
 
         // 4. Low Stock Items (Threshold < 10)
         const lowStockItems = await prisma.product.findMany({

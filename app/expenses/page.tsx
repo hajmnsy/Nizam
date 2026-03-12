@@ -22,7 +22,6 @@ const CATEGORIES = [
     { id: 'الفطور', label: 'الفطور', color: 'bg-rose-100 text-rose-700' },
     { id: 'صدقة', label: 'صدقة', color: 'bg-purple-100 text-purple-700' },
     { id: 'الرواتب', label: 'الرواتب', color: 'bg-indigo-100 text-indigo-700' },
-    { id: 'سعر الصرف', label: 'سعر الصرف', color: 'bg-teal-100 text-teal-700' },
 ]
 
 export default function ExpensesPage() {
@@ -102,8 +101,8 @@ export default function ExpensesPage() {
     }
 
     const filteredExpenses = selectedCategory === 'all'
-        ? expenses
-        : expenses.filter(e => e.category === selectedCategory)
+        ? expenses.filter(e => e.category !== 'سعر الصرف')
+        : expenses.filter(e => e.category === selectedCategory && e.category !== 'سعر الصرف')
 
     const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0)
 
