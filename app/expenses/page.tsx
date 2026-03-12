@@ -13,6 +13,15 @@ interface Expense {
     amount: number
     date: string
     category: string
+    employee?: {
+        name: string
+    }
+}
+
+interface Employee {
+    id: number
+    name: string
+    monthlySalary: number
 }
 
 const CATEGORIES = [
@@ -50,14 +59,26 @@ export default function ExpensesPage() {
         description: '',
         amount: '',
         date: getTodayLocal(),
-        category: 'توريدات'
+        category: 'توريدات',
+        employeeId: ''
     })
     const [submitting, setSubmitting] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
+    const [employees, setEmployees] = useState<Employee[]>([])
 
     useEffect(() => {
         fetchExpenses(date)
+        fetchEmployees()
     }, [date])
+
+    const fetchEmployees = () => {
+        fetch('/api/employees', { cache: 'no-store' })
+            .then(res => res.json())
+            .then(data => {
+                setEmployees(Array.isArray(data) ? data : [])
+            })
+            .catch(console.error)
+    }
 
     const fetchExpenses = (selectedDate: string) => {
         setLoading(true)
@@ -90,7 +111,8 @@ export default function ExpensesPage() {
                     description: '',
                     amount: '',
                     date: date,
-                    category: 'توريدات'
+                    category: 'توريدات',
+                    employeeId: ''
                 })
                 fetchExpenses(date)
             }
@@ -208,13 +230,36 @@ export default function ExpensesPage() {
                                 <select
                                     className="w-full border p-2 rounded-lg bg-white"
                                     value={newExpense.category}
-                                    onChange={e => setNewExpense({ ...newExpense, category: e.target.value })}
+                                    onChange={e => {
+                                        setNewExpense({ 
+                                            ...newExpense, 
+                                            category: e.target.value,
+                                            employeeId: e.target.value !== 'الرواتب' ? '' : newExpense.employeeId 
+                                        })
+                                    }}
                                 >
                                     {CATEGORIES.map(cat => (
                                         <option key={cat.id} value={cat.id}>{cat.label}</option>
                                     ))}
                                 </select>
                             </div>
+
+                            {newExpense.category === 'الرواتب' && (
+                                <div className="animate-fade-in-up">
+                                    <label className="text-sm font-bold text-indigo-700 block mb-1">صرف للموظف (سلفة/راتب)</label>
+                                    <select
+                                        className="w-full border-2 border-indigo-200 p-2 rounded-lg bg-indigo-50 focus:border-indigo-500 outline-none"
+                                        value={newExpense.employeeId}
+                                        onChange={e => setNewExpense({ ...newExpense, employeeId: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">-- اختر الموظف --</option>
+                                        {employees.map(emp => (
+                                            <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div>
                                 <label className="text-sm font-bold text-gray-700 block mb-1">التاريخ</label>
                                 <input
@@ -282,6 +327,12 @@ export default function ExpensesPage() {
                                                 <h3 className="font-bold text-slate-800">{expense.description}</h3>
                                                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
                                                     <span>{CATEGORIES.find(c => c.id === expense.category)?.label || expense.category}</span>
+                                                    {expense.employee && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span className="font-bold text-indigo-600">الموظف: {expense.employee.name}</span>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

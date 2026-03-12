@@ -57,11 +57,23 @@ model SaleItem {
 }
 
 model Expense {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   description String
   amount      Float
-  category    String   @default("تشغيلية")
-  date        DateTime @default(now())
+  category    String    @default("تشغيلية")
+  date        DateTime  @default(now())
+  employeeId  Int?
+  employee    Employee? @relation(fields: [employeeId], references: [id])
+}
+
+model Employee {
+  id            Int       @id @default(autoincrement())
+  name          String
+  monthlySalary Float     @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  expenses      Expense[]
 }
 
 model User {

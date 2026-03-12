@@ -140,6 +140,7 @@ export default function Navbar() {
         { name: 'المصروفات', path: '/expenses' },
         { name: 'التقارير', path: '/reports' },
         { name: 'حاسبة الأسعار', path: '/pricing' },
+        { name: 'الموظفين والرواتب', path: '/employees' },
         { name: 'الإعدادات', path: '/settings' },
     ]
 
