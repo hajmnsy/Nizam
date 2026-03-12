@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LogOut, Menu, X, Rocket, Search } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { LogOut, Menu, X, Rocket, Search, DollarSign } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 import CommandPalette from './CommandPalette'
 
 export default function Navbar() {
@@ -17,6 +17,24 @@ export default function Navbar() {
 
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [settings, setSettings] = useState<any>(null)
+
+    // Exchange Rate State
+    const [exchangeRate, setExchangeRate] = useState<number>(0)
+    const [showExchangeModal, setShowExchangeModal] = useState(false)
+    const [newExchangeRate, setNewExchangeRate] = useState<string>('')
+    const [savingRate, setSavingRate] = useState(false)
+    const exchangePopupRef = useRef<HTMLDivElement>(null)
+
+    // Handle Output clicks for Exchange Popup
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (exchangePopupRef.current && !exchangePopupRef.current.contains(event.target as Node)) {
+                setShowExchangeModal(false)
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     // Handle scroll effect
     useEffect(() => {
@@ -49,6 +67,17 @@ export default function Navbar() {
             })
             .catch(console.error)
 
+        // Fetch Exchange Rate
+        fetch('/api/exchange-rate')
+            .then(res => res.json())
+            .then(data => {
+                if (data && !data.error) {
+                    setExchangeRate(data.rate)
+                    setNewExchangeRate(data.rate.toString())
+                }
+            })
+            .catch(console.error)
+
         return () => window.removeEventListener('scroll', handleScroll)
     }, [])
 
@@ -70,6 +99,29 @@ export default function Navbar() {
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
         } catch (error) {
             console.error(error)
+        }
+    }
+
+    const handleSaveExchangeRate = async () => {
+        if (!newExchangeRate) return
+        setSavingRate(true)
+        try {
+            const res = await fetch('/api/exchange-rate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rate: parseFloat(newExchangeRate) })
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setExchangeRate(data.rate)
+                setShowExchangeModal(false)
+            } else {
+                alert('فشل حفظ سعر الصرف')
+            }
+        } catch (error) {
+            console.error(error)
+        } finally {
+            setSavingRate(false)
         }
     }
 
@@ -147,6 +199,55 @@ export default function Navbar() {
 
                         {/* Actions */}
                         <div className="hidden md:flex items-center gap-3">
+                            {/* Exchange Rate Widget */}
+                            <div className="relative" ref={exchangePopupRef}>
+                                <button
+                                    onClick={() => setShowExchangeModal(!showExchangeModal)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors border border-amber-200"
+                                    title="سعر الصرف الحالي"
+                                >
+                                    <DollarSign size={14} />
+                                    <span>{exchangeRate > 0 ? exchangeRate.toLocaleString() : 'غير محدد'} ج.س</span>
+                                </button>
+
+                                {showExchangeModal && (
+                                    <div className="absolute left-0 mt-3 w-64 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden animate-fade-in-up z-50 origin-top-left p-4">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="font-bold text-sm text-gray-800 flex items-center gap-2">
+                                                <DollarSign size={16} className="text-amber-500" />
+                                                تحديث سعر الصرف
+                                            </h4>
+                                            <button onClick={() => setShowExchangeModal(false)} className="text-gray-400 hover:text-gray-600">
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="text-xs text-gray-500 mb-1 block">السعر مقابل 1 دولار</label>
+                                                <input
+                                                    type="number"
+                                                    value={newExchangeRate}
+                                                    onChange={(e) => setNewExchangeRate(e.target.value)}
+                                                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all font-bold"
+                                                    placeholder="مثال: 3000"
+                                                    autoFocus
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') handleSaveExchangeRate()
+                                                    }}
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={handleSaveExchangeRate}
+                                                disabled={savingRate}
+                                                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm py-2 rounded-lg transition-colors disabled:opacity-50"
+                                            >
+                                                {savingRate ? 'جاري الحفظ...' : 'حفظ التحديث'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Notifications Dropdown */}
                             <div className="relative">
                                 <button
