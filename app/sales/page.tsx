@@ -3,7 +3,7 @@
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { Plus, Eye, FileText, CheckCircle, Clock, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Plus, Eye, FileText, CheckCircle, Clock, ChevronRight, ChevronLeft, CreditCard, X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -32,6 +32,12 @@ export default function SalesList() {
     const [loading, setLoading] = useState(true)
     const [tab, setTab] = useState<'PAID' | 'CREDIT' | 'QUOTATION'>('PAID')
     const [date, setDate] = useState<string>(getTodayLocal())
+    
+    // Quick Payment State
+    const [paymentModalOpen, setPaymentModalOpen] = useState(false)
+    const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
+    const [paymentAmount, setPaymentAmount] = useState<string>('')
+    const [submittingPayment, setSubmittingPayment] = useState(false)
 
     const changeDateByDays = (days: number) => {
         if (!date) {
@@ -44,7 +50,7 @@ export default function SalesList() {
         setDate(newDateStr);
     }
 
-    useEffect(() => {
+    const refreshSales = () => {
         setLoading(true)
         const dateQuery = date ? `&date=${date}` : ''
         fetch(`/api/sales?status=${tab}${dateQuery}`, { cache: 'no-store' })
@@ -54,7 +60,39 @@ export default function SalesList() {
                 setLoading(false)
             })
             .catch(console.error)
+    }
+
+    useEffect(() => {
+        refreshSales()
     }, [tab, date])
+
+    const handleQuickPayment = async () => {
+        if (!selectedSale || !paymentAmount || isNaN(parseFloat(paymentAmount))) return
+        setSubmittingPayment(true)
+
+        try {
+            const res = await fetch(`/api/sales/${selectedSale.id}/pay`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ amount: paymentAmount })
+            })
+
+            if (res.ok) {
+                setPaymentModalOpen(false)
+                setPaymentAmount('')
+                refreshSales()
+            } else {
+                alert('حدث خطأ أثناء تسجيل الدفعة')
+            }
+        } catch (error) {
+            console.error(error)
+            alert('تعذر الاتصال بالخادم')
+        } finally {
+            setSubmittingPayment(false)
+        }
+    }
 
     return (
         <main className="min-h-screen bg-slate-50">
@@ -223,7 +261,21 @@ export default function SalesList() {
                                                     </span>
                                                 )}
                                             </td>
-                                            <td className="p-4">
+                                            <td className="p-4 flex gap-2 justify-end">
+                                                {sale.status === 'CREDIT' && (
+                                                    <Button 
+                                                        variant="outline" 
+                                                        onClick={() => {
+                                                            setSelectedSale(sale)
+                                                            setPaymentAmount(sale.remainingAmount?.toString() || '')
+                                                            setPaymentModalOpen(true)
+                                                        }}
+                                                        className="px-3 py-1 text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 font-bold"
+                                                    >
+                                                        <CreditCard size={14} className="ml-1" />
+                                                        تسديد
+                                                    </Button>
+                                                )}
                                                 <Link href={`/sales/${sale.id}`}>
                                                     <Button variant="outline" className="px-3 py-1 text-xs border-blue-200 text-blue-600 hover:bg-blue-50">
                                                         <Eye size={14} className="ml-1" />
@@ -239,6 +291,94 @@ export default function SalesList() {
                     </div>
                 </Card>
             </div>
+
+            {/* Quick Payment Modal */}
+            {paymentModalOpen && selectedSale && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col animate-slide-up">
+                        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-slate-100 bg-slate-50/50">
+                            <h3 className="font-black text-slate-800 text-lg sm:text-xl flex items-center gap-2">
+                                <CreditCard className="text-amber-500" size={24} />
+                                تسديد دفعة جديدة
+                            </h3>
+                            <button
+                                onClick={() => setPaymentModalOpen(false)}
+                                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
+                            <div className="bg-slate-50 rounded-xl p-4 mb-6 border border-slate-100">
+                                <div className="text-sm font-bold text-slate-700 flex justify-between mb-2">
+                                    <span>الفاتورة:</span>
+                                    <span>#{selectedSale.invoiceNumber || selectedSale.id}</span>
+                                </div>
+                                <div className="text-sm font-bold text-slate-700 flex justify-between mb-2">
+                                    <span>العميل:</span>
+                                    <span>{selectedSale.customer || 'عميل نقدي'}</span>
+                                </div>
+                                <div className="text-sm font-bold text-slate-700 flex justify-between mb-2">
+                                    <span>الإجمالي:</span>
+                                    <span className="text-blue-600">{selectedSale.total.toLocaleString()} ج.س</span>
+                                </div>
+                                <div className="text-sm font-black text-rose-600 flex justify-between pt-2 border-t border-slate-200 mt-2">
+                                    <span>الباقي للمطلبة:</span>
+                                    <span>{selectedSale.remainingAmount?.toLocaleString()} ج.س</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                                        المبلغ المدفوع (ج.س) <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={paymentAmount}
+                                        onChange={(e) => setPaymentAmount(e.target.value)}
+                                        className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-800 text-lg outline-none focus:border-amber-500 transition-all bg-white"
+                                        placeholder="0"
+                                        min="1"
+                                        max={selectedSale.remainingAmount}
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleQuickPayment()
+                                        }}
+                                    />
+                                    {parseFloat(paymentAmount) > (selectedSale.remainingAmount || 0) && (
+                                        <p className="text-xs text-red-500 font-bold mt-2 flex items-center gap-1">
+                                            المبلغ المدفوع أكبر من الباقي!
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 sm:p-6 border-t border-slate-100 bg-slate-50 flex gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={() => setPaymentModalOpen(false)}
+                                className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-200 hover:text-slate-800"
+                            >
+                                إلغاء
+                            </Button>
+                            <Button
+                                onClick={handleQuickPayment}
+                                disabled={submittingPayment || !paymentAmount || isNaN(parseFloat(paymentAmount)) || parseFloat(paymentAmount) <= 0 || parseFloat(paymentAmount) > (selectedSale.remainingAmount || 0)}
+                                className="flex-1 py-3 border-transparent"
+                            >
+                                {submittingPayment ? (
+                                    <><Loader2 className="animate-spin ml-2" size={18} /> جاري الحفظ...</>
+                                ) : (
+                                    <>حفظ الدفعة</>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     )
 }
