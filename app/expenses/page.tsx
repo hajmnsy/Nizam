@@ -31,6 +31,7 @@ const CATEGORIES = [
     { id: 'الفطور', label: 'الفطور', color: 'bg-rose-100 text-rose-700' },
     { id: 'صدقة', label: 'صدقة', color: 'bg-purple-100 text-purple-700' },
     { id: 'الرواتب', label: 'الرواتب', color: 'bg-indigo-100 text-indigo-700' },
+    { id: 'سعر الصرف', label: 'سعر الصرف', color: 'bg-amber-100 text-amber-700' },
 ]
 
 export default function ExpensesPage() {
@@ -134,10 +135,13 @@ export default function ExpensesPage() {
     }
 
     const filteredExpenses = selectedCategory === 'all'
-        ? expenses.filter(e => e.category !== 'سعر الصرف')
-        : expenses.filter(e => e.category === selectedCategory && e.category !== 'سعر الصرف')
+        ? expenses
+        : expenses.filter(e => e.category === selectedCategory)
 
-    const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0)
+    // Exclude Exchange Rate from total expenses sum so it doesn't inflate the budget
+    const totalExpenses = filteredExpenses
+        .filter(e => e.category !== 'سعر الصرف')
+        .reduce((sum, e) => sum + e.amount, 0)
 
     const getCategoryColor = (cat: string) => {
         return CATEGORIES.find(c => c.id === cat)?.color || 'bg-gray-100 text-gray-600'
