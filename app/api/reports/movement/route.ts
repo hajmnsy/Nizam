@@ -41,7 +41,7 @@ export async function GET(request: Request) {
         if (hasInitialBalance && initialDate && startDate > initialDate) {
             // If report starts AFTER the initial balance date:
             const pastSales = await prisma.sale.aggregate({
-                where: { createdAt: { gte: initialDate, lt: startDate } },
+                where: { createdAt: { gte: initialDate, lt: startDate }, status: { not: 'QUOTATION' } },
                 _sum: { total: true }
             });
 
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
         } else {
             // Legacy behavior: No initial balance set, calculate all history BEFORE startDate
             const pastSales = await prisma.sale.aggregate({
-                where: { createdAt: { lt: startDate } },
+                where: { createdAt: { lt: startDate }, status: { not: 'QUOTATION' } },
                 _sum: { total: true }
             });
 
@@ -78,7 +78,8 @@ export async function GET(request: Request) {
         // 2. Fetch data WITHIN the date range
         const salesInPeriod = await prisma.sale.findMany({
             where: {
-                createdAt: { gte: startDate, lte: endDate }
+                createdAt: { gte: startDate, lte: endDate },
+                status: { not: 'QUOTATION' }
             },
             select: { createdAt: true, total: true }
         });
