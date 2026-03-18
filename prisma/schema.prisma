@@ -44,6 +44,7 @@ model Sale {
   status          String     @default("PAID")
   createdAt       DateTime   @default(now())
   items           SaleItem[]
+  payments        Payment[]
 }
 
 model SaleItem {
@@ -54,6 +55,15 @@ model SaleItem {
   price     Float
   product   Product @relation(fields: [productId], references: [id])
   sale      Sale    @relation(fields: [saleId], references: [id])
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  saleId    Int
+  amount    Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
 }
 
 model Expense {

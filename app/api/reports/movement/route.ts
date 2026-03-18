@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+// Forcing hot reload for total volume update
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
@@ -29,18 +30,10 @@ export async function GET(request: Request) {
 
         if (hasInitialBalance && initialDate && startDate > initialDate) {
             // If report starts AFTER the initial balance date:
-            // Calculate movement BETWEEN initialDate and startDate, then add to the initialBalance.
             const pastSales = await prisma.sale.aggregate({
                 where: { createdAt: { gte: initialDate, lt: startDate } },
-                _sum: { paidAmount: true, total: true }
-            });
-
-            const pastLegacyPaidSales = await prisma.sale.aggregate({
-                where: { createdAt: { gte: initialDate, lt: startDate }, status: 'PAID', paidAmount: 0 },
                 _sum: { total: true }
             });
-
-            const totalPastReceipts = (pastSales._sum.paidAmount || 0) + (pastLegacyPaidSales._sum.total || 0);
 
             const pastExpenses = await prisma.expense.aggregate({
                 where: {
@@ -50,29 +43,16 @@ export async function GET(request: Request) {
                 _sum: { amount: true }
             });
 
-            openingBalance = (setting.initialBalance || 0) + totalPastReceipts - (pastExpenses._sum.amount || 0);
+            openingBalance = (setting.initialBalance || 0) + (pastSales._sum.total || 0) - (pastExpenses._sum.amount || 0);
 
         } else if (hasInitialBalance && initialDate && startDate <= initialDate) {
-            // If the report starts ON or BEFORE the initial date:
-            // The opening balance is exactly the initial balance. (It assumes they are viewing the start point).
             openingBalance = setting.initialBalance || 0;
         } else {
             // Legacy behavior: No initial balance set, calculate all history BEFORE startDate
             const pastSales = await prisma.sale.aggregate({
                 where: { createdAt: { lt: startDate } },
-                _sum: { paidAmount: true, total: true }
-            });
-
-            const pastLegacyPaidSales = await prisma.sale.aggregate({
-                where: {
-                    createdAt: { lt: startDate },
-                    status: 'PAID',
-                    paidAmount: 0 // assuming old records have 0 or null. Schema says default 0.
-                },
                 _sum: { total: true }
             });
-
-            const totalPastReceipts = (pastSales._sum.paidAmount || 0) + (pastLegacyPaidSales._sum.total || 0);
 
             const pastExpenses = await prisma.expense.aggregate({
                 where: {
@@ -82,7 +62,7 @@ export async function GET(request: Request) {
                 _sum: { amount: true }
             });
 
-            openingBalance = totalPastReceipts - (pastExpenses._sum.amount || 0);
+            openingBalance = (pastSales._sum.total || 0) - (pastExpenses._sum.amount || 0);
         }
 
         // 2. Fetch data WITHIN the date range
@@ -90,7 +70,7 @@ export async function GET(request: Request) {
             where: {
                 createdAt: { gte: startDate, lte: endDate }
             },
-            select: { createdAt: true, paidAmount: true, total: true, status: true }
+            select: { createdAt: true, total: true }
         });
 
         const expensesInPeriod = await prisma.expense.findMany({
@@ -109,12 +89,7 @@ export async function GET(request: Request) {
             if (!dailyData.has(dateStr)) {
                 dailyData.set(dateStr, { dateObj: new Date(sale.createdAt), receipts: 0, expenses: 0 });
             }
-
-            let amount = sale.paidAmount;
-            if (sale.status === 'PAID' && amount === 0) {
-                amount = sale.total; // Legacy record fallback
-            }
-            dailyData.get(dateStr)!.receipts += amount;
+            dailyData.get(dateStr)!.receipts += sale.total;
         });
 
         expensesInPeriod.forEach(expense => {

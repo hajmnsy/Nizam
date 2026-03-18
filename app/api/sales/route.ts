@@ -63,10 +63,16 @@ export async function POST(request: Request) {
                 status: finalStatus,
                 items: {
                     create: newItemsData
-                }
+                },
+                payments: adjustedPaidAmount > 0 ? {
+                    create: {
+                        amount: adjustedPaidAmount
+                    }
+                } : undefined
             },
             include: {
-                items: true
+                items: true,
+                payments: true
             }
         });
 

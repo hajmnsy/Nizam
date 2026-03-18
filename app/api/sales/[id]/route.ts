@@ -80,7 +80,12 @@ export async function PUT(
                     status: 'PAID',
                     paidAmount: sale.total - sale.discount,
                     remainingAmount: 0,
-                    invoiceNumber: newInvoiceNumber
+                    invoiceNumber: newInvoiceNumber,
+                    payments: sale.total - sale.discount > 0 ? {
+                        create: {
+                            amount: sale.total - sale.discount
+                        }
+                    } : undefined
                 }
             })
 
@@ -153,6 +158,9 @@ export async function PUT(
                     newInvoiceNumber = (maxInvoice._max.invoiceNumber || 0) + 1;
                 }
 
+                // Calculate any newly added payment amount during this edit
+                const paymentDiff = adjustedPaidAmount - originalSale.paidAmount;
+
                 // Create new items and update sale main data
                 const newSale = await tx.sale.update({
                     where: { id },
@@ -166,9 +174,14 @@ export async function PUT(
                         invoiceNumber: newInvoiceNumber,
                         items: {
                             create: newItemsData
-                        }
+                        },
+                        payments: paymentDiff > 0 ? {
+                            create: {
+                                amount: paymentDiff
+                            }
+                        } : undefined
                     },
-                    include: { items: true }
+                    include: { items: true, payments: true }
                 })
 
                 // DEDUCT NEW QUANTITIES
