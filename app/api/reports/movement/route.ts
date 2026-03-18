@@ -10,15 +10,25 @@ export async function GET(request: Request) {
         const startDateParam = searchParams.get('startDate')
         const endDateParam = searchParams.get('endDate')
 
-        // Default to today if no dates provided
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
+        const now = new Date();
+        const khartoumDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Africa/Khartoum' });
+        const [currentYear, currentMonth] = khartoumDateStr.split('-');
+        
+        // Ensure accurate start boundary in +02:00
+        let startDate: Date;
+        if (startDateParam) {
+             startDate = new Date(`${startDateParam}T00:00:00.000+02:00`);
+        } else {
+             startDate = new Date(`${currentYear}-${currentMonth}-01T00:00:00.000+02:00`);
+        }
 
-        let startDate = startDateParam ? new Date(startDateParam) : new Date(today.getFullYear(), today.getMonth(), 1) // Default to start of month
-        let endDate = endDateParam ? new Date(endDateParam) : new Date()
-
-        // Ensure endDate covers the whole day
-        endDate.setHours(23, 59, 59, 999)
+        // Ensure accurate end boundary in +02:00
+        let endDate: Date;
+        if (endDateParam) {
+             endDate = new Date(`${endDateParam}T23:59:59.999+02:00`);
+        } else {
+             endDate = new Date(`${khartoumDateStr}T23:59:59.999+02:00`);
+        }
 
         // Fetch Settings to check for manual Initial Balance
         const setting: any = await prisma.setting.findUnique({ where: { id: 'default' } })
@@ -85,17 +95,17 @@ export async function GET(request: Request) {
         const dailyData = new Map<string, { dateObj: Date, receipts: number, expenses: number }>();
 
         salesInPeriod.forEach(sale => {
-            const dateStr = new Date(sale.createdAt).toLocaleDateString('en-CA'); // YYYY-MM-DD local
+            const dateStr = new Date(sale.createdAt).toLocaleDateString('en-CA', { timeZone: 'Africa/Khartoum' }); // YYYY-MM-DD in Sudan
             if (!dailyData.has(dateStr)) {
-                dailyData.set(dateStr, { dateObj: new Date(sale.createdAt), receipts: 0, expenses: 0 });
+                dailyData.set(dateStr, { dateObj: new Date(`${dateStr}T12:00:00.000+02:00`), receipts: 0, expenses: 0 }); // Midday safe anchor
             }
             dailyData.get(dateStr)!.receipts += sale.total;
         });
 
         expensesInPeriod.forEach(expense => {
-            const dateStr = new Date(expense.date).toLocaleDateString('en-CA');
+            const dateStr = new Date(expense.date).toLocaleDateString('en-CA', { timeZone: 'Africa/Khartoum' });
             if (!dailyData.has(dateStr)) {
-                dailyData.set(dateStr, { dateObj: new Date(expense.date), receipts: 0, expenses: 0 });
+                dailyData.set(dateStr, { dateObj: new Date(`${dateStr}T12:00:00.000+02:00`), receipts: 0, expenses: 0 });
             }
             dailyData.get(dateStr)!.expenses += expense.amount;
         });
@@ -114,7 +124,7 @@ export async function GET(request: Request) {
             totalExpensesPeriod += day.expenses;
 
             return {
-                date: day.dateObj.toLocaleDateString('ar-EG', { month: '2-digit', day: '2-digit' }), // MM/DD like in the image
+                date: day.dateObj.toLocaleDateString('ar-EG', { month: '2-digit', day: '2-digit', timeZone: 'Africa/Khartoum' }), // MM/DD like in the image
                 receipts: day.receipts,
                 expenses: day.expenses,
                 runningBalance: currentBalance
