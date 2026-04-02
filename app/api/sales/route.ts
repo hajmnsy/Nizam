@@ -6,10 +6,12 @@ import { prisma } from '@/lib/prisma'
 export async function POST(request: Request) {
     try {
         const json = await request.json()
-        // json structure: { customer: string, items: [{ productId, quantity, price }], status?: string }
+        // json structure: { customer: string, items: [{ productId, quantity, price }], status?: string, createdAt?: string }
 
         const status = json.status || 'PAID'
         const discount = parseFloat(json.discount || '0')
+        const createdAt = json.createdAt ? new Date(`${json.createdAt}T00:00:00.000+02:00`) : undefined
+
 
         // Calculate total cleanly with rounding at the item level
         const subtotal = json.items.reduce((sum: number, item: any) => sum + Math.round(item.price * item.quantity), 0)
@@ -61,6 +63,7 @@ export async function POST(request: Request) {
                 paidAmount: adjustedPaidAmount,
                 remainingAmount: actualRemainingAmount,
                 status: finalStatus,
+                createdAt: createdAt,
                 items: {
                     create: newItemsData
                 },
@@ -115,6 +118,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const dateParam = searchParams.get('date') // Expected format: YYYY-MM-DD
+    const startDateParam = searchParams.get('startDate')
+    const endDateParam = searchParams.get('endDate')
 
     try {
         let whereClause: any = {}
@@ -123,7 +128,14 @@ export async function GET(request: Request) {
             whereClause.status = status
         }
 
-        if (dateParam) {
+        if (startDateParam && endDateParam) {
+            const startDate = new Date(`${startDateParam}T00:00:00.000+02:00`)
+            const endDate = new Date(`${endDateParam}T23:59:59.999+02:00`)
+            whereClause.createdAt = {
+                gte: startDate,
+                lte: endDate
+            }
+        } else if (dateParam) {
             // Create start and end date objects for the specified date in Sudan timezone (+02:00)
             const startDate = new Date(`${dateParam}T00:00:00.000+02:00`)
             const endDate = new Date(`${dateParam}T23:59:59.999+02:00`)

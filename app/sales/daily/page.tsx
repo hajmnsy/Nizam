@@ -3,7 +3,7 @@
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { Calendar as CalendarIcon, FileText, Printer, ArrowLeft, TrendingUp, HandCoins, AlertCircle, DollarSign, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Calendar as CalendarIcon, FileText, Printer, ArrowLeft, TrendingUp, HandCoins, AlertCircle, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
 
@@ -39,21 +39,15 @@ export default function DailyReport() {
         return local.toISOString().split('T')[0]
     }
 
-    const [date, setDate] = useState(getTodayLocal())
+    const [startDate, setStartDate] = useState(getTodayLocal())
+    const [endDate, setEndDate] = useState(getTodayLocal())
     const [sales, setSales] = useState<Sale[]>([])
     const [loading, setLoading] = useState(true)
     const [exchangeRate, setExchangeRate] = useState<number>(0)
 
-    const changeDateByDays = (days: number) => {
-        const currentDate = new Date(date);
-        currentDate.setDate(currentDate.getDate() + days);
-        const newDateStr = currentDate.toISOString().split('T')[0];
-        setDate(newDateStr);
-    }
-
-    const fetchSales = (selectedDate: string) => {
+    const fetchSales = (start: string, end: string) => {
         setLoading(true)
-        fetch(`/api/sales?date=${selectedDate}`, { cache: 'no-store' })
+        fetch(`/api/sales?startDate=${start}&endDate=${end}`, { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 // Ignore quotations
@@ -68,8 +62,8 @@ export default function DailyReport() {
     }
 
     useEffect(() => {
-        fetchSales(date)
-    }, [date])
+        fetchSales(startDate, endDate)
+    }, [startDate, endDate])
 
     const [printAggregated, setPrintAggregated] = useState(true)
     const [printInvoices, setPrintInvoices] = useState(true)
@@ -137,32 +131,25 @@ export default function DailyReport() {
                     </div>
                     <div className="flex flex-col gap-3 items-end">
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center bg-white rounded-lg border shadow-sm overflow-hidden">
-                                <button
-                                    onClick={() => changeDateByDays(1)}
-                                    className="p-2 text-gray-500 hover:bg-gray-100 transition-colors border-l"
-                                    title="اليوم التالى"
-                                >
-                                    <ChevronRight size={18} />
-                                </button>
-                                
-                                <div className="flex items-center gap-2 px-3 py-2">
-                                    <CalendarIcon size={18} className="text-gray-400" />
+                            <div className="flex bg-white rounded-lg border shadow-sm overflow-hidden text-sm">
+                                <div className="flex items-center gap-2 border-l px-3 py-2 bg-gray-50 border-gray-200">
+                                    <span className="font-bold text-gray-600">من</span>
                                     <input
                                         type="date"
-                                        value={date}
-                                        onChange={(e) => setDate(e.target.value)}
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
                                         className="bg-transparent border-none outline-none font-bold text-slate-700 w-32"
                                     />
                                 </div>
-
-                                <button
-                                    onClick={() => changeDateByDays(-1)}
-                                    className="p-2 text-gray-500 hover:bg-gray-100 transition-colors border-r"
-                                    title="اليوم السابق"
-                                >
-                                    <ChevronLeft size={18} />
-                                </button>
+                                <div className="flex items-center gap-2 px-3 py-2">
+                                    <span className="font-bold text-gray-600">إلى</span>
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="bg-transparent border-none outline-none font-bold text-slate-700 w-32"
+                                    />
+                                </div>
                             </div>
                             <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border shadow-sm w-40">
                                 <DollarSign size={18} className="text-emerald-500" />
@@ -209,11 +196,15 @@ export default function DailyReport() {
                     {/* Report Header for Print */}
                     <div className="hidden print:block text-center border-b-2 border-slate-300 pb-4 mb-6">
                         <h2 className="text-3xl font-black text-slate-800 mb-2">تقرير اليومية</h2>
-                        <p className="text-lg font-bold text-slate-600">التاريخ: {new Date(date).toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        <p className="text-lg font-bold text-slate-600">
+                            الفترة: من {new Date(startDate).toLocaleDateString('ar-EG')} إلى {new Date(endDate).toLocaleDateString('ar-EG')}
+                        </p>
                     </div>
 
                     <div className="print:hidden mb-6 flex items-center justify-between border-b pb-4">
-                        <h2 className="text-xl font-black text-slate-800">تاريخ: {new Date(date).toLocaleDateString('ar-EG', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</h2>
+                        <h2 className="text-xl font-black text-slate-800">
+                            الفترة: {startDate === endDate ? new Date(startDate).toLocaleDateString('ar-EG', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : `من ${new Date(startDate).toLocaleDateString('ar-EG')} إلى ${new Date(endDate).toLocaleDateString('ar-EG')}`}
+                        </h2>
                     </div>
 
                     {loading ? (

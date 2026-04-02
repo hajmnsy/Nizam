@@ -48,7 +48,9 @@ export async function PUT(
         if (isNaN(id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
 
         const json = await request.json()
-        const { status, items, total, discount, customer } = json
+        const { status, items, total, discount, customer, createdAt } = json
+        const parsedCreatedAt = createdAt ? new Date(`${createdAt}T00:00:00.000+02:00`) : undefined
+
 
         // Existing Scenario 1: Just converting QUOTATION to PAID without editing items
         if (status === 'PAID' && !items) {
@@ -81,6 +83,7 @@ export async function PUT(
                     paidAmount: sale.total - sale.discount,
                     remainingAmount: 0,
                     invoiceNumber: newInvoiceNumber,
+                    ...(parsedCreatedAt && { createdAt: parsedCreatedAt }),
                     payments: sale.total - sale.discount > 0 ? {
                         create: {
                             amount: sale.total - sale.discount
@@ -172,6 +175,7 @@ export async function PUT(
                         remainingAmount: actualRemainingAmount,
                         status: finalStatus,
                         invoiceNumber: newInvoiceNumber,
+                        ...(parsedCreatedAt && { createdAt: parsedCreatedAt }),
                         items: {
                             create: newItemsData
                         },
