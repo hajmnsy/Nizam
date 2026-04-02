@@ -13,6 +13,7 @@ interface DailyData {
     receipts: number
     expenses: number
     runningBalance: number
+    exchangeRate: number
 }
 
 interface ReportData {
@@ -137,6 +138,18 @@ export default function CashFlowMovement() {
 
     const handlePrint = () => {
         window.print()
+    }
+
+    let grandTotalReceiptsUSD = 0;
+    let grandTotalExpensesUSD = 0;
+    if (reportData && !reportData.error && reportData.data) {
+        reportData.data.forEach(day => {
+             const rate = day.exchangeRate > 0 ? day.exchangeRate : exchangeRate;
+             if (rate > 0) {
+                 grandTotalReceiptsUSD += day.receipts / rate;
+                 grandTotalExpensesUSD += day.expenses / rate;
+             }
+        });
     }
 
     return (
@@ -264,21 +277,20 @@ export default function CashFlowMovement() {
                     </Button>
                 </Card>
 
-                {/* Summary Cards - hidden in print */}
                 {reportData && !reportData.error && reportData.data && (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 print:hidden">
                         <Card className="bg-white p-6 border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
                             <span className="text-sm font-bold text-slate-500 mb-1">إجمالي المقبوضات</span>
                             <span className="text-2xl font-black text-slate-800">{reportData.totals?.receipts ? reportData.totals.receipts.toLocaleString() : '0'}</span>
-                            {exchangeRate > 0 && (
-                                <span className="text-sm font-bold text-emerald-600 mt-1">${((reportData.totals?.receipts || 0) / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            {grandTotalReceiptsUSD > 0 && (
+                                <span className="text-sm font-bold text-emerald-600 mt-1">${grandTotalReceiptsUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             )}
                         </Card>
                         <Card className="bg-white p-6 border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
                             <span className="text-sm font-bold text-slate-500 mb-1">إجمالي المصروفات</span>
                             <span className="text-2xl font-black text-slate-800">{reportData.totals?.expenses ? reportData.totals.expenses.toLocaleString() : '0'}</span>
-                            {exchangeRate > 0 && (
-                                <span className="text-sm font-bold text-emerald-600 mt-1">${((reportData.totals?.expenses || 0) / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            {grandTotalExpensesUSD > 0 && (
+                                <span className="text-sm font-bold text-emerald-600 mt-1">${grandTotalExpensesUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             )}
                         </Card>
                         <Card className="bg-slate-900 p-6 shadow-md flex flex-col items-center justify-center text-center">
@@ -286,11 +298,19 @@ export default function CashFlowMovement() {
                             <span className="text-2xl font-black text-white">
                                 {reportData.data.length > 0 ? reportData.data[reportData.data.length - 1].runningBalance.toLocaleString() : (reportData.openingBalance?.toLocaleString() || '0')}
                             </span>
-                            {exchangeRate > 0 && (
-                                <span className="text-sm font-bold text-emerald-400 mt-1">
-                                    ${((reportData.data.length > 0 ? reportData.data[reportData.data.length - 1].runningBalance : (reportData.openingBalance || 0)) / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                            )}
+                            {(() => {
+                                const lastDay = reportData.data.length > 0 ? reportData.data[reportData.data.length - 1] : null;
+                                const lastRate = lastDay?.exchangeRate > 0 ? lastDay.exchangeRate : exchangeRate;
+                                const lastBalance = lastDay ? lastDay.runningBalance : (reportData.openingBalance || 0);
+                                if (lastRate > 0) {
+                                    return (
+                                        <span className="text-sm font-bold text-emerald-400 mt-1">
+                                            ${(lastBalance / lastRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                    );
+                                }
+                                return null;
+                            })()}
                         </Card>
                     </div>
                 )}
@@ -332,15 +352,17 @@ export default function CashFlowMovement() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {reportData.data.map((row, idx) => (
+                                    {reportData.data.map((row, idx) => {
+                                        const rowRate = row.exchangeRate > 0 ? row.exchangeRate : exchangeRate;
+                                        return (
                                         <tr key={idx}>
                                             <td className="border border-black p-2 align-top" dir="ltr">{row.date.replace('-', '/')}</td>
                                             <td className="border border-black p-2 align-top">
                                                 <div className="flex flex-col items-center justify-center">
                                                     <span>{row.receipts > 0 ? row.receipts.toLocaleString() : '-'}</span>
-                                                    {exchangeRate > 0 && row.receipts > 0 && (
+                                                    {rowRate > 0 && row.receipts > 0 && (
                                                         <span className="text-emerald-600 font-bold text-xs mt-1 block tracking-wider print:text-black">
-                                                            ${(row.receipts / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            ${(row.receipts / rowRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </span>
                                                     )}
                                                 </div>
@@ -348,9 +370,9 @@ export default function CashFlowMovement() {
                                             <td className="border border-black p-2 align-top">
                                                 <div className="flex flex-col items-center justify-center">
                                                     <span>{row.expenses > 0 ? row.expenses.toLocaleString() : '-'}</span>
-                                                    {exchangeRate > 0 && row.expenses > 0 && (
+                                                    {rowRate > 0 && row.expenses > 0 && (
                                                         <span className="text-emerald-600 font-bold text-xs mt-1 block tracking-wider print:text-black">
-                                                            ${(row.expenses / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            ${(row.expenses / rowRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </span>
                                                     )}
                                                 </div>
@@ -358,15 +380,15 @@ export default function CashFlowMovement() {
                                             <td className="border border-black p-2 font-black align-top">
                                                 <div className="flex flex-col items-center justify-center">
                                                     <span>{row.runningBalance.toLocaleString()}</span>
-                                                    {exchangeRate > 0 && (
+                                                    {rowRate > 0 && (
                                                         <span className="text-emerald-600 font-black text-xs mt-1 block tracking-wider print:text-black">
-                                                            ${(row.runningBalance / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            ${(row.runningBalance / rowRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </span>
                                                     )}
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))}
+                                    )})}
 
                                     {/* Footer Row */}
                                     <tr className="border-t-[3px] border-t-black">
@@ -374,9 +396,9 @@ export default function CashFlowMovement() {
                                         <td className="border border-black p-2 font-black align-top">
                                             <div className="flex flex-col items-center justify-center">
                                                 <span>{reportData.totals?.receipts ? reportData.totals.receipts.toLocaleString() : '0'}</span>
-                                                {exchangeRate > 0 && reportData.totals?.receipts > 0 && (
+                                                {grandTotalReceiptsUSD > 0 && reportData.totals?.receipts > 0 && (
                                                     <span className="text-emerald-600 font-black text-xs mt-1 block tracking-wider print:text-black">
-                                                        ${(reportData.totals.receipts / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        ${grandTotalReceiptsUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </span>
                                                 )}
                                             </div>
@@ -384,9 +406,9 @@ export default function CashFlowMovement() {
                                         <td className="border border-black p-2 font-black align-top">
                                             <div className="flex flex-col items-center justify-center">
                                                 <span>{reportData.totals?.expenses ? reportData.totals.expenses.toLocaleString() : '0'}</span>
-                                                {exchangeRate > 0 && reportData.totals?.expenses > 0 && (
+                                                {grandTotalExpensesUSD > 0 && reportData.totals?.expenses > 0 && (
                                                     <span className="text-emerald-600 font-black text-xs mt-1 block tracking-wider print:text-black">
-                                                        ${(reportData.totals.expenses / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        ${grandTotalExpensesUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </span>
                                                 )}
                                             </div>

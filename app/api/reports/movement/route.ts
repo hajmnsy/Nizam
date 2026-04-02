@@ -86,19 +86,18 @@ export async function GET(request: Request) {
 
         const expensesInPeriod = await prisma.expense.findMany({
             where: {
-                date: { gte: startDate, lte: endDate },
-                category: { not: 'سعر الصرف' }
+                date: { gte: startDate, lte: endDate }
             },
-            select: { date: true, amount: true }
+            select: { date: true, amount: true, category: true }
         });
 
         // 3. Group by Day
-        const dailyData = new Map<string, { dateObj: Date, receipts: number, expenses: number }>();
+        const dailyData = new Map<string, { dateObj: Date, receipts: number, expenses: number, exchangeRate: number }>();
 
         salesInPeriod.forEach(sale => {
             const dateStr = new Date(sale.createdAt).toLocaleDateString('en-CA', { timeZone: 'Africa/Khartoum' }); // YYYY-MM-DD in Sudan
             if (!dailyData.has(dateStr)) {
-                dailyData.set(dateStr, { dateObj: new Date(`${dateStr}T12:00:00.000+02:00`), receipts: 0, expenses: 0 }); // Midday safe anchor
+                dailyData.set(dateStr, { dateObj: new Date(`${dateStr}T12:00:00.000+02:00`), receipts: 0, expenses: 0, exchangeRate: 0 }); // Midday safe anchor
             }
             dailyData.get(dateStr)!.receipts += sale.total;
         });
@@ -106,9 +105,13 @@ export async function GET(request: Request) {
         expensesInPeriod.forEach(expense => {
             const dateStr = new Date(expense.date).toLocaleDateString('en-CA', { timeZone: 'Africa/Khartoum' });
             if (!dailyData.has(dateStr)) {
-                dailyData.set(dateStr, { dateObj: new Date(`${dateStr}T12:00:00.000+02:00`), receipts: 0, expenses: 0 });
+                dailyData.set(dateStr, { dateObj: new Date(`${dateStr}T12:00:00.000+02:00`), receipts: 0, expenses: 0, exchangeRate: 0 });
             }
-            dailyData.get(dateStr)!.expenses += expense.amount;
+            if (expense.category === 'سعر الصرف') {
+                dailyData.get(dateStr)!.exchangeRate = expense.amount; // Specific daily rate
+            } else {
+                dailyData.get(dateStr)!.expenses += expense.amount;
+            }
         });
 
         // Convert Map to sorted array
@@ -128,7 +131,8 @@ export async function GET(request: Request) {
                 date: day.dateObj.toLocaleDateString('ar-EG', { month: '2-digit', day: '2-digit', timeZone: 'Africa/Khartoum' }), // MM/DD like in the image
                 receipts: day.receipts,
                 expenses: day.expenses,
-                runningBalance: currentBalance
+                runningBalance: currentBalance,
+                exchangeRate: day.exchangeRate
             };
         });
 
