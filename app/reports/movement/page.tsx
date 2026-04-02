@@ -300,7 +300,7 @@ export default function CashFlowMovement() {
                             </span>
                             {(() => {
                                 const lastDay = reportData.data.length > 0 ? reportData.data[reportData.data.length - 1] : null;
-                                const lastRate = lastDay?.exchangeRate > 0 ? lastDay.exchangeRate : exchangeRate;
+                                const lastRate = (lastDay?.exchangeRate || 0) > 0 ? lastDay!.exchangeRate : exchangeRate;
                                 const lastBalance = lastDay ? lastDay.runningBalance : (reportData.openingBalance || 0);
                                 if (lastRate > 0) {
                                     return (
