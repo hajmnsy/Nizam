@@ -10,7 +10,16 @@ export async function POST(request: Request) {
 
         const status = json.status || 'PAID'
         const discount = parseFloat(json.discount || '0')
-        const createdAt = json.createdAt ? new Date(`${json.createdAt}T00:00:00.000+02:00`) : undefined
+        
+        let finalCreatedAt = undefined;
+        if (json.createdAt) {
+            const todayLocalStr = new Date(new Date().getTime() + (2 * 60 * 60 * 1000)).toISOString().split('T')[0];
+            if (json.createdAt === todayLocalStr) {
+                finalCreatedAt = new Date(); 
+            } else {
+                finalCreatedAt = new Date(`${json.createdAt}T00:00:00.000+02:00`);
+            }
+        }
 
 
         // Calculate total cleanly with rounding at the item level
@@ -63,7 +72,7 @@ export async function POST(request: Request) {
                 paidAmount: adjustedPaidAmount,
                 remainingAmount: actualRemainingAmount,
                 status: finalStatus,
-                createdAt: createdAt,
+                createdAt: finalCreatedAt,
                 items: {
                     create: newItemsData
                 },

@@ -49,7 +49,16 @@ export async function PUT(
 
         const json = await request.json()
         const { status, items, total, discount, customer, createdAt } = json
-        const parsedCreatedAt = createdAt ? new Date(`${createdAt}T00:00:00.000+02:00`) : undefined
+        
+        let parsedCreatedAt = undefined;
+        if (createdAt) {
+            const todayLocalStr = new Date(new Date().getTime() + (2 * 60 * 60 * 1000)).toISOString().split('T')[0];
+            if (createdAt === todayLocalStr) {
+                parsedCreatedAt = new Date(); 
+            } else {
+                parsedCreatedAt = new Date(`${createdAt}T00:00:00.000+02:00`);
+            }
+        }
 
 
         // Existing Scenario 1: Just converting QUOTATION to PAID without editing items
