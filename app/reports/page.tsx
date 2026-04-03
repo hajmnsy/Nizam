@@ -2,11 +2,15 @@
 
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
-import { TrendingUp, TrendingDown, DollarSign, PieChart, Activity, BarChart2, AlertCircle, Download } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, PieChart, Activity, BarChart2, AlertCircle, Download, Users, Package } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
+    BarChart, Bar, Legend, PieChart as RePieChart, Pie, Cell, ComposedChart, Line
+} from 'recharts'
 
 export default function Reports() {
     const [data, setData] = useState<any>(null)
@@ -22,7 +26,24 @@ export default function Reports() {
             .catch(console.error)
     }, [])
 
-    const maxSales = data ? Math.max(...data.salesChart.map((d: any) => d.sales)) : 0
+    const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-white p-3 rounded-lg shadow-xl border border-slate-100 flex flex-col gap-1 text-sm font-bold text-slate-800 font-sans dir-rtl text-right">
+                    <p className="text-slate-500 mb-1 border-b border-slate-100 pb-1">{label}</p>
+                    {payload.map((entry: any, index: number) => (
+                        <div key={`item-${index}`} className="flex justify-between items-center gap-4">
+                            <span style={{ color: entry.color }}>{entry.name}</span>
+                            <span className="font-black text-slate-900">{entry.value?.toLocaleString() || 0}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+        return null;
+    };
 
     return (
         <main className="min-h-screen bg-slate-50">
@@ -30,15 +51,15 @@ export default function Reports() {
 
             <div className="container mx-auto p-4 max-w-7xl animate-fade-in-up">
                 {/* Header */}
-                <div className="mb-8 flex justify-between items-end">
+                <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                     <div>
                         <h1 className="text-3xl font-black text-slate-800 flex items-center gap-2">
-                            <PieChart className="text-blue-600" />
-                            التقارير التحليلية
+                            <Activity className="text-blue-600" />
+                            لوحة المعلومات التحليلية
                         </h1>
-                        <p className="text-gray-500 mt-1">نظرة شاملة على أداء المصنع المالي والتشغيلي</p>
+                        <p className="text-gray-500 mt-1">نظرة شاملة ومخططات بيانية لأداء المصنع المالي والتشغيلي</p>
                     </div>
-                    <div className="flex items-center gap-6">
+                    <div className="flex gap-4 items-center">
                         <button
                             onClick={async () => {
                                 try {
@@ -74,16 +95,11 @@ export default function Reports() {
                                     alert('حدث خطأ أثناء التصدير')
                                 }
                             }}
-                            className="hidden md:flex bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold items-center gap-2 transition-all shadow-sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-sm"
                         >
                             <Download size={18} />
-                            تصدير Excel
+                            تصدير البيانات Excel
                         </button>
-
-                        <div className="text-left hidden md:block border-r pr-6 border-gray-200">
-                            <p className="text-sm font-bold text-slate-400">آخر تحديث</p>
-                            <p className="font-mono text-slate-600">{new Date().toLocaleTimeString('ar-SD')}</p>
-                        </div>
                     </div>
                 </div>
 
@@ -92,12 +108,12 @@ export default function Reports() {
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-                        {/* 1. Financial Overview (Left Column) */}
-                        <div className="space-y-4">
-                            <Card className="bg-gradient-to-br from-emerald-500 to-emerald-700 text-white border-none shadow-lg shadow-emerald-200">
-                                <div className="flex justify-between items-start mb-4">
+                        {/* Top KPIs */}
+                        <div className="lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <Card className="bg-gradient-to-br from-emerald-500 to-emerald-700 text-white border-none shadow-lg shadow-emerald-200/50">
+                                <div className="flex justify-between items-start mb-2">
                                     <div className="p-2 bg-white/20 rounded-lg">
                                         <TrendingUp size={24} className="text-white" />
                                     </div>
@@ -106,106 +122,181 @@ export default function Reports() {
                                 <h3 className="text-emerald-100 font-medium mb-1">صافي الأرباح (التقديري)</h3>
                                 <p className="text-3xl font-black tracking-tight">{data.stats.netProfit.toLocaleString()} <span className="text-lg opacity-70 font-normal">ج.س</span></p>
                             </Card>
+                            
+                            <Card className="border-l-4 border-blue-500 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+                                <Activity className="absolute -left-4 -top-4 text-blue-50 opacity-50 group-hover:scale-110 transition-transform" size={100} />
+                                <div className="relative z-10">
+                                    <h3 className="text-gray-500 text-sm font-bold mb-1">إجمالي المبيعات (الشهر)</h3>
+                                    <p className="text-2xl font-black text-slate-800">{data.stats.monthlySales.toLocaleString()}</p>
+                                </div>
+                            </Card>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <Card className="border-l-4 border-blue-500">
-                                    <h3 className="text-gray-400 text-xs font-bold mb-1">إجمالي المبيعات</h3>
-                                    <p className="text-xl font-bold text-slate-800">{data.stats.monthlySales.toLocaleString()}</p>
-                                </Card>
-                                <Card className="border-l-4 border-red-500">
-                                    <h3 className="text-gray-400 text-xs font-bold mb-1">إجمالي المصروفات</h3>
-                                    <p className="text-xl font-bold text-slate-800">{data.stats.monthlyExpenses.toLocaleString()}</p>
-                                </Card>
-                            </div>
+                            <Card className="border-l-4 border-red-500 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+                                <TrendingDown className="absolute -left-4 -top-4 text-red-50 opacity-50 group-hover:scale-110 transition-transform" size={100} />
+                                <div className="relative z-10">
+                                    <h3 className="text-gray-500 text-sm font-bold mb-1">إجمالي المصروفات (الشهر)</h3>
+                                    <p className="text-2xl font-black text-slate-800">{data.stats.monthlyExpenses.toLocaleString()}</p>
+                                </div>
+                            </Card>
 
-                            <Link href="/inventory" className="block">
-                                <Card className="border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer group">
+                            <Link href="/inventory" className="block h-full">
+                                <Card className="border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer group h-full flex flex-col justify-center">
                                     <div className="flex items-center gap-4">
                                         <div className="p-3 bg-amber-200 text-amber-700 rounded-full group-hover:scale-110 transition-transform">
-                                            <AlertCircle size={24} />
+                                            <AlertCircle size={28} />
                                         </div>
                                         <div>
-                                            <h3 className="text-amber-800 font-bold text-lg">{data.stats.lowStockCount} منتجات</h3>
-                                            <p className="text-amber-600 text-sm">أوشكت على النفاد من المخزون</p>
-                                        </div>
-                                    </div>
-                                </Card>
-                            </Link>
-
-                            <Link href="/reports/movement" className="block">
-                                <Card className="border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-indigo-200 text-indigo-700 rounded-full group-hover:scale-110 transition-transform">
-                                            <Activity size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-indigo-800 font-bold text-lg">حركة المقبوضات والمصروفات</h3>
-                                            <p className="text-indigo-600 text-sm">عرض وطباعة كشف الحركة العام</p>
+                                            <h3 className="text-amber-800 font-black text-2xl">{data.stats.lowStockCount}</h3>
+                                            <p className="text-amber-600 text-sm font-bold mt-1">أوشكت على النفاد من المخزون</p>
                                         </div>
                                     </div>
                                 </Card>
                             </Link>
                         </div>
 
-                        {/* 2. Sales Chart (Center - spanning 2 cols) */}
-                        <Card className="lg:col-span-2 flex flex-col min-h-[400px]">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                    <Activity className="text-blue-500" />
-                                    حركة المبيعات (آخر 7 أيام)
-                                </h2>
-                            </div>
-
-                            {/* Custom CSS Bar Chart */}
-                            <div className="flex-1 flex items-end justify-between gap-2 px-4 pb-2 border-b border-gray-100">
-                                {data.salesChart.map((item: any, i: number) => {
-                                    const heightPercent = maxSales > 0 ? (item.sales / maxSales) * 100 : 0
-                                    return (
-                                        <div key={i} className="flex flex-col items-center gap-2 flex-1 group relative">
-                                            {/* Tooltip */}
-                                            <div className="absolute -top-12 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                                                {item.sales.toLocaleString()} ج.س
-                                            </div>
-
-                                            {/* Bar */}
-                                            <div
-                                                className="w-full max-w-[40px] bg-blue-500 rounded-t-lg hover:bg-blue-600 transition-all cursor-pointer relative overflow-hidden"
-                                                style={{ height: `${Math.max(heightPercent, 2)}%` }} // Min 2% height
-                                            >
-                                                <div className="absolute inset-0 bg-gradient-to-t from-blue-600 to-transparent opacity-50"></div>
-                                            </div>
-
-                                            {/* Label */}
-                                            <span className="text-xs font-bold text-gray-500">{item.date}</span>
-                                        </div>
-                                    )
-                                })}
+                        {/* Main Cashflow Area Chart (Spans 4 cols horizontally) */}
+                        <Card className="lg:col-span-4 h-[400px] flex flex-col shadow-sm">
+                            <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 px-2">
+                                <Activity className="text-blue-500" />
+                                تحليلات التدفق المالي (الـ 30 يوماً الماضية)
+                            </h2>
+                            <div className="flex-1 w-full" dir="ltr">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={data.cashflowChart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                            </linearGradient>
+                                            <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                                                <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} tickFormatter={(val) => val === 0 ? '0' : `${val/1000}k`} />
+                                        <RechartsTooltip content={<CustomTooltip />} />
+                                        <Legend wrapperStyle={{ paddingTop: '20px', fontFamily: 'sans-serif', fontWeight: 'bold' }} />
+                                        <Area type="monotone" name="المبيعات" dataKey="sales" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                                        <Area type="monotone" name="المصروفات" dataKey="expenses" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
                             </div>
                         </Card>
 
-                        {/* 3. Top Products (Bottom Row - Wide) */}
-                        <Card className="lg:col-span-3">
-                            <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                        {/* Top Selling Products (Composed Chart) */}
+                        <Card className="lg:col-span-2 h-[350px] flex flex-col shadow-sm">
+                            <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 px-2">
                                 <BarChart2 className="text-purple-500" />
-                                المنتجات الأكثر مبيعاً
+                                المنتجات الأكثر مبيعاً (كمية وعائد)
                             </h2>
-                            <div className="space-y-4">
-                                {data.topProducts.map((p: any, i: number) => (
-                                    <div key={i} className="relative">
-                                        <div className="flex justify-between text-sm mb-1">
-                                            <span className="font-bold text-slate-700">{p.name}</span>
-                                            <span className="font-mono text-gray-500">{p.quantity} قطعة</span>
-                                        </div>
-                                        <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"
-                                                style={{ width: `${(p.quantity / data.topProducts[0].quantity) * 100}%` }}
-                                            ></div>
-                                        </div>
-                                    </div>
-                                ))}
-                                {data.topProducts.length === 0 && (
-                                    <p className="text-gray-400 text-center py-4">لا توجد بيانات كافية</p>
+                            <div className="flex-1 w-full" dir="ltr">
+                                {data.topProducts && data.topProducts.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={data.topProducts} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                                            <CartesianGrid stroke="#f5f5f5" vertical={false}/>
+                                            <XAxis dataKey="name" scale="band" tick={{ fontSize: 11, fill: '#64748b' }} angle={-15} textAnchor="end" height={60} />
+                                            <YAxis yAxisId="left" tickFormatter={(val) => `${val/1000}k`} tick={{ fontSize: 11, fill: '#64748b' }} />
+                                            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#64748b' }} />
+                                            <RechartsTooltip content={<CustomTooltip />} />
+                                            <Bar yAxisId="left" dataKey="revenue" name="العائد (ج.س)" barSize={20} fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                                            <Line yAxisId="right" type="monotone" dataKey="quantity" name="الكمية (قطعة)" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4 }} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-gray-400 font-bold">لا توجد بيانات مبيعات لهذا الشهر</div>
+                                )}
+                            </div>
+                        </Card>
+
+                        {/* Top Customers */}
+                        <Card className="lg:col-span-2 h-[350px] flex flex-col shadow-sm">
+                            <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 px-2">
+                                <Users className="text-indigo-500" />
+                                أكبر العملاء
+                            </h2>
+                            <div className="flex-1 w-full" dir="ltr">
+                                {data.topCustomers && data.topCustomers.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={data.topCustomers} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                            <XAxis type="number" hide />
+                                            <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#475569', fontWeight: 'bold' }} width={100} />
+                                            <RechartsTooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}} />
+                                            <Bar dataKey="total" name="المشتريات" fill="#14b8a6" radius={[0, 4, 4, 0]} barSize={24} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-gray-400 font-bold">لا توجد سجلات للعملاء</div>
+                                )}
+                            </div>
+                        </Card>
+
+                        {/* Sales Categories Donut */}
+                        <Card className="lg:col-span-2 h-[350px] flex flex-col shadow-sm">
+                            <h2 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2 px-2">
+                                <Package className="text-emerald-500" />
+                                مبيعات الأقسام
+                            </h2>
+                            <div className="flex-1 w-full" dir="ltr">
+                                {data.salesByCategory && data.salesByCategory.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RePieChart>
+                                            <Pie
+                                                data={data.salesByCategory}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={60}
+                                                outerRadius={90}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                                stroke="none"
+                                            >
+                                                {data.salesByCategory.map((entry: any, index: number) => (
+                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <RechartsTooltip content={<CustomTooltip />} />
+                                            <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontFamily: 'sans-serif', fontSize: '13px', fontWeight: 'bold' }} />
+                                        </RePieChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-gray-400 font-bold">لا توجد مبيعات</div>
+                                )}
+                            </div>
+                        </Card>
+
+                        {/* Expenses By Category */}
+                        <Card className="lg:col-span-2 h-[350px] flex flex-col shadow-sm">
+                            <h2 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2 px-2">
+                                <PieChart className="text-rose-500" />
+                                توزيع المصروفات
+                            </h2>
+                            <div className="flex-1 w-full" dir="ltr">
+                                {data.expensesByCategory && data.expensesByCategory.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RePieChart>
+                                            <Pie
+                                                data={data.expensesByCategory}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={0}
+                                                outerRadius={90}
+                                                paddingAngle={2}
+                                                dataKey="value"
+                                                stroke="none"
+                                            >
+                                                {data.expensesByCategory.map((entry: any, index: number) => (
+                                                    <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <RechartsTooltip content={<CustomTooltip />} />
+                                            <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontFamily: 'sans-serif', fontSize: '13px', fontWeight: 'bold' }} />
+                                        </RePieChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-gray-400 font-bold">لا توجد مصروفات</div>
                                 )}
                             </div>
                         </Card>

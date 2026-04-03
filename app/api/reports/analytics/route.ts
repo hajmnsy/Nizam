@@ -6,70 +6,136 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
     try {
         const today = new Date()
-        const last7Days = new Array(7).fill(0).map((_, i) => {
+        const thirtyDaysAgo = new Date(today)
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29)
+        thirtyDaysAgo.setHours(0, 0, 0, 0)
+        
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+        
+        const last30Days = new Array(30).fill(0).map((_, i) => {
             const d = new Date()
             d.setDate(d.getDate() - i)
             d.setHours(0, 0, 0, 0)
             return d
         }).reverse()
 
-        // 1. Sales Chart Data (Last 7 Days)
-        const salesData = await Promise.all(last7Days.map(async (date) => {
-            const nextDay = new Date(date)
-            nextDay.setDate(date.getDate() + 1)
+        // 1. Cashflow Chart Data (Last 30 Days)
+        const salesPeriod = await prisma.sale.findMany({
+            where: { createdAt: { gte: thirtyDaysAgo }, status: { not: 'QUOTATION' } },
+            select: { createdAt: true, total: true }
+        })
+        const expensesPeriod = await prisma.expense.findMany({
+            where: { date: { gte: thirtyDaysAgo }, category: { not: 'سعر الصرف' } },
+            select: { date: true, amount: true }
+        })
 
-            const sales = await prisma.sale.aggregate({
-                where: {
-                    createdAt: { gte: date, lt: nextDay },
-                    status: 'PAID'
-                },
-                _sum: { total: true }
+        const cashflowDataMap = new Map<string, any>()
+        last30Days.forEach(date => {
+            const str = date.toLocaleDateString('en-CA', { timeZone: 'Africa/Khartoum' })
+            cashflowDataMap.set(str, { 
+                date: date.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' }), 
+                sales: 0, 
+                expenses: 0, 
+                profit: 0,
+                sortDate: date
             })
-            return {
-                date: date.toLocaleDateString('ar-SD', { weekday: 'short' }),
-                sales: sales._sum.total || 0
-            }
+        })
+
+        salesPeriod.forEach(sale => {
+            const str = new Date(sale.createdAt).toLocaleDateString('en-CA', { timeZone: 'Africa/Khartoum' })
+            if (cashflowDataMap.has(str)) cashflowDataMap.get(str).sales += sale.total
+        })
+
+        expensesPeriod.forEach(exp => {
+            const str = new Date(exp.date).toLocaleDateString('en-CA', { timeZone: 'Africa/Khartoum' })
+            if (cashflowDataMap.has(str)) cashflowDataMap.get(str).expenses += exp.amount
+        })
+
+        const cashflowChart = Array.from(cashflowDataMap.values()).map(d => ({
+            date: d.date,
+            sales: d.sales,
+            expenses: d.expenses,
+            profit: d.sales - d.expenses
         }))
 
-        // 2. Top Selling Products
+        // 2. Expenses By Category (This Month)
+        const monthlyExpensesRaw = await prisma.expense.groupBy({
+            by: ['category'],
+            where: { date: { gte: firstDayOfMonth }, category: { not: 'سعر الصرف' } },
+            _sum: { amount: true }
+        })
+        const expensesByCategory = monthlyExpensesRaw.map(e => ({
+            name: e.category,
+            value: e._sum.amount || 0
+        })).sort((a,b) => b.value - a.value)
+
+        // 3. Sales By Category (This Month)
+        const monthlySaleItems = await prisma.saleItem.findMany({
+            where: { sale: { createdAt: { gte: firstDayOfMonth }, status: { not: 'QUOTATION' } } },
+            include: { product: { include: { category: true } } }
+        })
+        
+        const salesCategoryMap = new Map<string, number>()
+        monthlySaleItems.forEach(item => {
+            const catName = item.product?.category?.name || 'أخرى'
+            const value = item.price * item.quantity
+            salesCategoryMap.set(catName, (salesCategoryMap.get(catName) || 0) + value)
+        })
+        const salesByCategory = Array.from(salesCategoryMap.entries()).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value)
+
+        // 4. Top Selling Products (Extended - Revenue + Quantity)
         const topSelling = await prisma.saleItem.groupBy({
             by: ['productId'],
             _sum: { quantity: true },
+            where: { sale: { createdAt: { gte: firstDayOfMonth }, status: { not: 'QUOTATION' } } },
             orderBy: { _sum: { quantity: 'desc' } },
             take: 5
         })
 
         const topProductsDetails = await Promise.all(topSelling.map(async (item) => {
             const product = await prisma.product.findUnique({ where: { id: item.productId } })
+            // Calculate actual revenue for this product this month
+            const revSource = monthlySaleItems.filter(s => s.productId === item.productId)
+            const revenue = revSource.reduce((sum, s) => sum + (s.price * s.quantity), 0)
             return {
                 name: product?.name || 'Unknown',
-                quantity: item._sum.quantity
+                quantity: item._sum.quantity,
+                revenue
             }
         }))
 
-        // 3. Low Stock 
+        // 5. Top Customers (By Revenue)
+        const topCustomersRaw = await prisma.sale.groupBy({
+            by: ['customer'],
+            where: { createdAt: { gte: firstDayOfMonth }, status: { not: 'QUOTATION' } },
+            _sum: { total: true },
+            orderBy: { _sum: { total: 'desc' } },
+            take: 5
+        })
+        
+        const topCustomers = topCustomersRaw.map(c => ({
+            name: c.customer && c.customer.trim() !== '' ? c.customer : 'عميل عام',
+            total: c._sum.total || 0
+        }))
+
+        // 6. Global Stats (Low Stock, Month totals)
         const lowStock = await prisma.product.count({
             where: { quantity: { lt: 10 } }
         })
-
-        // 4. Total Net Profit Estimate (Simplified: Sales - Expenses) for this month
-        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-        const monthlySales = await prisma.sale.aggregate({
-            where: { createdAt: { gte: firstDayOfMonth }, status: 'PAID' },
-            _sum: { total: true }
-        })
-        const monthlyExpenses = await prisma.expense.aggregate({
-            where: { date: { gte: firstDayOfMonth } },
-            _sum: { amount: true }
-        })
+        
+        const totalSalesMonth = Array.from(salesCategoryMap.values()).reduce((a,b)=>a+b, 0)
+        const totalExpensesMonth = expensesByCategory.reduce((sum, e) => sum + e.value, 0)
 
         return NextResponse.json({
-            salesChart: salesData,
+            cashflowChart,
+            expensesByCategory,
+            salesByCategory,
             topProducts: topProductsDetails,
+            topCustomers,
             stats: {
-                monthlySales: monthlySales._sum.total || 0,
-                monthlyExpenses: monthlyExpenses._sum.amount || 0,
-                netProfit: (monthlySales._sum.total || 0) - (monthlyExpenses._sum.amount || 0),
+                monthlySales: totalSalesMonth,
+                monthlyExpenses: totalExpensesMonth,
+                netProfit: totalSalesMonth - totalExpensesMonth,
                 lowStockCount: lowStock
             }
         })
