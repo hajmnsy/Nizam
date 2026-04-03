@@ -352,7 +352,7 @@ export default function NewSale() {
                         <div className="lg:col-span-5 flex flex-col h-full bg-white border-2 border-blue-200 rounded-xl shadow-lg overflow-hidden min-h-0">
                             
                             {/* Cart Header */}
-                            <div className="bg-blue-50 p-3 border-b border-blue-100 shrink-0">
+                            <div className="bg-blue-50 p-2 border-b border-blue-100 shrink-0">
                                 <h2 className="font-bold text-blue-900 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         سلة المشتريات
@@ -459,92 +459,88 @@ export default function NewSale() {
                                 )}
                             </div>
 
-                            {/* Cart Checkout Section */}
-                            <div className="shrink-0 bg-white border-t border-gray-200 p-3 flex flex-col gap-3">
-                                
-                                {/* Discount */}
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-sm text-gray-600 whitespace-nowrap">خصم إضافي:</span>
-                                    <Input
-                                        type="number"
-                                        placeholder="0"
-                                        value={discount}
-                                        onChange={e => setDiscount(e.target.value)}
-                                        className="h-9 w-full text-left"
-                                    />
-                                </div>
-
-                                {/* Total Price Block */}
-                                <div className="flex justify-between items-center bg-slate-900 text-white p-3 rounded-lg shadow-md border-b-4 border-blue-500">
-                                    <div>
-                                        <span className="font-bold block text-xs opacity-80">الإجمالي النهائي</span>
-                                        <div className="flex flex-col">
-                                            <span className="font-black text-2xl">{finalTotal.toLocaleString()} <span className="text-xs font-normal text-gray-400">ج.س</span></span>
-                                            {exchangeRate > 0 && finalTotal > 0 && (
-                                                <span className="text-emerald-400 font-bold text-xs">
-                                                    ${(finalTotal / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {(parseFloat(discount) > 0) && (
-                                        <div className="text-right">
-                                            <span className="block text-[10px] text-red-300 line-through">{subtotal.toLocaleString()}</span>
-                                            <span className="text-xs text-green-400 font-bold">توفير: {parseFloat(discount).toLocaleString()}</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Payment Installment Inputs */}
-                                <div className="flex gap-2">
+                            {/* Cart Checkout Section (ULTRA COMPACT) */}
+                            <div className="shrink-0 bg-gray-50 border-t border-gray-200 p-2 flex flex-col gap-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                                {/* Compact Row: Discount & Payments */}
+                                <div className="flex gap-2 w-full">
                                     <div className="flex-1">
-                                        <div className="text-[10px] font-bold text-gray-500 mb-1">المدفوع (للآجل):</div>
+                                        <div className="text-[10px] font-bold text-gray-500 mb-0.5">خصم إضافي:</div>
+                                        <Input
+                                            type="number"
+                                            placeholder="0"
+                                            value={discount}
+                                            onChange={e => setDiscount(e.target.value)}
+                                            className="h-8 w-full text-sm font-bold bg-white"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="text-[10px] font-bold text-gray-500 mb-0.5">المدفوع (القسط):</div>
                                         <Input
                                             type="number"
                                             placeholder={finalTotal.toString()}
                                             value={paidAmountInput}
                                             onChange={e => setPaidAmountInput(e.target.value)}
-                                            className="h-9 w-full bg-amber-50 text-sm font-bold"
+                                            className="h-8 w-full bg-amber-50 text-sm font-bold text-blue-900 border-amber-200"
                                         />
                                     </div>
                                     <div className="flex-1">
-                                        <div className="text-[10px] font-bold text-gray-500 mb-1">المتبقي:</div>
-                                        <div className="h-9 flex items-center px-2 border border-red-200 rounded-lg bg-red-50 text-red-600 font-bold text-sm overflow-hidden whitespace-nowrap">
+                                        <div className="text-[10px] font-bold text-gray-500 mb-0.5">المتبقي:</div>
+                                        <div className="h-8 flex items-center px-2 border border-red-200 rounded-md bg-red-50 text-red-600 font-bold text-sm overflow-hidden whitespace-nowrap">
                                             {paidAmountInput === '' ? 0 : Math.max(0, finalTotal - parseFloat(paidAmountInput || '0')).toLocaleString()}
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Submit Buttons */}
-                                <div className="grid grid-cols-2 gap-2">
-                                    <Button
-                                        onClick={() => handleSubmit('PAID')}
-                                        className="h-10 text-sm bg-emerald-600 hover:bg-emerald-700 shadow-sm"
-                                        disabled={loading}
-                                    >
-                                        <span className="font-bold">{loading ? '...' : 'كاش (خالص)'}</span>
-                                    </Button>
-
-                                    <Button
-                                        onClick={() => handleSubmit('CREDIT')}
-                                        className="h-10 text-sm bg-amber-500 hover:bg-amber-600 text-white shadow-sm"
-                                        disabled={loading}
-                                    >
-                                        <span className="font-bold">{loading ? '...' : 'آجل (دفع جزئي)'}</span>
-                                    </Button>
-                                </div>
-
-                                <Button
-                                    onClick={() => handleSubmit('QUOTATION')}
-                                    variant="outline"
-                                    className="w-full h-9 text-xs border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 shadow-sm"
-                                    disabled={loading}
-                                >
-                                    <div className="flex items-center justify-center gap-1.5">
-                                        <FileText size={14} />
-                                        <span className="font-bold">حفظ كمسودة / عرض سعر</span>
+                                {/* Total and Buttons */}
+                                <div className="flex gap-2">
+                                    {/* Total Box */}
+                                    <div className="flex-1 flex flex-col justify-center bg-slate-900 text-white p-2 rounded-lg border-b-4 border-blue-500 relative">
+                                        {parseFloat(discount) > 0 && (
+                                            <span className="absolute top-1 left-2 text-[9px] text-green-400 font-bold bg-green-400/20 px-1 rounded">وفّر {parseFloat(discount).toLocaleString()}</span>
+                                        )}
+                                        <span className="font-bold text-[10px] opacity-80 whitespace-nowrap">الإجمالي النهائي</span>
+                                        <div className="flex items-end gap-1 mt-0.5">
+                                            <span className="font-black text-xl leading-none">{finalTotal.toLocaleString()}</span>
+                                            <span className="text-[10px] text-gray-400 mb-0.5">ج.س</span>
+                                            {exchangeRate > 0 && finalTotal > 0 && (
+                                                <span className="text-[10px] text-emerald-400 font-bold ml-2 mb-0.5">
+                                                    ${(finalTotal / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                </Button>
+
+                                    {/* Buttons */}
+                                    <div className="flex flex-col gap-1.5 w-1/2 shrink-0">
+                                        <div className="flex gap-1.5 h-9">
+                                            <Button
+                                                onClick={() => handleSubmit('PAID')}
+                                                className="flex-1 h-full text-xs font-bold bg-emerald-600 hover:bg-emerald-700 shadow-sm px-1"
+                                                disabled={loading}
+                                            >
+                                                كاش (خالص)
+                                            </Button>
+                                            <Button
+                                                onClick={() => handleSubmit('CREDIT')}
+                                                className="flex-1 h-full text-[11px] font-bold bg-amber-500 hover:bg-amber-600 shadow-sm px-1 text-white"
+                                                disabled={loading}
+                                            >
+                                                آجل (دفع جزئي)
+                                            </Button>
+                                        </div>
+                                        <Button
+                                            onClick={() => handleSubmit('QUOTATION')}
+                                            variant="outline"
+                                            className="h-7 text-[11px] font-bold bg-white text-blue-700 border-blue-200 hover:bg-blue-50 shadow-sm"
+                                            disabled={loading}
+                                        >
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                <FileText size={12} />
+                                                <span>حفظ عرض سعر مسودة</span>
+                                            </div>
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
