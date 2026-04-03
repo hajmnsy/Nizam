@@ -156,40 +156,40 @@ export default function Navbar() {
         <>
             <CommandPalette />
 
-            <nav className={`sticky top-0 z-40 w-full transition-all duration-200 border-b ${
-                scrolled ? 'bg-white/95 backdrop-blur-sm border-gray-200 shadow-sm' : 'bg-white border-gray-200'
+            <nav className={`sticky top-0 z-40 w-full transition-all duration-300 ${
+                scrolled ? 'bg-white/80 backdrop-blur-xl border-b border-slate-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] py-1' : 'bg-transparent py-3'
             } print:hidden`}>
                 <div className="container mx-auto px-4 max-w-[1400px]">
-                    <div className="flex justify-between items-center h-16">
+                    <div className="flex justify-between items-center h-14 transition-all">
                         
                         {/* Right: Logo & Primary Nav */}
-                        <div className="flex items-center gap-8">
+                        <div className="flex items-center gap-6">
                             {/* Logo */}
-                            <Link href="/" className="flex items-center gap-2">
+                            <Link href="/" className="flex items-center gap-3 group">
                                 {settings?.logoUrl ? (
-                                    <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                    <img src={settings.logoUrl} alt="Logo" className="h-9 w-auto object-contain group-hover:scale-105 transition-transform" onError={(e) => (e.currentTarget.style.display = 'none')} />
                                 ) : (
-                                    <div className="h-8 w-8 bg-blue-600 rounded-md flex items-center justify-center">
-                                        <Rocket className="text-white" size={18} />
+                                    <div className="h-9 w-9 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-200 group-hover:shadow-blue-300 transition-all">
+                                        <Rocket className="text-white" size={18} strokeWidth={2.5} />
                                     </div>
                                 )}
                                 {settings?.companyName && (
-                                    <span className="font-bold text-gray-900 tracking-tight hidden lg:block">
+                                    <span className="font-black text-lg text-slate-800 tracking-tight hidden lg:block group-hover:text-indigo-600 transition-colors">
                                         {settings.companyName}
                                     </span>
                                 )}
                             </Link>
 
                             {/* Desktop Navigation */}
-                            <div className="hidden md:flex items-center gap-1">
+                            <div className="hidden xl:flex items-center gap-1 bg-slate-100/60 p-1 rounded-full border border-slate-200/50 backdrop-blur-sm shadow-inner">
                                 {navLinks.map((link) => (
                                     <Link
                                         key={link.path}
                                         href={link.path}
-                                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                        className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all duration-300 relative ${
                                             isActive(link.path)
-                                                ? 'bg-gray-100 text-gray-900'
-                                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                                ? 'bg-white text-indigo-600 shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                                                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
                                         }`}
                                     >
                                         {link.name}
@@ -199,49 +199,35 @@ export default function Navbar() {
                         </div>
 
                         {/* Left: Actions */}
-                        <div className="hidden md:flex items-center gap-2">
-                            {/* Search Button */}
-                            <button
-                                onClick={openSearch}
-                                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-colors"
-                                title="بحث سريع (Ctrl+K)"
-                            >
-                                <Search size={14} className="text-gray-400" />
-                                <span className="hidden lg:inline mr-1">بحث</span>
-                                <kbd className="hidden lg:inline-flex items-center gap-1 font-sans text-[10px] bg-white border border-gray-200 px-1.5 rounded text-gray-400 ml-1">
-                                    <span className="text-xs">⌘</span>K
-                                </kbd>
-                            </button>
-
-                            <div className="w-px h-5 bg-gray-200 mx-1"></div>
-
+                        <div className="hidden md:flex items-center gap-3">
+                            
                             {/* Exchange Rate Widget */}
                             <div className="relative" ref={exchangePopupRef}>
                                 <button
                                     onClick={() => setShowExchangeModal(!showExchangeModal)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors border border-transparent hover:border-gray-200"
+                                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-all border border-emerald-200/60 shadow-sm"
                                     title="تحديث سعر الصرف"
                                 >
-                                    <DollarSign size={14} className="text-gray-400" />
+                                    <DollarSign size={16} strokeWidth={2.5} />
                                     <span>{exchangeRate > 0 ? exchangeRate.toLocaleString() : '---'} ج.س</span>
                                 </button>
 
                                 {showExchangeModal && (
-                                    <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-fade-in-up z-50 origin-top-left p-4">
-                                        <div className="flex justify-between items-center mb-3">
-                                            <h4 className="font-semibold text-sm text-gray-900">تحديث سعر الصرف</h4>
-                                            <button onClick={() => setShowExchangeModal(false)} className="text-gray-400 hover:text-gray-600">
-                                                <X size={14} />
+                                    <div className="absolute left-0 mt-3 w-64 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl shadow-xl overflow-hidden animate-fade-in-up z-50 origin-top-left p-5">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="font-bold text-slate-800">تحديث سعر الصرف</h4>
+                                            <button onClick={() => setShowExchangeModal(false)} className="text-slate-400 hover:text-slate-900 p-1 bg-slate-100 rounded-full transition-colors">
+                                                <X size={14} strokeWidth={3} />
                                             </button>
                                         </div>
-                                        <div className="space-y-3">
+                                        <div className="space-y-4">
                                             <div>
-                                                <label className="text-xs text-gray-500 mb-1.5 block">السعر مقابل 1 دولار</label>
+                                                <label className="text-xs font-bold text-slate-500 mb-2 block">السعر مقابل 1 دولار</label>
                                                 <input
                                                     type="number"
                                                     value={newExchangeRate}
                                                     onChange={(e) => setNewExchangeRate(e.target.value)}
-                                                    className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                                                    className="w-full font-bold text-base border-2 border-slate-100 rounded-xl px-4 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all bg-slate-50 focus:bg-white"
                                                     placeholder="مثال: 3000"
                                                     autoFocus
                                                     onKeyDown={(e) => {
@@ -252,14 +238,26 @@ export default function Navbar() {
                                             <button
                                                 onClick={handleSaveExchangeRate}
                                                 disabled={savingRate}
-                                                className="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium text-sm py-2 rounded-md transition-colors disabled:opacity-50"
+                                                className="w-full bg-slate-900 hover:bg-indigo-600 text-white font-bold text-sm py-2.5 rounded-xl transition-all disabled:opacity-50 shadow-md hover:shadow-indigo-500/20"
                                             >
-                                                {savingRate ? 'جاري الحفظ...' : 'حفظ'}
+                                                {savingRate ? 'جاري الحفظ...' : 'حفظ التحديث'}
                                             </button>
                                         </div>
                                     </div>
                                 )}
                             </div>
+
+                            <div className="w-px h-6 bg-slate-200 mx-1"></div>
+
+                            {/* Search Button */}
+                            <button
+                                onClick={openSearch}
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-500 bg-slate-100/80 hover:bg-slate-200/80 border border-transparent hover:border-slate-300 rounded-full transition-all"
+                                title="بحث سريع"
+                            >
+                                <Search size={16} strokeWidth={2.5} />
+                                <span className="hidden lg:inline">بحث...</span>
+                            </button>
 
                             {/* Notifications Dropdown */}
                             <div className="relative">
@@ -268,30 +266,33 @@ export default function Navbar() {
                                         setShowNotifications(!showNotifications)
                                         if (!showNotifications) markAsRead()
                                     }}
-                                    className="relative p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                                    className="relative p-2.5 text-slate-500 hover:text-indigo-600 bg-slate-100/80 hover:bg-indigo-50 rounded-full transition-all border border-transparent hover:border-indigo-100"
                                     title="الإشعارات"
                                 >
-                                    <Bell size={18} />
+                                    <Bell size={18} strokeWidth={2.5} />
                                     {unreadCount > 0 && (
-                                        <span className="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full border border-white"></span>
+                                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white shadow-sm"></span>
                                     )}
                                 </button>
 
                                 {showNotifications && (
-                                    <div className="absolute left-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-fade-in-up z-50 origin-top-left flex flex-col">
-                                        <div className="p-3 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                                            <span className="font-semibold text-sm text-gray-900">الإشعارات</span>
-                                            {unreadCount > 0 && <span className="text-[10px] font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{unreadCount} جديد</span>}
+                                    <div className="absolute left-0 mt-3 w-[320px] bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-3xl shadow-xl overflow-hidden animate-fade-in-up z-50 origin-top-left flex flex-col">
+                                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                                            <span className="font-black text-slate-800">الإشعارات</span>
+                                            {unreadCount > 0 && <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{unreadCount} جديد</span>}
                                         </div>
-                                        <div className="max-h-80 overflow-y-auto">
+                                        <div className="max-h-80 overflow-y-auto custom-scrollbar">
                                             {notifications.length === 0 ? (
-                                                <div className="p-6 text-center text-gray-500 text-sm">لا توجد إشعارات حالياً.</div>
+                                                <div className="p-8 text-center text-slate-400 font-bold text-sm flex flex-col items-center gap-2">
+                                                    <Bell size={24} className="opacity-20" />
+                                                    لا توجد إشعارات حالياً
+                                                </div>
                                             ) : (
                                                 notifications.map(notification => (
-                                                    <div key={notification.id} className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${!notification.isRead ? 'bg-blue-50/30' : ''}`}>
-                                                        <h4 className={`text-sm ${!notification.isRead ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{notification.title}</h4>
-                                                        <p className="text-xs text-gray-500 mt-1 leading-relaxed">{notification.message}</p>
-                                                        <span className="text-[10px] text-gray-400 mt-1.5 block">{new Date(notification.createdAt).toLocaleDateString('ar-SD')}</span>
+                                                    <div key={notification.id} className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors ${!notification.isRead ? 'bg-indigo-50/30' : ''}`}>
+                                                        <h4 className={`text-sm ${!notification.isRead ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>{notification.title}</h4>
+                                                        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed font-medium">{notification.message}</p>
+                                                        <span className="text-[10px] text-slate-400 mt-2 block font-bold">{new Date(notification.createdAt).toLocaleDateString('ar-SD')}</span>
                                                     </div>
                                                 ))
                                             )}
@@ -300,29 +301,27 @@ export default function Navbar() {
                                 )}
                             </div>
 
-                            <div className="w-px h-5 bg-gray-200 mx-1"></div>
-
                             {/* Logout */}
                             <button
                                 onClick={handleLogout}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all"
                                 title="تسجيل خروج"
                             >
-                                <LogOut size={18} />
+                                <LogOut size={18} strokeWidth={2.5} />
                             </button>
                         </div>
 
                         {/* Mobile Menu Button */}
-                        <div className="md:hidden flex items-center gap-2">
+                        <div className="xl:hidden flex items-center gap-2">
                             <button
                                 onClick={openSearch}
-                                className="p-2 text-gray-500 hover:bg-gray-100 rounded-md"
+                                className="p-2.5 text-slate-600 bg-slate-100 rounded-full"
                             >
-                                <Search size={20} />
+                                <Search size={18} strokeWidth={2.5} />
                             </button>
                             <button
                                 onClick={() => setIsOpen(!isOpen)}
-                                className="p-2 text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                                className="p-2.5 text-slate-900 bg-white shadow-sm border border-slate-200 rounded-xl transition-all"
                             >
                                 {isOpen ? <X size={20} /> : <Menu size={20} />}
                             </button>
@@ -332,32 +331,32 @@ export default function Navbar() {
 
                 {/* Mobile Navigation Menu */}
                 {isOpen && (
-                    <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-gray-200 shadow-md animate-slide-down">
-                        <div className="flex flex-col p-2 space-y-1">
+                    <div className="xl:hidden absolute top-full left-0 w-full bg-white/95 backdrop-blur-2xl border-b border-slate-200 shadow-2xl animate-slide-down">
+                        <div className="flex flex-col p-4 space-y-1">
                             {navLinks.map((link) => (
                                 <Link
                                     key={link.path}
                                     href={link.path}
                                     onClick={() => setIsOpen(false)}
-                                    className={`px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                                    className={`px-4 py-3 rounded-xl text-sm font-bold transition-all ${
                                         isActive(link.path)
-                                            ? 'bg-blue-50 text-blue-700'
-                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                            ? 'bg-indigo-50 text-indigo-700'
+                                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                     }`}
                                 >
                                     {link.name}
                                 </Link>
                             ))}
-                            <div className="border-t border-gray-100 my-1"></div>
-                            <div className="px-4 py-2.5 flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-600">سعر الصرف</span>
-                                <span className="text-sm font-semibold text-gray-900">{exchangeRate.toLocaleString()} ج.س</span>
+                            <div className="border-t border-slate-100 my-2"></div>
+                            <div className="px-4 py-3 flex items-center justify-between bg-emerald-50 rounded-xl mb-2">
+                                <span className="text-sm font-bold text-emerald-800">سعر الصرف (ج.س)</span>
+                                <span className="text-sm font-black text-emerald-900">{exchangeRate.toLocaleString()}</span>
                             </div>
                             <button
                                 onClick={handleLogout}
-                                className="flex w-full items-center gap-2 px-4 py-2.5 text-red-600 hover:bg-red-50 rounded-md transition-colors text-sm font-medium"
+                                className="flex w-full items-center gap-2 px-4 py-3 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors text-sm font-bold"
                             >
-                                <LogOut size={16} />
+                                <LogOut size={18} />
                                 <span>تسجيل خروج</span>
                             </button>
                         </div>
