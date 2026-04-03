@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LogOut, Menu, X, Rocket, Search, DollarSign } from 'lucide-react'
+import { LogOut, Menu, X, Rocket, Search, DollarSign, Bell } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import CommandPalette from './CommandPalette'
 
@@ -39,7 +39,7 @@ export default function Navbar() {
     // Handle scroll effect
     useEffect(() => {
         const handleScroll = () => {
-            setScrolled(window.scrollY > 20)
+            setScrolled(window.scrollY > 10)
         }
         window.addEventListener('scroll', handleScroll)
 
@@ -128,7 +128,6 @@ export default function Navbar() {
     const unreadCount = notifications.filter(n => !n.isRead).length
 
     const isActive = (path: string) => {
-        // Check if current path matches or starts with the link path (for sub-routes)
         if (path === '/') return pathname === '/'
         return pathname.startsWith(path)
     }
@@ -140,7 +139,7 @@ export default function Navbar() {
         { name: 'المصروفات', path: '/expenses' },
         { name: 'التقارير', path: '/reports' },
         { name: 'حاسبة الأسعار', path: '/pricing' },
-        { name: 'الموظفين والرواتب', path: '/employees' },
+        { name: 'الموظفين', path: '/employees' },
         { name: 'الإعدادات', path: '/settings' },
     ]
 
@@ -148,7 +147,6 @@ export default function Navbar() {
         navLinks.push({ name: 'المستخدمين', path: '/users' })
     }
 
-    // Trigger for Command Palette
     const openSearch = () => {
         const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })
         document.dispatchEvent(event)
@@ -158,78 +156,92 @@ export default function Navbar() {
         <>
             <CommandPalette />
 
-            <nav className={`sticky top-0 z-40 w-full transition-all duration-300 ${scrolled ? 'bg-white/80 backdrop-blur-md shadow-sm py-2' : 'bg-transparent py-4'
-                } print:hidden`}>
-                <div className="container mx-auto px-4 max-w-7xl relative z-10">
-                    <div className="flex justify-between items-center">
+            <nav className={`sticky top-0 z-40 w-full transition-all duration-200 border-b ${
+                scrolled ? 'bg-white/95 backdrop-blur-sm border-gray-200 shadow-sm' : 'bg-white border-gray-200'
+            } print:hidden`}>
+                <div className="container mx-auto px-4 max-w-[1400px]">
+                    <div className="flex justify-between items-center h-16">
+                        
+                        {/* Right: Logo & Primary Nav */}
+                        <div className="flex items-center gap-8">
+                            {/* Logo */}
+                            <Link href="/" className="flex items-center gap-2">
+                                {settings?.logoUrl ? (
+                                    <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                ) : (
+                                    <div className="h-8 w-8 bg-blue-600 rounded-md flex items-center justify-center">
+                                        <Rocket className="text-white" size={18} />
+                                    </div>
+                                )}
+                                {settings?.companyName && (
+                                    <span className="font-bold text-gray-900 tracking-tight hidden lg:block">
+                                        {settings.companyName}
+                                    </span>
+                                )}
+                            </Link>
 
-                        {/* Logo */}
-                        <Link href="/" className="flex items-center gap-3">
-                            {settings?.logoUrl ? (
-                                <img src={settings.logoUrl} alt="Logo" className="h-10 w-auto object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                            ) : (
-                                <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
-                                    <Rocket className="text-white" size={24} strokeWidth={2.5} />
-                                </div>
-                            )}
-                            {settings?.companyName && (
-                                <span className="font-black text-xl text-slate-800 tracking-tight hidden sm:block">
-                                    {settings.companyName}
-                                </span>
-                            )}
-                        </Link>
-
-                        {/* Desktop Navigation */}
-                        <div className="hidden md:flex items-center gap-1 bg-white/50 p-1 rounded-full border border-gray-100 backdrop-blur-sm">
-                            {navLinks.map((link) => (
-                                <Link
-                                    key={link.path}
-                                    href={link.path}
-                                    className={`px-5 py-2 rounded-full text-sm font-bold transition-all duration-300 relative overflow-hidden ${isActive(link.path)
-                                        ? 'text-white shadow-lg shadow-indigo-200'
-                                        : 'text-slate-600 hover:text-indigo-700 hover:bg-white/80'
+                            {/* Desktop Navigation */}
+                            <div className="hidden md:flex items-center gap-1">
+                                {navLinks.map((link) => (
+                                    <Link
+                                        key={link.path}
+                                        href={link.path}
+                                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                            isActive(link.path)
+                                                ? 'bg-gray-100 text-gray-900'
+                                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                         }`}
-                                >
-                                    {isActive(link.path) && (
-                                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-full -z-10 animate-fade-in" />
-                                    )}
-                                    {link.name}
-                                </Link>
-                            ))}
+                                    >
+                                        {link.name}
+                                    </Link>
+                                ))}
+                            </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="hidden md:flex items-center gap-3">
+                        {/* Left: Actions */}
+                        <div className="hidden md:flex items-center gap-2">
+                            {/* Search Button */}
+                            <button
+                                onClick={openSearch}
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-colors"
+                                title="بحث سريع (Ctrl+K)"
+                            >
+                                <Search size={14} className="text-gray-400" />
+                                <span className="hidden lg:inline mr-1">بحث</span>
+                                <kbd className="hidden lg:inline-flex items-center gap-1 font-sans text-[10px] bg-white border border-gray-200 px-1.5 rounded text-gray-400 ml-1">
+                                    <span className="text-xs">⌘</span>K
+                                </kbd>
+                            </button>
+
+                            <div className="w-px h-5 bg-gray-200 mx-1"></div>
+
                             {/* Exchange Rate Widget */}
                             <div className="relative" ref={exchangePopupRef}>
                                 <button
                                     onClick={() => setShowExchangeModal(!showExchangeModal)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors border border-amber-200"
-                                    title="سعر الصرف الحالي"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors border border-transparent hover:border-gray-200"
+                                    title="تحديث سعر الصرف"
                                 >
-                                    <DollarSign size={14} />
-                                    <span>{exchangeRate > 0 ? exchangeRate.toLocaleString() : 'غير محدد'} ج.س</span>
+                                    <DollarSign size={14} className="text-gray-400" />
+                                    <span>{exchangeRate > 0 ? exchangeRate.toLocaleString() : '---'} ج.س</span>
                                 </button>
 
                                 {showExchangeModal && (
-                                    <div className="absolute left-0 mt-3 w-64 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden animate-fade-in-up z-50 origin-top-left p-4">
+                                    <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-fade-in-up z-50 origin-top-left p-4">
                                         <div className="flex justify-between items-center mb-3">
-                                            <h4 className="font-bold text-sm text-gray-800 flex items-center gap-2">
-                                                <DollarSign size={16} className="text-amber-500" />
-                                                تحديث سعر الصرف
-                                            </h4>
+                                            <h4 className="font-semibold text-sm text-gray-900">تحديث سعر الصرف</h4>
                                             <button onClick={() => setShowExchangeModal(false)} className="text-gray-400 hover:text-gray-600">
-                                                <X size={16} />
+                                                <X size={14} />
                                             </button>
                                         </div>
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="text-xs text-gray-500 mb-1 block">السعر مقابل 1 دولار</label>
+                                                <label className="text-xs text-gray-500 mb-1.5 block">السعر مقابل 1 دولار</label>
                                                 <input
                                                     type="number"
                                                     value={newExchangeRate}
                                                     onChange={(e) => setNewExchangeRate(e.target.value)}
-                                                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all font-bold"
+                                                    className="w-full text-sm border border-gray-300 rounded-md px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                                                     placeholder="مثال: 3000"
                                                     autoFocus
                                                     onKeyDown={(e) => {
@@ -240,9 +252,9 @@ export default function Navbar() {
                                             <button
                                                 onClick={handleSaveExchangeRate}
                                                 disabled={savingRate}
-                                                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm py-2 rounded-lg transition-colors disabled:opacity-50"
+                                                className="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium text-sm py-2 rounded-md transition-colors disabled:opacity-50"
                                             >
-                                                {savingRate ? 'جاري الحفظ...' : 'حفظ التحديث'}
+                                                {savingRate ? 'جاري الحفظ...' : 'حفظ'}
                                             </button>
                                         </div>
                                     </div>
@@ -256,31 +268,30 @@ export default function Navbar() {
                                         setShowNotifications(!showNotifications)
                                         if (!showNotifications) markAsRead()
                                     }}
-                                    className="relative p-2 text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors border border-transparent hover:border-gray-300"
+                                    className="relative p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                                    title="الإشعارات"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+                                    <Bell size={18} />
                                     {unreadCount > 0 && (
-                                        <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
-                                            {unreadCount}
-                                        </span>
+                                        <span className="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full border border-white"></span>
                                     )}
                                 </button>
 
                                 {showNotifications && (
-                                    <div className="absolute left-0 mt-3 w- ৮০ sm:w-80 bg-white border rounded-2xl shadow-xl overflow-hidden animate-fade-in-up z-50 origin-top-left">
-                                        <div className="p-4 border-b bg-gray-50 font-bold text-gray-800 flex justify-between items-center">
-                                            الإشعارات
-                                            {unreadCount > 0 && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{unreadCount} جديد</span>}
+                                    <div className="absolute left-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-fade-in-up z-50 origin-top-left flex flex-col">
+                                        <div className="p-3 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                                            <span className="font-semibold text-sm text-gray-900">الإشعارات</span>
+                                            {unreadCount > 0 && <span className="text-[10px] font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{unreadCount} جديد</span>}
                                         </div>
                                         <div className="max-h-80 overflow-y-auto">
                                             {notifications.length === 0 ? (
                                                 <div className="p-6 text-center text-gray-500 text-sm">لا توجد إشعارات حالياً.</div>
                                             ) : (
                                                 notifications.map(notification => (
-                                                    <div key={notification.id} className={`p-4 border-b hover:bg-gray-50 transition-colors ${!notification.isRead ? 'bg-blue-50/50' : ''}`}>
-                                                        <h4 className={`text-sm ${!notification.isRead ? 'font-bold text-gray-900' : 'text-gray-700'}`}>{notification.title}</h4>
+                                                    <div key={notification.id} className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${!notification.isRead ? 'bg-blue-50/30' : ''}`}>
+                                                        <h4 className={`text-sm ${!notification.isRead ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{notification.title}</h4>
                                                         <p className="text-xs text-gray-500 mt-1 leading-relaxed">{notification.message}</p>
-                                                        <span className="text-[10px] text-gray-400 mt-2 block">{new Date(notification.createdAt).toLocaleDateString('ar-SD')}</span>
+                                                        <span className="text-[10px] text-gray-400 mt-1.5 block">{new Date(notification.createdAt).toLocaleDateString('ar-SD')}</span>
                                                     </div>
                                                 ))
                                             )}
@@ -289,70 +300,66 @@ export default function Navbar() {
                                 )}
                             </div>
 
-                            <button
-                                onClick={openSearch}
-                                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors border border-transparent hover:border-gray-300"
-                                title="بحث سريع (Ctrl+K)"
-                            >
-                                <Search size={16} />
-                                <span className="hidden lg:inline">بحث...</span>
-                                <span className="hidden lg:inline bg-white px-1.5 py-0.5 rounded text-[10px] border shadow-sm">Ctrl K</span>
-                            </button>
+                            <div className="w-px h-5 bg-gray-200 mx-1"></div>
 
+                            {/* Logout */}
                             <button
                                 onClick={handleLogout}
-                                className="flex items-center gap-2 px-4 py-2 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-full transition-all text-sm font-bold border border-transparent hover:border-red-100"
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                title="تسجيل خروج"
                             >
                                 <LogOut size={18} />
-                                <span>خروج</span>
                             </button>
                         </div>
 
                         {/* Mobile Menu Button */}
-                        <button
-                            onClick={() => setIsOpen(!isOpen)}
-                            className="md:hidden p-2 text-gray-600 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-                        >
-                            {isOpen ? <X size={24} /> : <Menu size={24} />}
-                        </button>
+                        <div className="md:hidden flex items-center gap-2">
+                            <button
+                                onClick={openSearch}
+                                className="p-2 text-gray-500 hover:bg-gray-100 rounded-md"
+                            >
+                                <Search size={20} />
+                            </button>
+                            <button
+                                onClick={() => setIsOpen(!isOpen)}
+                                className="p-2 text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                            >
+                                {isOpen ? <X size={20} /> : <Menu size={20} />}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {/* Mobile Navigation Menu */}
                 {isOpen && (
-                    <div className="md:hidden absolute top-full left-0 w-full bg-white border-b shadow-lg animate-slide-down">
-                        <div className="flex flex-col p-4 space-y-2">
-                            <button
-                                onClick={() => { openSearch(); setIsOpen(false) }}
-                                className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 text-gray-600 mb-2"
-                            >
-                                <Search size={20} />
-                                <span className="font-bold">بحث سريع</span>
-                            </button>
-
+                    <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-gray-200 shadow-md animate-slide-down">
+                        <div className="flex flex-col p-2 space-y-1">
                             {navLinks.map((link) => (
                                 <Link
                                     key={link.path}
                                     href={link.path}
                                     onClick={() => setIsOpen(false)}
-                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-colors ${isActive(link.path)
-                                        ? 'bg-blue-50 text-blue-600'
-                                        : 'text-gray-600 hover:bg-gray-50'
-                                        }`}
+                                    className={`px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                                        isActive(link.path)
+                                            ? 'bg-blue-50 text-blue-700'
+                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                    }`}
                                 >
-                                    <span className={`w-1.5 h-1.5 rounded-full ${isActive(link.path) ? 'bg-blue-600' : 'bg-gray-300'}`} />
                                     {link.name}
                                 </Link>
                             ))}
-                            <div className="border-t pt-2 mt-2">
-                                <button
-                                    onClick={handleLogout}
-                                    className="flex w-full items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors text-sm font-bold"
-                                >
-                                    <LogOut size={20} />
-                                    <span>تسجيل خروج</span>
-                                </button>
+                            <div className="border-t border-gray-100 my-1"></div>
+                            <div className="px-4 py-2.5 flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-600">سعر الصرف</span>
+                                <span className="text-sm font-semibold text-gray-900">{exchangeRate.toLocaleString()} ج.س</span>
                             </div>
+                            <button
+                                onClick={handleLogout}
+                                className="flex w-full items-center gap-2 px-4 py-2.5 text-red-600 hover:bg-red-50 rounded-md transition-colors text-sm font-medium"
+                            >
+                                <LogOut size={16} />
+                                <span>تسجيل خروج</span>
+                            </button>
                         </div>
                     </div>
                 )}
