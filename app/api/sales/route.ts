@@ -133,6 +133,11 @@ export async function GET(request: Request) {
     try {
         let whereClause: any = {}
 
+        const customer = searchParams.get('customer')
+        if (customer) {
+            whereClause.customer = { contains: customer }
+        }
+
         if (status) {
             whereClause.status = status
         }

@@ -21,24 +21,31 @@ export async function GET(request: Request) {
                 select: { id: true, name: true, quantity: true, price: true }
             }),
             // Search Sales by Customer
-            prisma.sale.findMany({
+            prisma.sale.groupBy({
+                by: ['customer'],
                 where: {
                     customer: { contains: query }
                 },
-                take: 3,
-                select: { id: true, customer: true, total: true, createdAt: true }
+                _count: { id: true },
+                orderBy: { _count: { id: 'desc' } },
+                take: 5
             }),
             // Search Sales by ID (if query is number)
             !isNaN(Number(query)) ? prisma.sale.findMany({
-                where: { id: parseInt(query) },
-                select: { id: true, customer: true, total: true, createdAt: true }
+                where: { 
+                    OR: [
+                        { id: parseInt(query) },
+                        { invoiceNumber: parseInt(query) }
+                    ]
+                 },
+                select: { id: true, invoiceNumber: true, customer: true, total: true, createdAt: true }
             }) : []
         ])
 
         return NextResponse.json({
             results: [
                 ...products.map(p => ({ type: 'product', ...p })),
-                ...customers.map(c => ({ type: 'customer', ...c })),
+                ...customers.map(c => ({ type: 'customer', name: c.customer, count: c._count.id })),
                 ...(Array.isArray(sales) ? sales : []).map(s => ({ type: 'sale', ...s }))
             ]
         })

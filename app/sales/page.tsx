@@ -32,6 +32,16 @@ export default function SalesList() {
     const [loading, setLoading] = useState(true)
     const [tab, setTab] = useState<'PAID' | 'CREDIT' | 'QUOTATION'>('PAID')
     const [date, setDate] = useState<string>(getTodayLocal())
+    const [customerFilter, setCustomerFilter] = useState<string>('')
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const cust = params.get('customer')
+        if (cust) {
+            setCustomerFilter(cust)
+            setDate('') // Clear date filter to show all invoices for the customer
+        }
+    }, [])
     
     // Quick Payment State
     const [paymentModalOpen, setPaymentModalOpen] = useState(false)
@@ -53,7 +63,8 @@ export default function SalesList() {
     const refreshSales = () => {
         setLoading(true)
         const dateQuery = date ? `&date=${date}` : ''
-        fetch(`/api/sales?status=${tab}${dateQuery}`, { cache: 'no-store' })
+        const customerQuery = customerFilter ? `&customer=${encodeURIComponent(customerFilter)}` : ''
+        fetch(`/api/sales?status=${tab}${dateQuery}${customerQuery}`, { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 setSales(data)
@@ -64,7 +75,7 @@ export default function SalesList() {
 
     useEffect(() => {
         refreshSales()
-    }, [tab, date])
+    }, [tab, date, customerFilter])
 
     const handleQuickPayment = async () => {
         if (!selectedSale || !paymentAmount || isNaN(parseFloat(paymentAmount))) return
@@ -192,6 +203,27 @@ export default function SalesList() {
                         </button>
                     </div>
                 </div>
+
+                {customerFilter && (
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl mb-6 flex items-center justify-between shadow-sm">
+                        <span className="font-bold flex items-center gap-2">
+                            <CheckCircle size={18} className="text-emerald-500" /> 
+                            يتم عرض نتائج البحث الخاصة بالعميل: <span className="font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">{customerFilter}</span>
+                        </span>
+                        <button 
+                            onClick={() => {
+                                setCustomerFilter('')
+                                setDate(getTodayLocal())
+                                // Remove ?customer from url
+                                window.history.replaceState({}, '', '/sales')
+                            }} 
+                            className="text-emerald-600 hover:bg-emerald-100 p-1.5 rounded-full transition-colors"
+                            title="إلغاء الفلتر"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+                )}
 
                 <Card className="overflow-hidden border border-slate-200 shadow-sm">
                     <div className="overflow-x-auto">

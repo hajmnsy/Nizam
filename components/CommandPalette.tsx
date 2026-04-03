@@ -81,7 +81,7 @@ export default function CommandPalette() {
                             {results.map((item, i) => (
                                 <Link
                                     key={i}
-                                    href={item.type === 'product' ? `/inventory?search=${item.name}` : `/sales/${item.id}`}
+                                    href={item.type === 'product' ? `/inventory?search=${item.name}` : item.type === 'customer' ? `/sales?customer=${encodeURIComponent(item.name)}` : `/sales/${item.id}`}
                                     onClick={close}
                                     className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg group transition-colors"
                                 >
@@ -94,11 +94,11 @@ export default function CommandPalette() {
                                     </div>
                                     <div className="flex-1">
                                         <h4 className="font-bold text-slate-800">
-                                            {item.type === 'product' ? item.name : item.type === 'customer' ? item.customer : `فاتورة #${item.id}`}
+                                            {item.type === 'product' ? item.name : item.type === 'customer' ? item.name : `فاتورة #${item.invoiceNumber || item.id}`}
                                         </h4>
                                         <p className="text-xs text-gray-500">
                                             {item.type === 'product' ? `الكمية: ${item.quantity} | السعر: ${item.price}` :
-                                                item.type === 'customer' ? `فاتورة #${item.id}` :
+                                                item.type === 'customer' ? `لديه ${item.count} فواتير مسجلة` :
                                                     `${new Date(item.createdAt).toLocaleDateString('ar-SD')} | ${item.total} ج.س`}
                                         </p>
                                     </div>
