@@ -259,7 +259,7 @@ export default function NewSale() {
 
                     <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
                         {/* LEFT SIDE: Product Selection */}
-                        <div className="lg:col-span-8 flex flex-col gap-3 min-h-0 h-full">
+                        <div className="lg:col-span-7 flex flex-col gap-3 min-h-0 h-full">
                             
                             {/* Categories Grid (Wraps inside to prevent horizontal scrolling) */}
                             <Card className="p-2 shrink-0 border-blue-100">
@@ -349,7 +349,7 @@ export default function NewSale() {
                         </div>
 
                         {/* RIGHT SIDE: Cart */}
-                        <div className="lg:col-span-4 flex flex-col h-full bg-white border-2 border-blue-200 rounded-xl shadow-lg overflow-hidden min-h-0">
+                        <div className="lg:col-span-5 flex flex-col h-full bg-white border-2 border-blue-200 rounded-xl shadow-lg overflow-hidden min-h-0">
                             
                             {/* Cart Header */}
                             <div className="bg-blue-50 p-3 border-b border-blue-100 shrink-0">
@@ -385,32 +385,32 @@ export default function NewSale() {
                                                 <div key={item.productId} className="bg-white p-3 rounded-lg border shadow-sm flex flex-col gap-2">
                                                     <div className="flex justify-between items-start">
                                                         <div className="flex flex-col">
-                                                            <span className="font-bold text-sm line-clamp-1">{item.name}</span>
-                                                            {item.thickness && <span className="text-xs text-gray-500">سمك: {item.thickness}مم</span>}
+                                                            <span className="font-bold text-sm">{item.name}</span>
+                                                            {item.thickness && <span className="text-xs text-gray-500 mb-1">سمك: {item.thickness}مم</span>}
                                                             {discountRatio > 0 && (
-                                                                <span className="text-xs text-green-600 font-bold">السعر بعد الخصم: {(itemDiscountedTotal / itemQty).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                                                                <span className="text-xs text-green-600 font-bold mb-1">السعر بعد الخصم: {(itemDiscountedTotal / itemQty).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                                                             )}
                                                             {exchangeRate > 0 && itemPPU > 0 && (
-                                                                <div className="mt-1 flex flex-wrap items-center gap-1">
-                                                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200">
+                                                                <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200 whitespace-nowrap">
                                                                         صافي الربح: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * itemTransport)) * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
                                                                     </span>
-                                                                    <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold border border-blue-200" title="الربح بعد خصم 15% مصاريف وهامش مستهدف">
+                                                                    <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold border border-blue-200 whitespace-nowrap" title="الربح بعد خصم 15% مصاريف وهامش مستهدف">
                                                                         الربح النهائي: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * itemTransport)) * 1.15 * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
                                                                     </span>
-                                                                    <span className="text-[10px] text-emerald-600 font-bold">
+                                                                    <span className="text-[10px] text-emerald-600 font-bold whitespace-nowrap">
                                                                         (${((((itemDiscountedTotal / itemQty) / exchangeRate) - (itemPPU + ((itemWeight / 1000) * itemTransport))) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })})
                                                                     </span>
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <button onClick={() => removeFromCart(item.productId)} className="text-red-400 hover:text-red-600">
+                                                        <button onClick={() => removeFromCart(item.productId)} className="text-red-400 hover:text-red-600 p-1">
                                                             <Trash2 size={16} />
                                                         </button>
                                                     </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center border rounded">
-                                                            <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} className="px-2 py-1 hover:bg-gray-100">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2 mt-1 border-t pt-2 border-gray-100">
+                                                        <div className="flex items-center border rounded shrink-0">
+                                                            <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} className="px-3 py-1.5 hover:bg-gray-100">
                                                                 <Minus size={14} />
                                                             </button>
                                                             <input
@@ -425,14 +425,14 @@ export default function NewSale() {
                                                                 onBlur={(e) => {
                                                                     if (!e.target.value || parseInt(e.target.value) < 1) updateQuantity(item.productId, 1);
                                                                 }}
-                                                                className="w-12 text-center text-sm font-bold border-x py-1 outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                className="w-14 text-center text-sm font-bold border-x py-1.5 outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                             />
-                                                            <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} className="px-2 py-1 hover:bg-gray-100 text-blue-600">
+                                                            <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} className="px-3 py-1.5 hover:bg-gray-100 text-blue-600">
                                                                 <Plus size={14} />
                                                             </button>
                                                         </div>
-                                                        <div className="flex flex-col items-end gap-1">
-                                                            <div className="flex items-center gap-1 border border-slate-200 rounded px-2 py-0.5 bg-gray-50/80">
+                                                        <div className="flex flex-col items-end gap-1 shrink-0">
+                                                            <div className="flex items-center gap-1 border border-slate-200 rounded px-2 py-1 bg-gray-50/80">
                                                                 <span className="text-xs text-gray-500 font-bold">السعر:</span>
                                                                 <input
                                                                     type="number"
@@ -442,11 +442,11 @@ export default function NewSale() {
                                                                     className="w-20 text-left text-sm font-bold bg-transparent outline-none text-blue-700 font-mono"
                                                                 />
                                                             </div>
-                                                            <div className="flex flex-col items-end mt-1">
+                                                            <div className="flex flex-col items-end">
                                                                 {discountRatio > 0 && (
-                                                                    <span className="text-xs text-gray-400 line-through">{itemOriginalTotal.toLocaleString()}</span>
+                                                                    <span className="text-[10px] text-gray-400 line-through">{itemOriginalTotal.toLocaleString()}</span>
                                                                 )}
-                                                                <span className="font-bold text-blue-600">
+                                                                <span className="font-bold text-blue-600 text-sm">
                                                                     {itemDiscountedTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                                                 </span>
                                                             </div>
