@@ -279,16 +279,7 @@ export default function NewSale() {
                                 </div>
                             </Card>
 
-                            {/* Search */}
-                            <div className="relative shrink-0">
-                                <Search className="absolute right-3 top-2.5 text-gray-400" size={20} />
-                                <Input
-                                    placeholder="بحث سريع عن منتج..."
-                                    className="pr-10 h-10 bg-white"
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
-                                />
-                            </div>
+                            {/* Search Box Removed per User Request */}
 
                             {/* Products Grid */}
                             <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col min-h-0">
@@ -391,22 +382,35 @@ export default function NewSale() {
                                             const itemTransport = item.transportCostUSD || 15;
 
                                             return (
-                                                <div key={item.productId} className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex flex-col gap-2">
+                                                <div key={item.productId} className="bg-white p-3 rounded-lg border shadow-sm flex flex-col gap-2">
                                                     <div className="flex justify-between items-start">
-                                                        <div className="flex flex-col flex-1 pr-1">
-                                                            <span className="font-bold text-sm leading-tight">{item.name}</span>
-                                                            <div className="flex justify-between items-center w-full mt-1">
-                                                                {item.thickness ? <span className="text-[10px] text-gray-500 bg-gray-100 px-1 rounded">سمك: {item.thickness}مم</span> : <span></span>}
-                                                                <button onClick={() => removeFromCart(item.productId)} className="text-red-400 hover:text-red-600 p-1 bg-red-50 rounded">
-                                                                    <Trash2 size={14} />
-                                                                </button>
-                                                            </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-sm line-clamp-1">{item.name}</span>
+                                                            {item.thickness && <span className="text-xs text-gray-500">سمك: {item.thickness}مم</span>}
+                                                            {discountRatio > 0 && (
+                                                                <span className="text-xs text-green-600 font-bold">السعر بعد الخصم: {(itemDiscountedTotal / itemQty).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                                                            )}
+                                                            {exchangeRate > 0 && itemPPU > 0 && (
+                                                                <div className="mt-1 flex flex-wrap items-center gap-1">
+                                                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200">
+                                                                        صافي الربح: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * itemTransport)) * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
+                                                                    </span>
+                                                                    <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold border border-blue-200" title="الربح بعد خصم 15% مصاريف وهامش مستهدف">
+                                                                        الربح النهائي: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * itemTransport)) * 1.15 * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
+                                                                    </span>
+                                                                    <span className="text-[10px] text-emerald-600 font-bold">
+                                                                        (${((((itemDiscountedTotal / itemQty) / exchangeRate) - (itemPPU + ((itemWeight / 1000) * itemTransport))) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })})
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </div>
+                                                        <button onClick={() => removeFromCart(item.productId)} className="text-red-400 hover:text-red-600">
+                                                            <Trash2 size={16} />
+                                                        </button>
                                                     </div>
-                                                    
-                                                    <div className="flex items-center justify-between border-t pt-2 mt-1">
-                                                        <div className="flex items-center border rounded border-gray-300 overflow-hidden">
-                                                            <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} className="px-2 py-1 bg-gray-50 hover:bg-gray-200 text-gray-600">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center border rounded">
+                                                            <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} className="px-2 py-1 hover:bg-gray-100">
                                                                 <Minus size={14} />
                                                             </button>
                                                             <input
@@ -415,36 +419,37 @@ export default function NewSale() {
                                                                 value={item.quantity === 0 ? '' : item.quantity}
                                                                 onChange={(e) => {
                                                                     const val = e.target.value;
-                                                                    if (val === '') {
-                                                                        updateQuantity(item.productId, 0);
-                                                                    } else {
-                                                                        updateQuantity(item.productId, parseInt(val) || 1);
-                                                                    }
+                                                                    if (val === '') updateQuantity(item.productId, 0);
+                                                                    else updateQuantity(item.productId, parseInt(val) || 1);
                                                                 }}
                                                                 onBlur={(e) => {
                                                                     if (!e.target.value || parseInt(e.target.value) < 1) updateQuantity(item.productId, 1);
                                                                 }}
-                                                                className="w-10 text-center text-sm font-bold border-x py-1 outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none text-blue-900 bg-blue-50/30"
+                                                                className="w-12 text-center text-sm font-bold border-x py-1 outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                             />
-                                                            <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} className="px-2 py-1 bg-gray-50 hover:bg-gray-200 text-blue-600">
+                                                            <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} className="px-2 py-1 hover:bg-gray-100 text-blue-600">
                                                                 <Plus size={14} />
                                                             </button>
                                                         </div>
-                                                        
                                                         <div className="flex flex-col items-end gap-1">
-                                                            <div className="flex items-center gap-1 rounded bg-gray-50 border border-gray-200 px-1">
-                                                                <span className="text-[10px] text-gray-400">السعر:</span>
+                                                            <div className="flex items-center gap-1 border border-slate-200 rounded px-2 py-0.5 bg-gray-50/80">
+                                                                <span className="text-xs text-gray-500 font-bold">السعر:</span>
                                                                 <input
                                                                     type="number"
                                                                     min="0"
                                                                     value={item.price}
                                                                     onChange={(e) => updatePrice(item.productId, parseFloat(e.target.value) || 0)}
-                                                                    className="w-16 text-left text-sm font-bold bg-transparent outline-none text-slate-800"
+                                                                    className="w-20 text-left text-sm font-bold bg-transparent outline-none text-blue-700 font-mono"
                                                                 />
                                                             </div>
-                                                            <span className="font-bold text-blue-700 text-sm">
-                                                                {itemDiscountedTotal.toLocaleString()}
-                                                            </span>
+                                                            <div className="flex flex-col items-end mt-1">
+                                                                {discountRatio > 0 && (
+                                                                    <span className="text-xs text-gray-400 line-through">{itemOriginalTotal.toLocaleString()}</span>
+                                                                )}
+                                                                <span className="font-bold text-blue-600">
+                                                                    {itemDiscountedTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
