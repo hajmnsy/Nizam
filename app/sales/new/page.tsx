@@ -5,7 +5,7 @@ import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { ProformaInvoice } from '@/components/ProformaInvoice'
-import { ArrowLeft, Plus, Trash2, Search, Minus, FileText, Printer, Save } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Search, Minus, FileText, Printer, Save, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -103,30 +103,25 @@ export default function NewSale() {
         }
 
         return filtered.sort((a, b) => {
-            // Function to extract and multiply dimensions from name (e.g. "ماسورة 40*80" -> 40 * 80 = 3200)
             const getDimensionsMultiplier = (name: string) => {
                 const numbers = name.match(/\d+(\.\d+)?/g);
                 if (!numbers || numbers.length === 0) return 0;
-                // If it looks like dimensions "40*80" or just one number "16"
                 return numbers.reduce((acc, val) => acc * parseFloat(val), 1);
             };
 
             const dimA = getDimensionsMultiplier(a.name);
             const dimB = getDimensionsMultiplier(b.name);
 
-            // 1. Sort by Dimensions Descending
             if (dimA !== dimB) {
                 return dimB - dimA;
             }
 
-            // 2. Sort by Thickness Descending
             const thickA = a.thickness || 0;
             const thickB = b.thickness || 0;
             if (thickA !== thickB) {
                 return thickB - thickA;
             }
 
-            // 3. Fallback to Natural Name Sort
             return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
         })
     }, [products, activeCategory, searchTerm])
@@ -229,30 +224,53 @@ export default function NewSale() {
 
     return (
         <>
-            <main className="min-h-screen bg-slate-50 flex flex-col print:hidden">
+            <main className="h-screen bg-slate-50 flex flex-col print:hidden overflow-hidden">
                 <Navbar />
-                <div className="flex-1 container mx-auto p-4 max-w-7xl">
-                    <div className="mb-4 flex justify-between items-center">
-                        <Link href="/sales" className="text-blue-600 hover:underline flex items-center gap-1">
-                            <ArrowLeft size={16} />
-                            رجوع للمبيعات
-                        </Link>
-                        <h1 className="text-2xl font-bold">نقطة البيع (POS)</h1>
+                
+                <div className="flex-1 flex flex-col p-3 overflow-hidden max-w-7xl mx-auto w-full">
+                    {/* Top Control Bar */}
+                    <div className="bg-white rounded-xl border shadow-sm p-3 mb-3 flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <Link href="/sales" className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="رجوع">
+                                <ArrowLeft size={20} />
+                            </Link>
+                            <h1 className="text-xl font-bold text-slate-800">نقطة البيع (POS)</h1>
+                        </div>
+                        
+                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                            <Input
+                                placeholder="اسم العميل (اختياري)"
+                                value={customer}
+                                onChange={(e) => setCustomer(e.target.value)}
+                                className="h-10 bg-gray-50 min-w-[200px]"
+                            />
+                            <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 h-10 min-w-[170px]">
+                                <Calendar size={16} className="text-gray-500" />
+                                <span className="text-sm font-bold text-gray-500">التاريخ:</span>
+                                <input
+                                    type="date"
+                                    value={createdAt}
+                                    onChange={(e) => setCreatedAt(e.target.value)}
+                                    className="bg-transparent text-sm font-bold text-slate-800 outline-none w-full"
+                                />
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-150px)]">
+                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
                         {/* LEFT SIDE: Product Selection */}
-                        <div className="lg:col-span-8 flex flex-col gap-4 h-full">
-                            {/* Categories */}
-                            <Card className="p-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
-                                <div className="flex gap-2">
+                        <div className="lg:col-span-8 flex flex-col gap-3 min-h-0 h-full">
+                            
+                            {/* Categories Grid (Wraps inside to prevent horizontal scrolling) */}
+                            <Card className="p-2 shrink-0 border-blue-100">
+                                <div className="flex flex-wrap gap-1.5">
                                     {categories.map(cat => (
                                         <button
                                             key={cat.id}
                                             onClick={() => setActiveCategory(cat.name)}
-                                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeCategory === cat.name
-                                                ? 'bg-blue-600 text-white shadow-md'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            className={`px-3 py-1.5 rounded-md text-sm font-bold transition-all border ${activeCategory === cat.name
+                                                ? 'bg-blue-600 text-white border-blue-700 shadow-md transform scale-[1.02]'
+                                                : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                                                 }`}
                                         >
                                             {cat.name}
@@ -262,69 +280,69 @@ export default function NewSale() {
                             </Card>
 
                             {/* Search */}
-                            <div className="relative">
+                            <div className="relative shrink-0">
                                 <Search className="absolute right-3 top-2.5 text-gray-400" size={20} />
                                 <Input
                                     placeholder="بحث سريع عن منتج..."
-                                    className="pr-10"
+                                    className="pr-10 h-10 bg-white"
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
                                 />
                             </div>
 
                             {/* Products Grid */}
-                            <div className="flex-1 overflow-y-auto pr-2 pb-2">
-                                {filteredProducts.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
-                                        <Search size={48} className="mb-2" />
-                                        <p>لا توجد منتجات في هذا القسم</p>
-                                    </div>
-                                ) : (
-                                    <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+                            <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col min-h-0">
+                                <div className="flex-1 overflow-y-auto w-full">
+                                    {filteredProducts.length === 0 ? (
+                                        <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
+                                            <Search size={48} className="mb-2" />
+                                            <p>لا توجد منتجات في هذا القسم</p>
+                                        </div>
+                                    ) : (
                                         <table className="w-full text-right text-sm">
-                                            <thead className="bg-slate-50 border-b text-slate-500 font-bold sticky top-0 z-10">
+                                            <thead className="bg-slate-100 border-b text-slate-600 font-bold sticky top-0 z-10 shadow-sm">
                                                 <tr>
-                                                    <th className="p-3">المنتج</th>
-                                                    <th className="p-3">النوع</th>
-                                                    <th className="p-3">السماكة</th>
-                                                    <th className="p-3 text-center">المتوفر</th>
-                                                    <th className="p-3">السعر</th>
-                                                    <th className="p-3 w-16">إضافة</th>
+                                                    <th className="p-2">المنتج</th>
+                                                    <th className="p-2">النوع</th>
+                                                    <th className="p-2">السماكة</th>
+                                                    <th className="p-2 text-center w-16">المتوفر</th>
+                                                    <th className="p-2">السعر</th>
+                                                    <th className="p-2 w-14"></th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y">
+                                            <tbody className="divide-y divide-gray-100">
                                                 {filteredProducts.map(product => (
-                                                    <tr key={product.id} className="hover:bg-blue-50/50 transition-colors group">
-                                                        <td className="p-3 font-bold text-slate-800">{product.name}</td>
-                                                        <td className="p-3 text-gray-500 text-xs font-medium max-w-[80px] break-words">{product.type || '-'}</td>
-                                                        <td className="p-3">
+                                                    <tr key={product.id} className="hover:bg-blue-50 transition-colors">
+                                                        <td className="p-2 font-bold text-slate-800">{product.name}</td>
+                                                        <td className="p-2 text-gray-500 text-xs font-medium max-w-[80px] break-words">{product.type || '-'}</td>
+                                                        <td className="p-2">
                                                             {product.thickness ? (
-                                                                <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 font-bold">
+                                                                <span className="text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 font-bold whitespace-nowrap text-xs">
                                                                     {product.thickness} مم
                                                                 </span>
                                                             ) : (
                                                                 <span className="text-gray-400">-</span>
                                                             )}
                                                         </td>
-                                                        <td className="p-3 text-center">
-                                                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${product.quantity > 0 ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                                                        <td className="p-2 text-center">
+                                                            <span className={`px-1.5 py-0.5 rounded text-xs font-bold inline-block w-full ${product.quantity > 0 ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
                                                                 {product.quantity}
                                                             </span>
                                                         </td>
-                                                        <td className="p-3">
+                                                        <td className="p-2">
                                                             <div className="flex flex-col">
-                                                                <span className="font-bold text-slate-800">{product.price.toLocaleString()}</span>
+                                                                <span className="font-bold text-slate-800 leading-tight">{product.price.toLocaleString()}</span>
                                                                 {exchangeRate > 0 && product.price > 0 && (
-                                                                    <span className="text-[11px] font-black text-emerald-600 tracking-wider">
+                                                                    <span className="text-[10px] font-black text-emerald-600 tracking-wider">
                                                                         ${(product.price / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                                     </span>
                                                                 )}
                                                             </div>
                                                         </td>
-                                                        <td className="p-3">
+                                                        <td className="p-1 px-2 text-center">
                                                             <button
                                                                 onClick={() => addToCart(product)}
-                                                                className="bg-slate-100 text-blue-600 hover:bg-blue-600 hover:text-white p-2 rounded-lg transition-colors w-full flex justify-center items-center"
+                                                                className="bg-slate-100 text-blue-600 hover:bg-blue-600 hover:text-white p-1.5 rounded-lg transition-colors w-full flex justify-center items-center shadow-sm border border-gray-200"
                                                                 title="إضافة للسلة"
                                                             >
                                                                 <Plus size={18} />
@@ -334,55 +352,37 @@ export default function NewSale() {
                                                 ))}
                                             </tbody>
                                         </table>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         </div>
 
                         {/* RIGHT SIDE: Cart */}
-                        <div className="lg:col-span-4 flex flex-col h-full">
-                            <Card className="flex flex-col h-full border-2 border-blue-100 shadow-xl overflow-hidden">
-                                <div className="bg-blue-50 -m-6 mb-4 p-4 border-b border-blue-100">
-                                    <h2 className="font-bold text-blue-900 flex items-center gap-2">
-                                        <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">{cart.length}</span>
+                        <div className="lg:col-span-4 flex flex-col h-full bg-white border-2 border-blue-200 rounded-xl shadow-lg overflow-hidden min-h-0">
+                            
+                            {/* Cart Header */}
+                            <div className="bg-blue-50 p-3 border-b border-blue-100 shrink-0">
+                                <h2 className="font-bold text-blue-900 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
                                         سلة المشتريات
-                                    </h2>
-                                </div>
-
-                                <div className="mb-4 space-y-2 mt-2 px-1">
-                                    <div className="flex gap-2">
-                                        <div className="flex-1">
-                                            <Input
-                                                label="اسم العميل"
-                                                placeholder="اسم العميل (اختياري)"
-                                                value={customer}
-                                                onChange={(e) => setCustomer(e.target.value)}
-                                                className="bg-gray-50 bg-white"
-                                            />
-                                        </div>
-                                        <div className="w-1/3 min-w-[120px]">
-                                            <label className="block text-sm font-bold text-gray-700 mb-1">التاريخ</label>
-                                            <input
-                                                type="date"
-                                                value={createdAt}
-                                                onChange={(e) => setCreatedAt(e.target.value)}
-                                                className="w-full h-10 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
-                                        </div>
                                     </div>
-                                </div>
+                                    <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs">{cart.length} أصناف</span>
+                                </h2>
+                            </div>
 
-                                <div className="flex-1 overflow-y-auto mb-4 border-t border-b bg-gray-50/50 -mx-6 px-6 py-2 space-y-2">
-                                    {cart.length === 0 ? (
-                                        <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-                                            السلة فارغة
-                                        </div>
-                                    ) : (
-                                        cart.map(item => {
+                            {/* Cart Items */}
+                            <div className="flex-1 overflow-y-auto p-2 bg-gray-50/50">
+                                {cart.length === 0 ? (
+                                    <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+                                        قم بإضافة منتجات للسلة
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {cart.map(item => {
                                             const discountVal = parseFloat(discount) || 0;
                                             const safeSubtotal = subtotal > 0 ? subtotal : 1;
                                             const discountRatio = subtotal > 0 && discountVal > 0 ? discountVal / safeSubtotal : 0;
-                                            const itemQty = item.quantity || 1; // avoid division by zero
+                                            const itemQty = item.quantity || 1; 
                                             const itemOriginalTotal = Math.round((item.price || 0) * (item.quantity === 0 ? 0 : item.quantity));
                                             const itemDiscount = Math.round(itemOriginalTotal * discountRatio);
                                             const itemDiscountedTotal = itemOriginalTotal - itemDiscount;
@@ -391,184 +391,156 @@ export default function NewSale() {
                                             const itemTransport = item.transportCostUSD || 15;
 
                                             return (
-                                                <div key={item.productId} className="bg-white p-3 rounded-lg border shadow-sm flex flex-col gap-2">
+                                                <div key={item.productId} className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex flex-col gap-2">
                                                     <div className="flex justify-between items-start">
-                                                        <div className="flex flex-col">
-                                                            <span className="font-bold text-sm line-clamp-1">{item.name}</span>
-                                                            {item.thickness && <span className="text-xs text-gray-500">سمك: {item.thickness}مم</span>}
-                                                            {discountRatio > 0 && (
-                                                                <span className="text-xs text-green-600 font-bold">السعر بعد الخصم: {(itemDiscountedTotal / itemQty).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                                                            )}
-                                                            {exchangeRate > 0 && itemPPU > 0 && (
-                                                                <div className="mt-1 flex items-center gap-1">
-                                                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200">
-                                                                        صافي الربح: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * itemTransport)) * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
-                                                                    </span>
-                                                                    <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold border border-blue-200" title="الربح بعد خصم 15% مصاريف وهامش مستهدف">
-                                                                        الربح النهائي: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * itemTransport)) * 1.15 * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
-                                                                    </span>
-                                                                    <span className="text-[10px] text-emerald-600 font-bold">
-                                                                        (${((((itemDiscountedTotal / itemQty) / exchangeRate) - (itemPPU + ((itemWeight / 1000) * itemTransport))) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })})
-                                                                    </span>
-                                                                </div>
-                                                            )}
+                                                        <div className="flex flex-col flex-1 pr-1">
+                                                            <span className="font-bold text-sm leading-tight">{item.name}</span>
+                                                            <div className="flex justify-between items-center w-full mt-1">
+                                                                {item.thickness ? <span className="text-[10px] text-gray-500 bg-gray-100 px-1 rounded">سمك: {item.thickness}مم</span> : <span></span>}
+                                                                <button onClick={() => removeFromCart(item.productId)} className="text-red-400 hover:text-red-600 p-1 bg-red-50 rounded">
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <button onClick={() => removeFromCart(item.productId)} className="text-red-400 hover:text-red-600">
-                                                            <Trash2 size={16} />
-                                                        </button>
                                                     </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center border rounded">
-                                                            <button
-                                                                onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                                                                className="px-2 py-1 hover:bg-gray-100"
-                                                            >
+                                                    
+                                                    <div className="flex items-center justify-between border-t pt-2 mt-1">
+                                                        <div className="flex items-center border rounded border-gray-300 overflow-hidden">
+                                                            <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} className="px-2 py-1 bg-gray-50 hover:bg-gray-200 text-gray-600">
                                                                 <Minus size={14} />
                                                             </button>
                                                             <input
                                                                 type="number"
                                                                 min="1"
-                                                                value={item.quantity === 0 ? '' : item.quantity} // Allow emptying the field temporarily
+                                                                value={item.quantity === 0 ? '' : item.quantity}
                                                                 onChange={(e) => {
                                                                     const val = e.target.value;
                                                                     if (val === '') {
-                                                                        updateQuantity(item.productId, 0); // Temporary state before they type the rest
+                                                                        updateQuantity(item.productId, 0);
                                                                     } else {
                                                                         updateQuantity(item.productId, parseInt(val) || 1);
                                                                     }
                                                                 }}
                                                                 onBlur={(e) => {
-                                                                    if (!e.target.value || parseInt(e.target.value) < 1) {
-                                                                        updateQuantity(item.productId, 1); // Reset to 1 if left empty or 0
-                                                                    }
+                                                                    if (!e.target.value || parseInt(e.target.value) < 1) updateQuantity(item.productId, 1);
                                                                 }}
-                                                                className="w-12 text-center text-sm font-bold border-x py-1 outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                                className="w-10 text-center text-sm font-bold border-x py-1 outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none text-blue-900 bg-blue-50/30"
                                                             />
-                                                            <button
-                                                                onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                                                                className="px-2 py-1 hover:bg-gray-100 text-blue-600"
-                                                            >
+                                                            <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} className="px-2 py-1 bg-gray-50 hover:bg-gray-200 text-blue-600">
                                                                 <Plus size={14} />
                                                             </button>
                                                         </div>
+                                                        
                                                         <div className="flex flex-col items-end gap-1">
-                                                            <div className="flex items-center gap-1 border border-slate-200 rounded px-2 py-0.5 bg-gray-50/80">
-                                                                <span className="text-xs text-gray-500 font-bold">السعر:</span>
+                                                            <div className="flex items-center gap-1 rounded bg-gray-50 border border-gray-200 px-1">
+                                                                <span className="text-[10px] text-gray-400">السعر:</span>
                                                                 <input
                                                                     type="number"
                                                                     min="0"
                                                                     value={item.price}
                                                                     onChange={(e) => updatePrice(item.productId, parseFloat(e.target.value) || 0)}
-                                                                    className="w-20 text-left text-sm font-bold bg-transparent outline-none text-blue-700 font-mono"
+                                                                    className="w-16 text-left text-sm font-bold bg-transparent outline-none text-slate-800"
                                                                 />
                                                             </div>
-                                                            <div className="flex flex-col items-end mt-1">
-                                                                {discountRatio > 0 && (
-                                                                    <span className="text-xs text-gray-400 line-through">{itemOriginalTotal.toLocaleString()}</span>
-                                                                )}
-                                                                <span className="font-bold text-blue-600">
-                                                                    {itemDiscountedTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                                                                </span>
-                                                            </div>
+                                                            <span className="font-bold text-blue-700 text-sm">
+                                                                {itemDiscountedTotal.toLocaleString()}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             );
-                                        })
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Cart Checkout Section */}
+                            <div className="shrink-0 bg-white border-t border-gray-200 p-3 flex flex-col gap-3">
+                                
+                                {/* Discount */}
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-sm text-gray-600 whitespace-nowrap">خصم إضافي:</span>
+                                    <Input
+                                        type="number"
+                                        placeholder="0"
+                                        value={discount}
+                                        onChange={e => setDiscount(e.target.value)}
+                                        className="h-9 w-full text-left"
+                                    />
+                                </div>
+
+                                {/* Total Price Block */}
+                                <div className="flex justify-between items-center bg-slate-900 text-white p-3 rounded-lg shadow-md border-b-4 border-blue-500">
+                                    <div>
+                                        <span className="font-bold block text-xs opacity-80">الإجمالي النهائي</span>
+                                        <div className="flex flex-col">
+                                            <span className="font-black text-2xl">{finalTotal.toLocaleString()} <span className="text-xs font-normal text-gray-400">ج.س</span></span>
+                                            {exchangeRate > 0 && finalTotal > 0 && (
+                                                <span className="text-emerald-400 font-bold text-xs">
+                                                    ${(finalTotal / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {(parseFloat(discount) > 0) && (
+                                        <div className="text-right">
+                                            <span className="block text-[10px] text-red-300 line-through">{subtotal.toLocaleString()}</span>
+                                            <span className="text-xs text-green-400 font-bold">توفير: {parseFloat(discount).toLocaleString()}</span>
+                                        </div>
                                     )}
                                 </div>
 
-                                <div className="space-y-3 bg-white pt-2">
-                                    {/* Discount Input */}
-                                    <div className="flex items-center gap-2 px-1">
-                                        <span className="font-bold text-sm text-gray-600">خصم:</span>
+                                {/* Payment Installment Inputs */}
+                                <div className="flex gap-2">
+                                    <div className="flex-1">
+                                        <div className="text-[10px] font-bold text-gray-500 mb-1">المدفوع (للآجل):</div>
                                         <Input
                                             type="number"
-                                            placeholder="0"
-                                            value={discount}
-                                            onChange={e => setDiscount(e.target.value)}
-                                            className="h-10 w-full"
+                                            placeholder={finalTotal.toString()}
+                                            value={paidAmountInput}
+                                            onChange={e => setPaidAmountInput(e.target.value)}
+                                            className="h-9 w-full bg-amber-50 text-sm font-bold"
                                         />
                                     </div>
-
-                                    <div className="flex justify-between items-center bg-slate-900 text-white p-4 rounded-xl shadow-lg">
-                                        <div>
-                                            <span className="font-bold block text-xs opacity-70">الإجمالي النهائي</span>
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-2xl">{finalTotal.toLocaleString()} <span className="text-sm font-normal text-gray-400">ج.س</span></span>
-                                                {exchangeRate > 0 && finalTotal > 0 && (
-                                                    <span className="text-emerald-400 font-bold text-sm tracking-wider">
-                                                        ${(finalTotal / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {(parseFloat(discount) > 0) && (
-                                            <div className="text-right">
-                                                <span className="block text-xs text-red-300 line-through">{subtotal.toLocaleString()}</span>
-                                                <span className="text-xs text-green-400 font-bold">خصم {parseFloat(discount).toLocaleString()}</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex-1">
-                                            <span className="font-bold text-sm text-gray-600 block mb-1">المدفوع (للآجل):</span>
-                                            <Input
-                                                type="number"
-                                                placeholder={finalTotal.toString()}
-                                                value={paidAmountInput}
-                                                onChange={e => setPaidAmountInput(e.target.value)}
-                                                className="h-10 w-full bg-amber-50"
-                                            />
-                                        </div>
-                                        <div className="flex-1">
-                                            <span className="font-bold text-sm text-gray-600 block mb-1">المتبقي:</span>
-                                            <div className="h-10 flex items-center px-3 border border-red-200 rounded-lg bg-red-50 text-red-600 font-bold">
-                                                {paidAmountInput === '' ? 0 : Math.max(0, finalTotal - parseFloat(paidAmountInput || '0')).toLocaleString()}
-                                            </div>
+                                    <div className="flex-1">
+                                        <div className="text-[10px] font-bold text-gray-500 mb-1">المتبقي:</div>
+                                        <div className="h-9 flex items-center px-2 border border-red-200 rounded-lg bg-red-50 text-red-600 font-bold text-sm overflow-hidden whitespace-nowrap">
+                                            {paidAmountInput === '' ? 0 : Math.max(0, finalTotal - parseFloat(paidAmountInput || '0')).toLocaleString()}
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div className="grid grid-cols-2 gap-3 pb-2">
-                                        <Button
-                                            onClick={() => handleSubmit('PAID')}
-                                            className="py-3 text-sm bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 shadow-lg"
-                                            disabled={loading}
-                                        >
-                                            {loading ? '...' : (
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <span className="font-bold">كاش (خالص)</span>
-                                                </div>
-                                            )}
-                                        </Button>
-
-                                        <Button
-                                            onClick={() => handleSubmit('CREDIT')}
-                                            className="py-3 text-sm bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200 shadow-lg"
-                                            disabled={loading}
-                                        >
-                                            {loading ? '...' : (
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <span className="font-bold">آجل (دفع جزئي)</span>
-                                                </div>
-                                            )}
-                                        </Button>
-                                    </div>
-
+                                {/* Submit Buttons */}
+                                <div className="grid grid-cols-2 gap-2">
                                     <Button
-                                        onClick={() => handleSubmit('QUOTATION')}
-                                        variant="outline"
-                                        className="w-full py-3 text-sm border-blue-200 hover:bg-blue-50 text-blue-700"
+                                        onClick={() => handleSubmit('PAID')}
+                                        className="h-10 text-sm bg-emerald-600 hover:bg-emerald-700 shadow-sm"
                                         disabled={loading}
                                     >
-                                        <div className="flex items-center justify-center gap-2">
-                                            <FileText size={18} />
-                                            <span className="font-bold">حفظ كمسودة / عرض سعر</span>
-                                        </div>
+                                        <span className="font-bold">{loading ? '...' : 'كاش (خالص)'}</span>
+                                    </Button>
+
+                                    <Button
+                                        onClick={() => handleSubmit('CREDIT')}
+                                        className="h-10 text-sm bg-amber-500 hover:bg-amber-600 text-white shadow-sm"
+                                        disabled={loading}
+                                    >
+                                        <span className="font-bold">{loading ? '...' : 'آجل (دفع جزئي)'}</span>
                                     </Button>
                                 </div>
-                            </Card>
+
+                                <Button
+                                    onClick={() => handleSubmit('QUOTATION')}
+                                    variant="outline"
+                                    className="w-full h-9 text-xs border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 shadow-sm"
+                                    disabled={loading}
+                                >
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <FileText size={14} />
+                                        <span className="font-bold">حفظ كمسودة / عرض سعر</span>
+                                    </div>
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
