@@ -2,7 +2,11 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { cookies } from 'next/headers'
-import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
+
+function hashPassword(password: string): string {
+    return crypto.createHash('sha256').update(password).digest('hex')
+}
 
 export async function PUT(request: Request) {
     try {
@@ -27,13 +31,13 @@ export async function PUT(request: Request) {
         }
 
         // Verify current password
-        const isValid = await bcrypt.compare(currentPassword, session.user.password)
+        const isValid = hashPassword(currentPassword) === session.user.password
         if (!isValid) {
             return NextResponse.json({ error: 'كلمة المرور الحالية غير صحيحة' }, { status: 400 })
         }
 
         // Hash new password
-        const hashedPassword = await bcrypt.hash(newPassword, 10)
+        const hashedPassword = hashPassword(newPassword)
 
         // Update user
         await prisma.user.update({
