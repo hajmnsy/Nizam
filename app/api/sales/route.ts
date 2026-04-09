@@ -53,67 +53,71 @@ export async function POST(request: Request) {
         const actualRemainingAmount = Math.max(0, total - adjustedPaidAmount);
         const finalStatus = actualRemainingAmount === 0 && status === 'CREDIT' ? 'PAID' : status;
 
-        let invoiceNumber = null;
-        if (finalStatus !== 'QUOTATION') {
-            const maxInvoice = await prisma.sale.aggregate({
-                _max: {
-                    invoiceNumber: true
+        const result = await prisma.$transaction(async (tx) => {
+            let invoiceNumber = null;
+            if (finalStatus !== 'QUOTATION') {
+                const maxInvoice = await tx.sale.aggregate({
+                    _max: {
+                        invoiceNumber: true
+                    }
+                });
+                invoiceNumber = (maxInvoice._max.invoiceNumber || 0) + 1;
+            }
+
+            const sale = await tx.sale.create({
+                data: {
+                    invoiceNumber: invoiceNumber,
+                    customer: json.customer || 'Customer',
+                    total: total,
+                    discount: discount,
+                    paidAmount: adjustedPaidAmount,
+                    remainingAmount: actualRemainingAmount,
+                    status: finalStatus,
+                    createdAt: finalCreatedAt,
+                    items: {
+                        create: newItemsData
+                    },
+                    payments: adjustedPaidAmount > 0 ? {
+                        create: {
+                            amount: adjustedPaidAmount
+                        }
+                    } : undefined
+                },
+                include: {
+                    items: true,
+                    payments: true
                 }
             });
-            invoiceNumber = (maxInvoice._max.invoiceNumber || 0) + 1;
-        }
 
-        const sale = await prisma.sale.create({
-            data: {
-                invoiceNumber: invoiceNumber,
-                customer: json.customer || 'Customer',
-                total: total,
-                discount: discount,
-                paidAmount: adjustedPaidAmount,
-                remainingAmount: actualRemainingAmount,
-                status: finalStatus,
-                createdAt: finalCreatedAt,
-                items: {
-                    create: newItemsData
-                },
-                payments: adjustedPaidAmount > 0 ? {
-                    create: {
-                        amount: adjustedPaidAmount
-                    }
-                } : undefined
-            },
-            include: {
-                items: true,
-                payments: true
-            }
-        });
-
-        // Update stock ONLY if not a quotation
-        if (finalStatus !== 'QUOTATION') {
-            for (const item of json.items) {
-                const updatedProduct = await prisma.product.update({
-                    where: { id: parseInt(item.productId) },
-                    data: {
-                        quantity: {
-                            decrement: parseInt(item.quantity)
-                        }
-                    }
-                })
-
-                // Auto-generate notification for low stock
-                if (updatedProduct.quantity <= 5) {
-                    await prisma.notification.create({
+            // Update stock ONLY if not a quotation
+            if (finalStatus !== 'QUOTATION') {
+                for (const item of json.items) {
+                    const updatedProduct = await tx.product.update({
+                        where: { id: parseInt(item.productId) },
                         data: {
-                            title: 'تنبيه مخزون منخفض',
-                            message: `انخفض مخزون ${updatedProduct.name} إلى ${updatedProduct.quantity} قطعة بقسم ${updatedProduct.type}. يرجى إعادة الطلب.`,
-                            type: 'WARNING'
+                            quantity: {
+                                decrement: parseInt(item.quantity)
+                            }
                         }
                     })
+
+                    // Auto-generate notification for low stock
+                    if (updatedProduct.quantity <= 5) {
+                        await tx.notification.create({
+                            data: {
+                                title: 'تنبيه مخزون منخفض',
+                                message: `انخفض مخزون ${updatedProduct.name} إلى ${updatedProduct.quantity} قطعة بقسم ${updatedProduct.type || 'عام'}. يرجى إعادة الطلب.`,
+                                type: 'WARNING'
+                            }
+                        })
+                    }
                 }
             }
-        }
 
-        return NextResponse.json(sale)
+            return sale;
+        });
+
+        return NextResponse.json(result)
     } catch (error: any) {
         console.error('Error creating sale:', error)
         return NextResponse.json({

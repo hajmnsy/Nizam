@@ -71,34 +71,36 @@ export async function PUT(
             if (!sale) return NextResponse.json({ error: 'Sale not found' }, { status: 404 })
             if (sale.status === 'PAID') return NextResponse.json({ error: 'Sale already paid' }, { status: 400 })
 
-            for (const item of sale.items) {
-                await prisma.product.update({
-                    where: { id: item.productId },
-                    data: { quantity: { decrement: item.quantity } }
-                })
-            }
-
-            // Determine new invoice number
-            let newInvoiceNumber = sale.invoiceNumber;
-            if (!newInvoiceNumber) {
-                const maxInvoice = await prisma.sale.aggregate({ _max: { invoiceNumber: true } });
-                newInvoiceNumber = (maxInvoice._max.invoiceNumber || 0) + 1;
-            }
-
-            const updatedSale = await prisma.sale.update({
-                where: { id },
-                data: {
-                    status: 'PAID',
-                    paidAmount: sale.total - sale.discount,
-                    remainingAmount: 0,
-                    invoiceNumber: newInvoiceNumber,
-                    ...(parsedCreatedAt && { createdAt: parsedCreatedAt }),
-                    payments: sale.total - sale.discount > 0 ? {
-                        create: {
-                            amount: sale.total - sale.discount
-                        }
-                    } : undefined
+            const updatedSale = await prisma.$transaction(async (tx) => {
+                for (const item of sale.items) {
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: { quantity: { decrement: item.quantity } }
+                    })
                 }
+
+                // Determine new invoice number
+                let newInvoiceNumber = sale.invoiceNumber;
+                if (!newInvoiceNumber) {
+                    const maxInvoice = await tx.sale.aggregate({ _max: { invoiceNumber: true } });
+                    newInvoiceNumber = (maxInvoice._max.invoiceNumber || 0) + 1;
+                }
+
+                return await tx.sale.update({
+                    where: { id },
+                    data: {
+                        status: 'PAID',
+                        paidAmount: sale.total - sale.discount,
+                        remainingAmount: 0,
+                        invoiceNumber: newInvoiceNumber,
+                        ...(parsedCreatedAt && { createdAt: parsedCreatedAt }),
+                        payments: sale.total - sale.discount > 0 ? {
+                            create: {
+                                amount: sale.total - sale.discount
+                            }
+                        } : undefined
+                    }
+                })
             })
 
             return NextResponse.json(updatedSale)

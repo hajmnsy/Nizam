@@ -158,7 +158,7 @@ export default function Inventory() {
                                     إجمالي قيمة المخزون الحالية
                                 </span>
                                 <div className="text-3xl font-black text-slate-800">
-                                    {(products.reduce((sum, p) => sum + (p.quantity * p.price), 0)).toLocaleString()} <span className="text-lg text-slate-500 font-bold">ج.س</span>
+                                    {(products.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0) * exchangeRate), 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-lg text-slate-500 font-bold">ج.س</span>
                                 </div>
                             </div>
 
@@ -182,21 +182,19 @@ export default function Inventory() {
                             </div>
 
                             {/* Value in USD */}
-                            {exchangeRate > 0 && (
-                                <>
-                                    {/* Divider on desktop */}
-                                    <div className="hidden md:block w-px h-16 bg-slate-200"></div>
+                            <>
+                                {/* Divider on desktop */}
+                                <div className="hidden md:block w-px h-16 bg-slate-200"></div>
 
-                                    <div className="flex flex-col items-center md:items-end text-center md:text-left w-full md:w-auto bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 md:border-none md:bg-transparent md:p-0">
-                                        <span className="text-sm font-bold text-emerald-600 mb-1 flex items-center gap-1">
-                                            القيمة التقريبية بالدولار
-                                        </span>
-                                        <div className="text-3xl font-black text-emerald-700 font-mono">
-                                            ${(products.reduce((sum, p) => sum + (p.quantity * p.price), 0) / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </div>
+                                <div className="flex flex-col items-center md:items-end text-center md:text-left w-full md:w-auto bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 md:border-none md:bg-transparent md:p-0">
+                                    <span className="text-sm font-bold text-emerald-600 mb-1 flex items-center gap-1">
+                                        إجمالي قيمة المخزون بالدولار
+                                    </span>
+                                    <div className="text-3xl font-black text-emerald-700 font-mono">
+                                        ${(products.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0)), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </div>
-                                </>
-                            )}
+                                </div>
+                            </>
                         </div>
                     </Card>
                 )}
