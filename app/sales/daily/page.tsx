@@ -244,13 +244,14 @@ export default function DailyReport() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div className="flex flex-col gap-10">
                                 {/* Aggregated Items Table */}
                                 <div className={!printAggregated ? 'print:hidden' : ''}>
                                     <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">ملخص الأصناف المباعة</h3>
                                     <table className="w-full text-right border-collapse text-sm">
                                         <thead className="bg-slate-100 print:bg-slate-50">
                                             <tr>
+                                                <th className="p-3 border-b-2 border-slate-200 text-center text-slate-400 w-12">#</th>
                                                 <th className="p-3 border-b-2 border-slate-200">الصنف</th>
                                                 <th className="p-3 border-b-2 border-slate-200 text-center">النوع</th>
                                                 <th className="p-3 border-b-2 border-slate-200 text-center">السماكة</th>
@@ -263,6 +264,7 @@ export default function DailyReport() {
                                         <tbody>
                                             {aggregatedItems.map((item, i) => (
                                                 <tr key={i} className="border-b border-slate-100">
+                                                    <td className="p-3 text-center text-slate-400 font-mono text-xs border-l border-slate-50 print:border-none">{i + 1}</td>
                                                     <td className="p-3 font-bold text-slate-700">{item.name}</td>
                                                     <td className="p-3 text-center text-slate-500">{item.type || '-'}</td>
                                                     <td className="p-3 text-center text-slate-500 text-xs" dir="ltr">{item.thickness ? `${item.thickness} mm` : '-'}</td>
@@ -281,7 +283,7 @@ export default function DailyReport() {
                                                 </tr>
                                             ))}
                                             <tr className="bg-slate-50 print:bg-transparent font-black">
-                                                <td className="p-3 text-left" colSpan={3}>الإجمالي</td>
+                                                <td className="p-3 text-left" colSpan={4}>الإجمالي</td>
                                                 <td className="p-3 text-center font-mono text-blue-600">{aggregatedItems.reduce((sum, item) => sum + item.qty, 0)}</td>
                                                 {exchangeRate > 0 && <td className="p-3"></td>}
                                                 <td className="p-3 text-left font-mono text-blue-600">{totalSales.toLocaleString()}</td>
