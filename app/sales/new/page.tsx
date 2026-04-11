@@ -58,6 +58,7 @@ export default function NewSale() {
     const [activeCategory, setActiveCategory] = useState<string>('')
     const [searchTerm, setSearchTerm] = useState('')
     const [exchangeRate, setExchangeRate] = useState<number>(0)
+    const [sellingPricePerTonUSD, setSellingPricePerTonUSD] = useState<number>(0)
 
     useEffect(() => {
         Promise.all([
@@ -66,7 +67,10 @@ export default function NewSale() {
             fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json())
         ]).then(([productsData, categoriesData, exchangeRateData]) => {
             setProducts(Array.isArray(productsData) ? productsData : [])
-            setExchangeRate(exchangeRateData.rate || 0)
+            if (exchangeRateData) {
+                if (exchangeRateData.rate > 0) setExchangeRate(exchangeRateData.rate)
+                if (exchangeRateData.sellingPricePerTonUSD >= 0) setSellingPricePerTonUSD(exchangeRateData.sellingPricePerTonUSD)
+            }
 
             // Filter out specific categories and remove duplicates by name
             if (Array.isArray(categoriesData)) {
@@ -401,6 +405,11 @@ export default function NewSale() {
                                                                         <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold border border-blue-200 whitespace-nowrap" title="الربح بعد خصم 15% مصاريف وهامش مستهدف">
                                                                             الربح النهائي: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * itemTransport)) * 1.15 * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
                                                                         </span>
+                                                                        {sellingPricePerTonUSD > 0 && (
+                                                                            <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold border border-purple-200 whitespace-nowrap" title="السعر المقترح بناءً على وزن القطعة وسعر الطن بالدولار">
+                                                                                السعر بالوزن: {(((itemWeight / 1000) * sellingPricePerTonUSD * exchangeRate) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
+                                                                            </span>
+                                                                        )}
                                                                         <span className="text-[10px] text-emerald-600 font-bold whitespace-nowrap">
                                                                             (${((((itemDiscountedTotal / itemQty) / exchangeRate) - (itemPPU + ((itemWeight / 1000) * itemTransport))) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })})
                                                                         </span>

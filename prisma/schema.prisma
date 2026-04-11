@@ -101,6 +101,7 @@ model Setting {
   phone              String?
   vatRate            Float     @default(0)
   exchangeRate       Float     @default(0)
+  sellingPricePerTonUSD Float  @default(0)
   address            String?
   logoUrl            String?   @db.Text
   initialBalance     Float     @default(0)

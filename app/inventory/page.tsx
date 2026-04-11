@@ -29,6 +29,7 @@ export default function Inventory() {
     const [editForm, setEditForm] = useState({ quantity: 0, price: 0, purchasePriceUSD: 0, transportCostUSD: 15 })
     const [saving, setSaving] = useState(false)
     const [exchangeRate, setExchangeRate] = useState<number>(0)
+    const [sellingPricePerTonUSD, setSellingPricePerTonUSD] = useState<number>(0)
 
     useEffect(() => {
         fetchProducts()
@@ -40,8 +41,9 @@ export default function Inventory() {
             fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json())
         ]).then(([productsData, exchangeRateData]) => {
             setProducts(Array.isArray(productsData) ? productsData : []);
-            if (exchangeRateData && exchangeRateData.rate > 0) {
-                setExchangeRate(exchangeRateData.rate);
+            if (exchangeRateData) {
+                if (exchangeRateData.rate > 0) setExchangeRate(exchangeRateData.rate);
+                if (exchangeRateData.sellingPricePerTonUSD >= 0) setSellingPricePerTonUSD(exchangeRateData.sellingPricePerTonUSD);
             }
             setLoading(false)
         }).catch(err => {
@@ -106,6 +108,19 @@ export default function Inventory() {
         }
     }
 
+    const saveSellingPricePerTon = async (newPrice: number) => {
+        if (newPrice < 0) return;
+        try {
+            await fetch('/api/exchange-rate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sellingPricePerTonUSD: newPrice })
+            });
+        } catch (err) {
+            console.error("Failed to save selling price per ton", err);
+        }
+    }
+
     const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
@@ -166,17 +181,36 @@ export default function Inventory() {
                             <div className="hidden md:block w-px h-16 bg-slate-200"></div>
 
                             {/* Exchange Rate Input */}
-                            <div className="flex flex-col items-center flex-1 max-w-sm w-full">
-                                <label className="text-xs font-bold text-slate-500 mb-2">سعر صرف الدولار اليوم</label>
+                            <div className="flex flex-col items-center flex-1 max-w-[200px] w-full">
+                                <label className="text-xs font-bold text-slate-500 mb-2">سعر صرف الدولار</label>
                                 <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 w-full focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all">
                                     <DollarSign size={20} className="text-emerald-500" />
                                     <input
                                         type="number"
-                                        placeholder="أدخل سعر الصرف هنا..."
+                                        placeholder="السعر..."
                                         value={exchangeRate || ''}
                                         onChange={(e) => setExchangeRate(Number(e.target.value))}
                                         onBlur={(e) => saveExchangeRate(Number(e.target.value))}
                                         className="bg-transparent border-none outline-none font-bold text-emerald-700 w-full text-center"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Divider on desktop */}
+                            <div className="hidden md:block w-px h-16 bg-slate-200"></div>
+
+                            {/* Selling Price per Ton Input */}
+                            <div className="flex flex-col items-center flex-1 max-w-[200px] w-full">
+                                <label className="text-xs font-bold text-slate-500 mb-2">سعر بيع الطن بالدولار</label>
+                                <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 w-full focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
+                                    <DollarSign size={20} className="text-blue-500" />
+                                    <input
+                                        type="number"
+                                        placeholder="السعر..."
+                                        value={sellingPricePerTonUSD || ''}
+                                        onChange={(e) => setSellingPricePerTonUSD(Number(e.target.value))}
+                                        onBlur={(e) => saveSellingPricePerTon(Number(e.target.value))}
+                                        className="bg-transparent border-none outline-none font-bold text-blue-700 w-full text-center"
                                     />
                                 </div>
                             </div>
