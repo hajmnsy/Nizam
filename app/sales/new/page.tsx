@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 interface Category {
     id: number
     name: string
+    sellingPricePerTonUSD?: number
 }
 
 interface Product {
@@ -38,6 +39,7 @@ interface CartItem {
     weight: number
     thickness?: number | null
     transportCostUSD?: number | null
+    sellingPricePerTonUSD?: number
 }
 
 export default function NewSale() {
@@ -58,7 +60,6 @@ export default function NewSale() {
     const [activeCategory, setActiveCategory] = useState<string>('')
     const [searchTerm, setSearchTerm] = useState('')
     const [exchangeRate, setExchangeRate] = useState<number>(0)
-    const [sellingPricePerTonUSD, setSellingPricePerTonUSD] = useState<number>(0)
 
     useEffect(() => {
         Promise.all([
@@ -69,7 +70,6 @@ export default function NewSale() {
             setProducts(Array.isArray(productsData) ? productsData : [])
             if (exchangeRateData) {
                 if (exchangeRateData.rate > 0) setExchangeRate(exchangeRateData.rate)
-                if (exchangeRateData.sellingPricePerTonUSD >= 0) setSellingPricePerTonUSD(exchangeRateData.sellingPricePerTonUSD)
             }
 
             // Filter out specific categories and remove duplicates by name
@@ -147,7 +147,8 @@ export default function NewSale() {
                 transportCostUSD: product.transportCostUSD || 15,
                 quantity: 1,
                 weight: product.weightPerUnit,
-                thickness: product.thickness
+                thickness: product.thickness,
+                sellingPricePerTonUSD: product.category?.sellingPricePerTonUSD || 0
             }]
         })
     }
@@ -405,9 +406,9 @@ export default function NewSale() {
                                                                         <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold border border-blue-200 whitespace-nowrap" title="الربح بعد خصم 15% مصاريف وهامش مستهدف">
                                                                             الربح النهائي: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * itemTransport)) * 1.15 * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
                                                                         </span>
-                                                                        {sellingPricePerTonUSD > 0 && (
-                                                                            <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold border border-purple-200 whitespace-nowrap" title="السعر المقترح بناءً على وزن القطعة وسعر الطن بالدولار">
-                                                                                السعر بالوزن: {(((itemWeight / 1000) * sellingPricePerTonUSD * exchangeRate) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
+                                                                        {(item.sellingPricePerTonUSD || 0) > 0 && (
+                                                                            <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold border border-purple-200 whitespace-nowrap" title="السعر المقترح بناءً على وزن القطعة وسعر الطن بالدولار لهذا التصنيف">
+                                                                                السعر بالوزن: {(((itemWeight / 1000) * (item.sellingPricePerTonUSD || 0) * exchangeRate) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
                                                                             </span>
                                                                         )}
                                                                         <span className="text-[10px] text-emerald-600 font-bold whitespace-nowrap">

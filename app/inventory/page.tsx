@@ -8,6 +8,12 @@ import { ArrowLeft, Edit, Plus, Trash2, Search, Save, X, Loader2, Settings, Doll
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
 
+interface Category {
+    id: number
+    name: string
+    sellingPricePerTonUSD: number
+}
+
 interface Product {
     id: number
     name: string
@@ -18,10 +24,12 @@ interface Product {
     purchasePriceUSD: number | null
     transportCostUSD: number | null
     categoryId: number
-    category: { name: string }
+    category: Category
 }
 
 export default function Inventory() {
+    const [categories, setCategories] = useState<Category[]>([])
+    const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
@@ -38,12 +46,18 @@ export default function Inventory() {
     const fetchProducts = () => {
         Promise.all([
             fetch('/api/products', { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json())
-        ]).then(([productsData, exchangeRateData]) => {
+        ]).then(([productsData, categoriesData, exchangeRateData]) => {
             setProducts(Array.isArray(productsData) ? productsData : []);
+            if (Array.isArray(categoriesData)) {
+                setCategories(categoriesData);
+                if (categoriesData.length > 0) {
+                    setSelectedCategoryId(prevId => prevId || categoriesData[0].id);
+                }
+            }
             if (exchangeRateData) {
                 if (exchangeRateData.rate > 0) setExchangeRate(exchangeRateData.rate);
-                if (exchangeRateData.sellingPricePerTonUSD >= 0) setSellingPricePerTonUSD(exchangeRateData.sellingPricePerTonUSD);
             }
             setLoading(false)
         }).catch(err => {
@@ -109,17 +123,26 @@ export default function Inventory() {
     }
 
     const saveSellingPricePerTon = async (newPrice: number) => {
-        if (newPrice < 0) return;
+        if (newPrice < 0 || !selectedCategoryId) return;
         try {
-            await fetch('/api/exchange-rate', {
-                method: 'POST',
+            await fetch('/api/categories', {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sellingPricePerTonUSD: newPrice })
+                body: JSON.stringify({ id: selectedCategoryId, sellingPricePerTonUSD: newPrice })
             });
+            setCategories(prev => prev.map(c => c.id === selectedCategoryId ? { ...c, sellingPricePerTonUSD: newPrice } : c));
+            setProducts(prev => prev.map(p => p.categoryId === selectedCategoryId ? { ...p, category: { ...p.category, sellingPricePerTonUSD: newPrice } } : p));
         } catch (err) {
             console.error("Failed to save selling price per ton", err);
         }
     }
+
+    useEffect(() => {
+        if (selectedCategoryId) {
+            const cat = categories.find(c => c.id === selectedCategoryId);
+            if (cat) setSellingPricePerTonUSD(cat.sellingPricePerTonUSD || 0);
+        }
+    }, [selectedCategoryId, categories]);
 
     const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -200,18 +223,29 @@ export default function Inventory() {
                             <div className="hidden md:block w-px h-16 bg-slate-200"></div>
 
                             {/* Selling Price per Ton Input */}
-                            <div className="flex flex-col items-center flex-1 max-w-[200px] w-full">
-                                <label className="text-xs font-bold text-slate-500 mb-2">سعر بيع الطن بالدولار</label>
-                                <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 w-full focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
-                                    <DollarSign size={20} className="text-blue-500" />
-                                    <input
-                                        type="number"
-                                        placeholder="السعر..."
-                                        value={sellingPricePerTonUSD || ''}
-                                        onChange={(e) => setSellingPricePerTonUSD(Number(e.target.value))}
-                                        onBlur={(e) => saveSellingPricePerTon(Number(e.target.value))}
-                                        className="bg-transparent border-none outline-none font-bold text-blue-700 w-full text-center"
-                                    />
+                            <div className="flex flex-col items-center flex-1 max-w-[280px] w-full">
+                                <label className="text-xs font-bold text-slate-500 mb-2">سعر بيع الطن بالدولار (حسب التصنيف)</label>
+                                <div className="flex items-center gap-1 w-full bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+                                    <select
+                                        className="bg-white border text-center border-slate-200 outline-none text-xs font-bold text-slate-700 py-1.5 px-2 rounded-lg cursor-pointer w-1/2 focus:ring-2 focus:ring-blue-500/20"
+                                        value={selectedCategoryId || ''}
+                                        onChange={(e) => setSelectedCategoryId(Number(e.target.value))}
+                                    >
+                                        {categories.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                    <div className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-1.5 rounded-lg w-1/2 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                                        <DollarSign size={14} className="text-blue-500 shrink-0" />
+                                        <input
+                                            type="number"
+                                            placeholder="السعر..."
+                                            value={sellingPricePerTonUSD === 0 ? '' : sellingPricePerTonUSD}
+                                            onChange={(e) => setSellingPricePerTonUSD(Number(e.target.value))}
+                                            onBlur={(e) => saveSellingPricePerTon(Number(e.target.value))}
+                                            className="bg-transparent border-none outline-none font-bold text-blue-700 w-full text-center text-sm"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 

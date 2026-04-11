@@ -11,3 +11,22 @@ export async function GET() {
         return NextResponse.json({ error: 'Error fetching categories' }, { status: 500 })
     }
 }
+
+export async function PUT(request: Request) {
+    try {
+        const { id, sellingPricePerTonUSD } = await request.json()
+        
+        if (!id || typeof sellingPricePerTonUSD !== 'number') {
+             return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
+        }
+
+        const category = await prisma.category.update({
+            where: { id: parseInt(id) },
+            data: { sellingPricePerTonUSD }
+        })
+        return NextResponse.json(category)
+    } catch (error) {
+        console.error('Error updating category', error)
+        return NextResponse.json({ error: 'Failed to update category' }, { status: 500 })
+    }
+}

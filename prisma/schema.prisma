@@ -9,9 +9,10 @@ datasource db {
 }
 
 model Category {
-  id       Int       @id @default(autoincrement())
-  name     String
-  products Product[]
+  id                    Int       @id @default(autoincrement())
+  name                  String
+  sellingPricePerTonUSD Float     @default(0)
+  products              Product[]
 }
 
 model Product {
@@ -101,7 +102,6 @@ model Setting {
   phone              String?
   vatRate            Float     @default(0)
   exchangeRate       Float     @default(0)
-  sellingPricePerTonUSD Float  @default(0)
   address            String?
   logoUrl            String?   @db.Text
   initialBalance     Float     @default(0)
