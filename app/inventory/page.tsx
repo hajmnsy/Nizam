@@ -51,9 +51,20 @@ export default function Inventory() {
         ]).then(([productsData, categoriesData, exchangeRateData]) => {
             setProducts(Array.isArray(productsData) ? productsData : []);
             if (Array.isArray(categoriesData)) {
-                setCategories(categoriesData);
-                if (categoriesData.length > 0) {
-                    setSelectedCategoryId(prevId => prevId || categoriesData[0].id);
+                const hiddenCategories = ['قطاعات', 'مسطحات', 'مواسير', 'سيخ']
+                let visibleCategories = categoriesData.filter((cat: Category) => !hiddenCategories.includes(cat.name))
+
+                const uniqueMap = new Map();
+                visibleCategories.forEach(cat => {
+                    if (!uniqueMap.has(cat.name)) {
+                        uniqueMap.set(cat.name, cat);
+                    }
+                });
+                visibleCategories = Array.from(uniqueMap.values());
+
+                setCategories(visibleCategories);
+                if (visibleCategories.length > 0) {
+                    setSelectedCategoryId(prevId => prevId || visibleCategories[0].id);
                 }
             }
             if (exchangeRateData) {
