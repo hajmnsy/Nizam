@@ -12,6 +12,8 @@ interface Product {
     id: number
     name: string
     quantity: number
+    type?: string
+    thickness?: number
     purchasePriceUSD: number
     price: number
 }
@@ -201,7 +203,9 @@ export default function NewPurchase() {
                                         >
                                             <option value="">-- اختر الصنف --</option>
                                             {products.map(p => (
-                                                <option key={p.id} value={p.id}>{p.name} (المخزن: {p.quantity})</option>
+                                                <option key={p.id} value={p.id}>
+                                                    {p.name} {p.type ? `- ${p.type}` : ''} {p.thickness ? `(${p.thickness}mm)` : ''} (المخزن: {p.quantity})
+                                                </option>
                                             ))}
                                         </select>
                                     </div>

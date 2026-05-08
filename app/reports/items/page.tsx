@@ -10,6 +10,8 @@ interface Product {
     id: number
     name: string
     quantity: number
+    type?: string
+    thickness?: number
 }
 
 interface HistoryItem {
@@ -91,7 +93,9 @@ export default function ItemsReport() {
                             >
                                 <option value="">-- اختر الصنف --</option>
                                 {products.map(p => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                    <option key={p.id} value={p.id}>
+                                        {p.name} {p.type ? `- ${p.type}` : ''} {p.thickness ? `(${p.thickness}mm)` : ''}
+                                    </option>
                                 ))}
                             </select>
                         )}
