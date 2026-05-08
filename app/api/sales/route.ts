@@ -142,7 +142,7 @@ export async function GET(request: Request) {
             whereClause.customer = { contains: customer }
         }
 
-        if (status) {
+        if (status && status !== 'ALL') {
             whereClause.status = status
         }
 

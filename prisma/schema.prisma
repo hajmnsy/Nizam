@@ -32,6 +32,7 @@ model Product {
   updatedAt     DateTime   @updatedAt
   category      Category   @relation(fields: [categoryId], references: [id])
   saleItems     SaleItem[]
+  purchaseItems PurchaseItem[]
 }
 
 model Sale {
@@ -125,4 +126,24 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model Purchase {
+  id            Int            @id @default(autoincrement())
+  invoiceNumber String?
+  supplier      String?
+  total         Float
+  status        String         @default("COMPLETED")
+  createdAt     DateTime       @default(now())
+  items         PurchaseItem[]
+}
+
+model PurchaseItem {
+  id         Int      @id @default(autoincrement())
+  purchaseId Int
+  productId  Int
+  quantity   Int
+  price      Float
+  product    Product  @relation(fields: [productId], references: [id])
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
 }

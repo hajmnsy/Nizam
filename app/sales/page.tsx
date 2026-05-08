@@ -30,7 +30,7 @@ export default function SalesList() {
 
     const [sales, setSales] = useState<Sale[]>([])
     const [loading, setLoading] = useState(true)
-    const [tab, setTab] = useState<'PAID' | 'CREDIT' | 'QUOTATION'>('PAID')
+    const [tab, setTab] = useState<'ALL' | 'PAID' | 'CREDIT' | 'QUOTATION'>('PAID')
     const [date, setDate] = useState<string>(getTodayLocal())
     const [customerFilter, setCustomerFilter] = useState<string>('')
 
@@ -40,6 +40,7 @@ export default function SalesList() {
         if (cust) {
             setCustomerFilter(cust)
             setDate('') // Clear date filter to show all invoices for the customer
+            setTab('ALL') // Switch to ALL tab to show all their invoices regardless of status
         }
     }, [])
     
@@ -112,11 +113,11 @@ export default function SalesList() {
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                            {tab === 'PAID' ? <CheckCircle className="text-emerald-500" /> : tab === 'CREDIT' ? <Clock className="text-amber-500" /> : <FileText className="text-blue-500" />}
-                            {tab === 'PAID' ? 'فواتير المبيعات' : tab === 'CREDIT' ? 'مبيعات آجلة' : 'عروض الأسعار'}
+                            {tab === 'ALL' ? <FileText className="text-slate-500" /> : tab === 'PAID' ? <CheckCircle className="text-emerald-500" /> : tab === 'CREDIT' ? <Clock className="text-amber-500" /> : <FileText className="text-blue-500" />}
+                            {tab === 'ALL' ? 'كل المبيعات' : tab === 'PAID' ? 'فواتير المبيعات' : tab === 'CREDIT' ? 'مبيعات آجلة' : 'عروض الأسعار'}
                         </h1>
                         <p className="text-gray-500 text-sm mt-1">
-                            {tab === 'PAID' ? 'سجل عمليات البيع المكتملة الدفع' : tab === 'CREDIT' ? 'مبيعات غير مسددة بالكامل' : 'المسودات وعروض الأسعار المحفوظة'}
+                            {tab === 'ALL' ? 'جميع فواتير وعروض أسعار المبيعات' : tab === 'PAID' ? 'سجل عمليات البيع المكتملة الدفع' : tab === 'CREDIT' ? 'مبيعات غير مسددة بالكامل' : 'المسودات وعروض الأسعار المحفوظة'}
                         </p>
                     </div>
                     <div className="flex gap-3">
@@ -138,6 +139,15 @@ export default function SalesList() {
                 {/* Tabs & Filters */}
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 border-b border-gray-200">
                     <div className="flex gap-2">
+                        <button
+                            onClick={() => setTab('ALL')}
+                            className={`px-6 py-3 font-bold text-sm transition-all border-b-2 -mb-[1px] ${tab === 'ALL'
+                                ? 'border-slate-500 text-slate-700 bg-slate-50'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}
+                        >
+                            الكل
+                        </button>
                         <button
                             onClick={() => setTab('PAID')}
                             className={`px-6 py-3 font-bold text-sm transition-all border-b-2 -mb-[1px] ${tab === 'PAID'
@@ -248,14 +258,14 @@ export default function SalesList() {
                                     <tr>
                                         <td colSpan={7} className="p-12 text-center text-gray-400 flex flex-col items-center">
                                             <FileText size={48} className="mb-2 opacity-50" />
-                                            لا توجد {tab === 'PAID' ? 'فواتير' : 'عروض أسعار'} حتى الآن
+                                            لا توجد سجلات لعرضها
                                         </td>
                                     </tr>
                                 ) : (
                                     sales.map(sale => (
                                         <tr key={sale.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="p-4 font-mono font-bold text-slate-700">
-                                                {tab === 'QUOTATION' ? '-' : `#${sale.invoiceNumber || sale.id}`}
+                                                {sale.status === 'QUOTATION' ? '-' : `#${sale.invoiceNumber || sale.id}`}
                                             </td>
                                             <td className="p-4 font-bold text-slate-800">{sale.customer || 'عميل نقدي'}</td>
                                             <td className="p-4 text-gray-600 text-sm">

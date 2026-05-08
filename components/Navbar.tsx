@@ -135,8 +135,10 @@ export default function Navbar() {
     const navLinks = [
         { name: 'الرئيسية', path: '/' },
         { name: 'المخزون', path: '/inventory' },
+        { name: 'المشتريات', path: '/purchases' },
         { name: 'المبيعات', path: '/sales' },
         { name: 'المصروفات', path: '/expenses' },
+        { name: 'حركة الأصناف', path: '/reports/items' },
         { name: 'التقارير', path: '/reports' },
         { name: 'حاسبة الأسعار', path: '/pricing' },
         { name: 'الموظفين', path: '/employees' },
