@@ -4,7 +4,7 @@ import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import { ArrowLeft, Edit, Plus, Trash2, Search, Save, X, Loader2, Settings, DollarSign, Package } from 'lucide-react'
+import { ArrowLeft, Edit, Plus, Trash2, Search, Save, X, Loader2, Settings, DollarSign, Package, Printer } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
 
@@ -159,11 +159,15 @@ export default function Inventory() {
         p.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
+    const handlePrint = () => {
+        window.print()
+    }
+
     return (
         <main className="min-h-screen bg-slate-50">
             <Navbar />
             <div className="container mx-auto p-4 max-w-7xl">
-                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 print:hidden">
                     <div className="flex items-center gap-2">
                         <Link href="/" className="text-gray-500 hover:text-blue-600">
                             <ArrowLeft />
@@ -174,6 +178,10 @@ export default function Inventory() {
                         </span>
                     </div>
                     <div className="flex gap-2 w-full md:w-auto">
+                        <Button onClick={handlePrint} className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900">
+                            <Printer size={20} />
+                            طباعة
+                        </Button>
                         <div className="relative flex-1 md:w-64">
                             <Search className="absolute right-3 top-2.5 text-gray-400" size={20} />
                             <Input
@@ -192,9 +200,14 @@ export default function Inventory() {
                     </div>
                 </div>
 
+                <div className="hidden print:block text-center mb-8">
+                    <h1 className="text-2xl font-bold text-slate-800 mb-2">تقرير جرد المخزون</h1>
+                    <p className="text-sm text-gray-500 mt-2">تاريخ الطباعة: {new Date().toLocaleDateString('ar-SD')}</p>
+                </div>
+
                 {/* Total Value Summary Card */}
                 {!loading && products.length > 0 && (
-                    <Card className="mb-6 bg-white border border-slate-200 shadow-sm p-6 overflow-hidden relative">
+                    <Card className="mb-6 bg-white border border-slate-200 shadow-sm p-6 overflow-hidden relative print:hidden">
                         {/* Decorative Background Icon */}
                         <div className="absolute left-0 top-0 opacity-5 pointer-events-none -translate-x-1/4 -translate-y-1/4">
                             <Package size={200} />
@@ -278,23 +291,23 @@ export default function Inventory() {
                     </Card>
                 )}
 
-                <Card className="overflow-hidden border border-slate-200 shadow-sm">
-                    <div className="overflow-x-auto">
+                <Card className="overflow-hidden border border-slate-200 shadow-sm print:shadow-none print:border-none">
+                    <div className="overflow-x-auto print:overflow-visible">
                         <table className="w-full text-right">
-                            <thead className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                            <thead className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200 print:bg-transparent print:border-b-2 print:border-black">
                                 <tr>
-                                    <th className="p-4">اسم المنتج</th>
-                                    <th className="p-4 hidden md:table-cell">النوع</th>
-                                    <th className="p-4 hidden sm:table-cell">السماكة</th>
-                                    <th className="p-4">الكمية</th>
-                                    <th className="p-4">سعر الشراء ($)</th>
-                                    <th className="p-4">تكلفة الترحيل ($)</th>
-                                    <th className="p-4">سعر البيع (ج.س)</th>
-                                    <th className="p-4">الحالة</th>
-                                    <th className="p-4">إجراءات</th>
+                                    <th className="p-4 print:p-2">اسم المنتج</th>
+                                    <th className="p-4 print:p-2 hidden md:table-cell print:table-cell">النوع</th>
+                                    <th className="p-4 print:p-2 hidden sm:table-cell print:table-cell">السماكة</th>
+                                    <th className="p-4 print:p-2">الكمية</th>
+                                    <th className="p-4 print:p-2 print:hidden">سعر الشراء ($)</th>
+                                    <th className="p-4 print:p-2 print:hidden">تكلفة الترحيل ($)</th>
+                                    <th className="p-4 print:p-2">سعر البيع (ج.س)</th>
+                                    <th className="p-4 print:p-2">الحالة</th>
+                                    <th className="p-4 print:hidden">إجراءات</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-100 print:divide-slate-200">
                                 {loading ? (
                                     <tr>
                                         <td colSpan={9} className="p-8 text-center text-gray-500">جاري التحميل...</td>
@@ -305,19 +318,19 @@ export default function Inventory() {
                                     </tr>
                                 ) : (
                                     filteredProducts.map(product => (
-                                        <tr key={product.id} className="hover:bg-slate-50 transition-colors group">
-                                            <td className="p-4 font-medium text-slate-800">{product.name}</td>
+                                        <tr key={product.id} className="hover:bg-slate-50 transition-colors group print:border-b print:border-slate-200">
+                                            <td className="p-4 print:p-2 font-medium text-slate-800 print:text-black">{product.name}</td>
                                             
-                                            <td className="p-4 hidden md:table-cell text-sm text-slate-500">
+                                            <td className="p-4 print:p-2 hidden md:table-cell print:table-cell text-sm text-slate-500 print:text-black">
                                                 {product.type || '-'}
                                             </td>
                                             
-                                            <td className="p-4 hidden sm:table-cell font-mono text-sm text-slate-500">
+                                            <td className="p-4 print:p-2 hidden sm:table-cell print:table-cell font-mono text-sm text-slate-500 print:text-black">
                                                 {product.thickness ? `${product.thickness}mm` : '-'}
                                             </td>
 
                                             {/* Editable Quantity */}
-                                            <td className="p-4">
+                                            <td className="p-4 print:p-2 print:text-black">
                                                 {editingId === product.id ? (
                                                     <input
                                                         type="number"
@@ -333,7 +346,7 @@ export default function Inventory() {
                                             </td>
 
                                             {/* Editable Purchase Price */}
-                                            <td className="p-4">
+                                            <td className="p-4 print:hidden">
                                                 {editingId === product.id ? (
                                                     <input
                                                         type="number"
@@ -348,7 +361,7 @@ export default function Inventory() {
                                             </td>
 
                                             {/* Editable Transport Cost */}
-                                            <td className="p-4">
+                                            <td className="p-4 print:hidden">
                                                 {editingId === product.id ? (
                                                     <input
                                                         type="number"
@@ -363,7 +376,7 @@ export default function Inventory() {
                                             </td>
 
                                             {/* Editable Selling Price */}
-                                            <td className="p-4">
+                                            <td className="p-4 print:p-2 print:text-black">
                                                 {editingId === product.id ? (
                                                     <input
                                                         type="number"
@@ -376,18 +389,18 @@ export default function Inventory() {
                                                 )}
                                             </td>
 
-                                            <td className="p-4">
+                                            <td className="p-4 print:p-2">
                                                 {product.quantity === 0 ? (
-                                                    <span className="text-red-600 text-xs font-bold bg-red-50 px-2 py-1 rounded-full">نفد المخزون</span>
+                                                    <span className="text-red-600 text-xs font-bold bg-red-50 print:bg-transparent print:text-black px-2 py-1 rounded-full">نفد المخزون</span>
                                                 ) : product.quantity < 10 ? (
-                                                    <span className="text-amber-600 text-xs font-bold bg-amber-50 px-2 py-1 rounded-full">منخفض</span>
+                                                    <span className="text-amber-600 text-xs font-bold bg-amber-50 print:bg-transparent print:text-black px-2 py-1 rounded-full">منخفض</span>
                                                 ) : (
-                                                    <span className="text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded-full">متوفر</span>
+                                                    <span className="text-green-600 text-xs font-bold bg-green-50 print:bg-transparent print:text-black px-2 py-1 rounded-full">متوفر</span>
                                                 )}
                                             </td>
 
                                             {/* Actions */}
-                                            <td className="p-4">
+                                            <td className="p-4 print:hidden">
                                                 <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                                     {editingId === product.id ? (
                                                         <>
