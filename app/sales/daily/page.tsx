@@ -23,6 +23,7 @@ interface Sale {
     invoiceNumber?: number
     customer: string
     total: number
+    discount?: number
     paidAmount?: number
     remainingAmount?: number
     status: string
@@ -88,6 +89,9 @@ export default function DailyReport() {
     // Items aggregate
     const itemMap = new Map<string, { name: string, type: string | null, thickness: number | null, qty: number, totalVal: number }>()
     sales.forEach(s => {
+        const subtotal = s.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+        const discountRatio = (s.discount || 0) > 0 && subtotal > 0 ? (s.discount || 0) / subtotal : 0
+
         s.items.forEach(item => {
             const key = `${item.product.name}-${item.product.type || 'none'}-${item.product.thickness || 'none'}`
             const existing = itemMap.get(key) || {
@@ -97,8 +101,12 @@ export default function DailyReport() {
                 qty: 0,
                 totalVal: 0
             }
+            
+            const itemOriginalTotal = item.price * item.quantity
+            const itemDiscountedTotal = itemOriginalTotal - (itemOriginalTotal * discountRatio)
+
             existing.qty += item.quantity
-            existing.totalVal += item.price * item.quantity
+            existing.totalVal += itemDiscountedTotal
             itemMap.set(key, existing)
         })
     })
@@ -323,7 +331,12 @@ export default function DailyReport() {
                                                     <td className="p-3 text-left font-mono text-slate-500 text-xs">
                                                         {new Date(s.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
                                                     </td>
-                                                    <td className="p-3 text-left font-mono font-bold text-slate-800">{s.total.toLocaleString()}</td>
+                                                    <td className="p-3 text-left font-mono font-bold text-slate-800">
+                                                        {s.total.toLocaleString()}
+                                                        {s.discount && s.discount > 0 ? (
+                                                            <span className="text-rose-500 text-xs mr-2 line-through block sm:inline">{(s.total + s.discount).toLocaleString()}</span>
+                                                        ) : null}
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -349,31 +362,43 @@ export default function DailyReport() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {sales.flatMap(sale =>
-                                            sale.items.map((item, idx) => (
-                                                <tr key={`${sale.id}-${idx}`} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="p-3 font-mono font-bold text-slate-700">#{sale.invoiceNumber || sale.id}</td>
-                                                    <td className="p-3 font-mono text-slate-500 text-xs text-right">
-                                                        {new Date(sale.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
-                                                    </td>
-                                                    <td className="p-3 font-bold text-slate-700">{item.product.name}</td>
-                                                    <td className="p-3 text-center text-slate-500">{item.product.type || '-'}</td>
-                                                    <td className="p-3 text-center text-slate-500 text-xs" dir="ltr">{item.product.thickness ? `${item.product.thickness} mm` : '-'}</td>
-                                                    <td className="p-3 text-center font-mono text-blue-600 font-bold bg-blue-50/50 print:bg-transparent">{item.quantity}</td>
-                                                    {exchangeRate > 0 && (
-                                                        <td className="p-3 text-center font-mono font-bold text-teal-700 bg-teal-50/30 print:bg-transparent">
-                                                            {(item.price / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        {sales.flatMap(sale => {
+                                            const subtotal = sale.items.reduce((sum, i) => sum + (i.price * i.quantity), 0)
+                                            const discountRatio = (sale.discount || 0) > 0 && subtotal > 0 ? (sale.discount || 0) / subtotal : 0
+
+                                            return sale.items.map((item, idx) => {
+                                                const itemOriginalTotal = item.price * item.quantity
+                                                const itemEffectiveTotal = itemOriginalTotal - (itemOriginalTotal * discountRatio)
+                                                const effectivePrice = itemEffectiveTotal / item.quantity
+
+                                                return (
+                                                    <tr key={`${sale.id}-${idx}`} className="hover:bg-slate-50 transition-colors">
+                                                        <td className="p-3 font-mono font-bold text-slate-700">#{sale.invoiceNumber || sale.id}</td>
+                                                        <td className="p-3 font-mono text-slate-500 text-xs text-right">
+                                                            {new Date(sale.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
                                                         </td>
-                                                    )}
-                                                    <td className="p-3 text-left font-mono font-bold text-slate-800">{(item.price * item.quantity).toLocaleString()}</td>
-                                                    {exchangeRate > 0 && (
-                                                        <td className="p-3 text-left font-mono font-bold text-emerald-700 bg-emerald-50/30 print:bg-transparent">
-                                                            {((item.price * item.quantity) / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        <td className="p-3 font-bold text-slate-700">{item.product.name}</td>
+                                                        <td className="p-3 text-center text-slate-500">{item.product.type || '-'}</td>
+                                                        <td className="p-3 text-center text-slate-500 text-xs" dir="ltr">{item.product.thickness ? `${item.product.thickness} mm` : '-'}</td>
+                                                        <td className="p-3 text-center font-mono text-blue-600 font-bold bg-blue-50/50 print:bg-transparent">{item.quantity}</td>
+                                                        {exchangeRate > 0 && (
+                                                            <td className="p-3 text-center font-mono font-bold text-teal-700 bg-teal-50/30 print:bg-transparent">
+                                                                {(effectivePrice / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </td>
+                                                        )}
+                                                        <td className="p-3 text-left font-mono font-bold text-slate-800">
+                                                            {itemEffectiveTotal.toLocaleString()}
+                                                            {discountRatio > 0 && <span className="text-xs text-rose-500 line-through mr-2 block sm:inline">{itemOriginalTotal.toLocaleString()}</span>}
                                                         </td>
-                                                    )}
-                                                </tr>
-                                            ))
-                                        )}
+                                                        {exchangeRate > 0 && (
+                                                            <td className="p-3 text-left font-mono font-bold text-emerald-700 bg-emerald-50/30 print:bg-transparent">
+                                                                {(itemEffectiveTotal / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </td>
+                                                        )}
+                                                    </tr>
+                                                )
+                                            })
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
