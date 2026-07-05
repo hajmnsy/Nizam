@@ -176,6 +176,28 @@ export default function Inventory() {
         }
     }
 
+    const handleDeleteCategory = async () => {
+        if (!selectedCategoryId) return
+        const cat = categories.find(c => c.id === selectedCategoryId)
+        if (!cat) return
+        if (!confirm(`هل أنت متأكد من حذف تصنيف "${cat.name}"؟`)) return
+
+        try {
+            const res = await fetch(`/api/categories/${selectedCategoryId}`, {
+                method: 'DELETE'
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setSelectedCategoryId(null)
+                fetchProducts()
+            } else {
+                alert(data.error || 'حدث خطأ أثناء حذف التصنيف')
+            }
+        } catch (e) {
+            alert('حدث خطأ بالاتصال')
+        }
+    }
+
     useEffect(() => {
         if (selectedCategoryId) {
             const cat = categories.find(c => c.id === selectedCategoryId);
@@ -234,7 +256,7 @@ export default function Inventory() {
                 </div>
 
                 {/* Total Value Summary Card */}
-                {!loading && products.length > 0 && (
+                {!loading && (
                     <Card className="mb-6 bg-white border border-slate-200 shadow-sm p-6 overflow-hidden relative print:hidden">
                         {/* Decorative Background Icon */}
                         <div className="absolute left-0 top-0 opacity-5 pointer-events-none -translate-x-1/4 -translate-y-1/4">
@@ -287,15 +309,27 @@ export default function Inventory() {
                                     </button>
                                 </div>
                                 <div className="flex items-center gap-1 w-full bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-                                    <select
-                                        className="bg-white border text-center border-slate-200 outline-none text-xs font-bold text-slate-700 py-1.5 px-2 rounded-lg cursor-pointer w-1/2 focus:ring-2 focus:ring-blue-500/20"
-                                        value={selectedCategoryId || ''}
-                                        onChange={(e) => setSelectedCategoryId(Number(e.target.value))}
-                                    >
-                                        {categories.map(c => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
-                                        ))}
-                                    </select>
+                                    <div className="flex items-center w-1/2 gap-1 bg-white border border-slate-200 rounded-lg p-1">
+                                        <select
+                                            className="bg-transparent outline-none text-xs font-bold text-slate-700 py-1 px-1 cursor-pointer w-full"
+                                            value={selectedCategoryId || ''}
+                                            onChange={(e) => setSelectedCategoryId(Number(e.target.value))}
+                                        >
+                                            {categories.map(c => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                        {selectedCategoryId && (
+                                            <button
+                                                type="button"
+                                                onClick={handleDeleteCategory}
+                                                className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 shrink-0"
+                                                title="حذف التصنيف المحدد"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
                                     <div className="flex items-center gap-1 bg-white border border-slate-200 px-2 py-1.5 rounded-lg w-1/2 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
                                         <DollarSign size={14} className="text-blue-500 shrink-0" />
                                         <input
