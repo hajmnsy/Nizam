@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function GET(request: Request) {
     try {
@@ -30,8 +31,10 @@ export async function GET(request: Request) {
              endDate = new Date(`${khartoumDateStr}T23:59:59.999+02:00`);
         }
 
+        const branchId = getActiveBranchId()
+
         // Fetch Settings to check for manual Initial Balance
-        const setting: any = await prisma.setting.findUnique({ where: { id: 'default' } })
+        const setting: any = await prisma.setting.findFirst({ where: { branchId } })
         const hasInitialBalance = setting && setting.initialBalanceDate;
         const initialDate = hasInitialBalance ? new Date(setting.initialBalanceDate) : undefined;
 
@@ -41,12 +44,13 @@ export async function GET(request: Request) {
         if (hasInitialBalance && initialDate && startDate > initialDate) {
             // If report starts AFTER the initial balance date:
             const pastSales = await prisma.sale.aggregate({
-                where: { createdAt: { gte: initialDate, lt: startDate }, status: { not: 'QUOTATION' } },
+                where: { branchId, createdAt: { gte: initialDate, lt: startDate }, status: { not: 'QUOTATION' } },
                 _sum: { total: true }
             });
 
             const pastExpenses = await prisma.expense.aggregate({
                 where: {
+                    branchId,
                     date: { gte: initialDate, lt: startDate },
                     category: { not: 'سعر الصرف' }
                 },
@@ -60,12 +64,13 @@ export async function GET(request: Request) {
         } else {
             // Legacy behavior: No initial balance set, calculate all history BEFORE startDate
             const pastSales = await prisma.sale.aggregate({
-                where: { createdAt: { lt: startDate }, status: { not: 'QUOTATION' } },
+                where: { branchId, createdAt: { lt: startDate }, status: { not: 'QUOTATION' } },
                 _sum: { total: true }
             });
 
             const pastExpenses = await prisma.expense.aggregate({
                 where: {
+                    branchId,
                     date: { lt: startDate },
                     category: { not: 'سعر الصرف' }
                 },
@@ -78,6 +83,7 @@ export async function GET(request: Request) {
         // 2. Fetch data WITHIN the date range
         const salesInPeriod = await prisma.sale.findMany({
             where: {
+                branchId,
                 createdAt: { gte: startDate, lte: endDate },
                 status: { not: 'QUOTATION' }
             },
@@ -86,6 +92,7 @@ export async function GET(request: Request) {
 
         const expensesInPeriod = await prisma.expense.findMany({
             where: {
+                branchId,
                 date: { gte: startDate, lte: endDate }
             },
             select: { date: true, amount: true, category: true }

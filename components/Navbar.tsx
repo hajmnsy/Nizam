@@ -25,11 +25,31 @@ export default function Navbar() {
     const [savingRate, setSavingRate] = useState(false)
     const exchangePopupRef = useRef<HTMLDivElement>(null)
 
-    // Handle Output clicks for Exchange Popup
+    // Branch Switcher State
+    const [branches, setBranches] = useState<any[]>([])
+    const [activeBranchId, setActiveBranchId] = useState<number>(1)
+    const [showBranchModal, setShowBranchModal] = useState(false)
+    const [newBranchName, setNewBranchName] = useState('')
+    const [newBranchCode, setNewBranchCode] = useState('')
+    const [creatingBranch, setCreatingBranch] = useState(false)
+    const branchPopupRef = useRef<HTMLDivElement>(null)
+
+    const getCookie = (name: string) => {
+        if (typeof document === 'undefined') return null;
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop()?.split(';').shift();
+        return null;
+    }
+
+    // Handle Output clicks for Exchange & Branch Popups
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (exchangePopupRef.current && !exchangePopupRef.current.contains(event.target as Node)) {
                 setShowExchangeModal(false)
+            }
+            if (branchPopupRef.current && !branchPopupRef.current.contains(event.target as Node)) {
+                setShowBranchModal(false)
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
@@ -78,6 +98,22 @@ export default function Navbar() {
             })
             .catch(console.error)
 
+        // Fetch Branches
+        fetch('/api/branches')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) setBranches(data)
+            })
+            .catch(console.error)
+
+        // Set active branch from cookie
+        const activeBranchCookie = getCookie('active_branch_id')
+        if (activeBranchCookie) {
+            setActiveBranchId(parseInt(activeBranchCookie))
+        } else {
+            setActiveBranchId(1)
+        }
+
         return () => window.removeEventListener('scroll', handleScroll)
     }, [])
 
@@ -122,6 +158,52 @@ export default function Navbar() {
             console.error(error)
         } finally {
             setSavingRate(false)
+        }
+    }
+
+    const handleBranchSwitch = async (id: number) => {
+        try {
+            const res = await fetch('/api/branches/switch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ branchId: id })
+            })
+            if (res.ok) {
+                window.location.reload()
+            } else {
+                alert('فشل تغيير الفرع')
+            }
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    const handleCreateBranch = async () => {
+        if (!newBranchName || !newBranchCode) return
+        setCreatingBranch(true)
+        try {
+            const res = await fetch('/api/branches', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: newBranchName,
+                    code: newBranchCode
+                })
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setBranches(prev => [...prev, data])
+                setNewBranchName('')
+                setNewBranchCode('')
+                alert('تمت إضافة الفرع الجديد بنجاح مع إعدادات افتراضية!')
+                setShowBranchModal(false)
+            } else {
+                alert(data.error || 'فشل إضافة الفرع')
+            }
+        } catch (error) {
+            console.error(error)
+        } finally {
+            setCreatingBranch(false)
         }
     }
 
@@ -249,6 +331,79 @@ export default function Navbar() {
                                 )}
                             </div>
 
+                            {/* Branch Switcher Widget */}
+                            {(currentUser?.role === 'ADMIN' || branches.length > 1) && (
+                                <div className="relative" ref={branchPopupRef}>
+                                    <button
+                                        onClick={() => setShowBranchModal(!showBranchModal)}
+                                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-200/60 shadow-sm animate-fade-in"
+                                        title="تبديل الفرع"
+                                    >
+                                        <Rocket size={16} strokeWidth={2.5} className="text-indigo-500" />
+                                        <span>{branches.find(b => b.id === activeBranchId)?.name || 'جاري التحميل...'}</span>
+                                    </button>
+
+                                    {showBranchModal && (
+                                        <div className="absolute left-0 mt-3 w-72 bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl shadow-xl overflow-hidden animate-fade-in-up z-50 origin-top-left p-5">
+                                            <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+                                                <h4 className="font-black text-slate-850">فروع المحل</h4>
+                                                <button onClick={() => setShowBranchModal(false)} className="text-slate-400 hover:text-slate-900 p-1 bg-slate-100 rounded-full transition-colors">
+                                                    <X size={14} strokeWidth={3} />
+                                                </button>
+                                            </div>
+                                            
+                                            <div className="space-y-1 max-h-48 overflow-y-auto mb-4">
+                                                {branches.map((b) => (
+                                                    <button
+                                                        key={b.id}
+                                                        onClick={() => handleBranchSwitch(b.id)}
+                                                        className={`w-full text-right px-3 py-2 rounded-xl text-sm font-bold transition-all flex justify-between items-center ${
+                                                            b.id === activeBranchId
+                                                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
+                                                                : 'hover:bg-slate-50 text-slate-700'
+                                                        }`}
+                                                    >
+                                                        <span>{b.name}</span>
+                                                        {b.id === activeBranchId && (
+                                                            <span className="w-2 h-2 bg-white rounded-full"></span>
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {currentUser?.role === 'ADMIN' && (
+                                                <div className="border-t border-slate-100 pt-3 space-y-3">
+                                                    <h5 className="text-xs font-black text-slate-500">إضافة محل / فرع جديد</h5>
+                                                    <div className="space-y-2">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="اسم المحل (مثال: فرع 2)"
+                                                            value={newBranchName}
+                                                            onChange={(e) => setNewBranchName(e.target.value)}
+                                                            className="w-full text-xs font-bold border border-slate-100 rounded-xl px-3 py-2 bg-slate-50 outline-none focus:border-indigo-500 focus:bg-white"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="رمز الفرع بالإنجليزية (مثال: branch2)"
+                                                            value={newBranchCode}
+                                                            onChange={(e) => setNewBranchCode(e.target.value)}
+                                                            className="w-full text-xs font-bold border border-slate-100 rounded-xl px-3 py-2 bg-slate-50 outline-none focus:border-indigo-500 focus:bg-white"
+                                                        />
+                                                        <button
+                                                            onClick={handleCreateBranch}
+                                                            disabled={creatingBranch || !newBranchName || !newBranchCode}
+                                                            className="w-full bg-slate-900 hover:bg-indigo-600 text-white font-bold text-xs py-2.5 rounded-xl transition-all disabled:opacity-50"
+                                                        >
+                                                            {creatingBranch ? 'جاري الإضافة...' : 'إضافة الفرع'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="w-px h-6 bg-slate-200 mx-1"></div>
 
                             {/* Search Button */}
@@ -335,6 +490,31 @@ export default function Navbar() {
                 {isOpen && (
                     <div className="xl:hidden absolute top-full left-0 w-full bg-white/95 backdrop-blur-2xl border-b border-slate-200 shadow-2xl animate-slide-down">
                         <div className="flex flex-col p-4 space-y-1">
+                            {/* Branch Switcher on Mobile */}
+                            {branches.length > 1 && (
+                                <div className="mb-3 p-3 bg-slate-50 rounded-xl border border-slate-200/60">
+                                    <span className="text-xs font-black text-slate-500 mb-2 block">تبديل الفرع / المحل النشط:</span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {branches.map(b => (
+                                            <button
+                                                key={b.id}
+                                                onClick={() => {
+                                                    handleBranchSwitch(b.id)
+                                                    setIsOpen(false)
+                                                }}
+                                                className={`px-3 py-2 rounded-xl text-xs font-bold text-center border transition-all ${
+                                                    b.id === activeBranchId
+                                                        ? 'bg-indigo-600 text-white border-indigo-700'
+                                                        : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-200'
+                                                }`}
+                                            >
+                                                {b.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {navLinks.map((link) => (
                                 <Link
                                     key={link.path}

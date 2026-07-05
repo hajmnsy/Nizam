@@ -59,6 +59,14 @@ export async function POST(request: Request) {
             sameSite: 'lax',
         })
 
+        // Set active branch cookie
+        const branchIdToSet = user.branchId || 1
+        response.cookies.set('active_branch_id', branchIdToSet.toString(), {
+            path: '/',
+            expires: expiresAt,
+            sameSite: 'lax',
+        })
+
         return response
     } catch (error) {
         console.error('Login error:', error)

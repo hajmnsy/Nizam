@@ -55,7 +55,8 @@ export async function PUT(
                 data: {
                     title: 'تنبيه مخزون منخفض (تعديل يدوي)',
                     message: `تم تعديل مخزون ${product.name} إلى ${product.quantity} قطعة بقسم ${product.type}. يرجى التحقق.`,
-                    type: 'WARNING'
+                    type: 'WARNING',
+                    branchId: product.branchId
                 }
             })
         }

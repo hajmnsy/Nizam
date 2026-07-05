@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
@@ -11,10 +12,12 @@ export async function GET(request: Request) {
     }
 
     try {
+        const branchId = getActiveBranchId()
         const [products, customers, sales] = await Promise.all([
             // Search Products
             prisma.product.findMany({
                 where: {
+                    branchId,
                     name: { contains: query }
                 },
                 take: 5,
@@ -24,6 +27,7 @@ export async function GET(request: Request) {
             prisma.sale.groupBy({
                 by: ['customer'],
                 where: {
+                    branchId,
                     customer: { contains: query }
                 },
                 _count: { id: true },
@@ -33,6 +37,7 @@ export async function GET(request: Request) {
             // Search Sales by ID (if query is number)
             !isNaN(Number(query)) ? prisma.sale.findMany({
                 where: { 
+                    branchId,
                     OR: [
                         { id: parseInt(query) },
                         { invoiceNumber: parseInt(query) }

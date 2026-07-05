@@ -16,7 +16,10 @@ export async function PUT(
         if (isNaN(id)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
 
         const json = await request.json()
-        const updateData: any = { role: json.role }
+        const updateData: any = { 
+            role: json.role,
+            branchId: json.role === 'ADMIN' ? null : (json.branchId ? parseInt(json.branchId) : null)
+        }
 
         // Only update password if provided
         if (json.password) {

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function GET() {
     try {
@@ -9,9 +10,12 @@ export async function GET() {
 
         const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
 
+        const branchId = getActiveBranchId()
+
         // 1. Calculate Daily Sales
         const todaySales = await prisma.sale.findMany({
             where: {
+                branchId,
                 createdAt: {
                     gte: today
                 }
@@ -22,6 +26,7 @@ export async function GET() {
         // 2. Calculate Monthly Sales
         const monthSales = await prisma.sale.findMany({
             where: {
+                branchId,
                 createdAt: {
                     gte: firstDayOfMonth
                 }
@@ -32,6 +37,7 @@ export async function GET() {
         // 3. Calculate Monthly Expenses
         const monthExpenses = await prisma.expense.findMany({
             where: {
+                branchId,
                 date: {
                     gte: firstDayOfMonth
                 }
@@ -44,6 +50,7 @@ export async function GET() {
         // 4. Low Stock Items (Threshold < 10)
         const lowStockItems = await prisma.product.findMany({
             where: {
+                branchId,
                 quantity: {
                     lt: 10
                 }
@@ -56,6 +63,7 @@ export async function GET() {
 
         // 5. Recent Activity (Last 5 sales)
         const recentSales = await prisma.sale.findMany({
+            where: { branchId },
             take: 5,
             orderBy: {
                 createdAt: 'desc'

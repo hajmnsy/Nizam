@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function GET(request: Request) {
     try {
@@ -11,9 +12,11 @@ export async function GET(request: Request) {
         const startOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1)
         const endOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0, 23, 59, 59, 999)
 
+        const branchId = getActiveBranchId()
+
         // Fetch all employees with their specific expenses for the context month 
         const employees = await prisma.employee.findMany({
-            where: { isActive: true },
+            where: { isActive: true, branchId },
             include: {
                 expenses: {
                     where: {
@@ -48,10 +51,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const json = await request.json()
+        const branchId = getActiveBranchId()
         const employee = await prisma.employee.create({
             data: {
                 name: json.name,
-                monthlySalary: parseFloat(json.monthlySalary) || 0
+                monthlySalary: parseFloat(json.monthlySalary) || 0,
+                branchId
             }
         })
         return NextResponse.json(employee)

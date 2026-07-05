@@ -13,6 +13,8 @@ model Category {
   name                  String
   sellingPricePerTonUSD Float     @default(0)
   products              Product[]
+  branchId              Int       @default(1)
+  branch                Branch    @relation(fields: [branchId], references: [id])
 }
 
 model Product {
@@ -33,6 +35,8 @@ model Product {
   category      Category   @relation(fields: [categoryId], references: [id])
   saleItems     SaleItem[]
   purchaseItems PurchaseItem[]
+  branchId      Int        @default(1)
+  branch        Branch     @relation(fields: [branchId], references: [id])
 }
 
 model Sale {
@@ -47,6 +51,8 @@ model Sale {
   createdAt       DateTime   @default(now())
   items           SaleItem[]
   payments        Payment[]
+  branchId        Int        @default(1)
+  branch          Branch     @relation(fields: [branchId], references: [id])
 }
 
 model SaleItem {
@@ -76,6 +82,8 @@ model Expense {
   date        DateTime  @default(now())
   employeeId  Int?
   employee    Employee? @relation(fields: [employeeId], references: [id])
+  branchId    Int        @default(1)
+  branch      Branch     @relation(fields: [branchId], references: [id])
 }
 
 model Employee {
@@ -86,6 +94,8 @@ model Employee {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   expenses      Expense[]
+  branchId      Int        @default(1)
+  branch        Branch     @relation(fields: [branchId], references: [id])
 }
 
 model User {
@@ -95,6 +105,8 @@ model User {
   role      String    @default("CASHIER")
   createdAt DateTime  @default(now())
   sessions  Session[]
+  branchId  Int?
+  branch    Branch?   @relation(fields: [branchId], references: [id])
 }
 
 model Setting {
@@ -108,6 +120,8 @@ model Setting {
   initialBalance     Float     @default(0)
   initialBalanceDate DateTime?
   updatedAt          DateTime  @updatedAt
+  branchId           Int       @unique @default(1)
+  branch             Branch    @relation(fields: [branchId], references: [id])
 }
 
 model Notification {
@@ -117,6 +131,8 @@ model Notification {
   isRead    Boolean  @default(false)
   type      String   @default("INFO")
   createdAt DateTime @default(now())
+  branchId  Int      @default(1)
+  branch    Branch   @relation(fields: [branchId], references: [id])
 }
 
 model Session {
@@ -136,6 +152,8 @@ model Purchase {
   status        String         @default("COMPLETED")
   createdAt     DateTime       @default(now())
   items         PurchaseItem[]
+  branchId      Int            @default(1)
+  branch        Branch         @relation(fields: [branchId], references: [id])
 }
 
 model PurchaseItem {
@@ -146,4 +164,23 @@ model PurchaseItem {
   price      Float
   product    Product  @relation(fields: [productId], references: [id])
   purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+}
+
+model Branch {
+  id            Int            @id @default(autoincrement())
+  name          String         @unique
+  code          String         @unique
+  address       String?
+  phone         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  products      Product[]
+  sales         Sale[]
+  expenses      Expense[]
+  purchases     Purchase[]
+  users         User[]
+  categories    Category[]
+  settings      Setting[]
+  notifications Notification[]
+  employees     Employee[]
 }

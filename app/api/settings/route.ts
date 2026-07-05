@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getActiveBranchId } from '@/lib/branch'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,15 +8,25 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
     try {
-        let setting = await prisma.setting.findUnique({
-            where: { id: 'default' }
+        const branchId = getActiveBranchId()
+        let setting = await prisma.setting.findFirst({
+            where: { branchId }
         })
 
         if (!setting) {
+            // Find default setting to clone its name or use default values
+            const defaultSetting = await prisma.setting.findFirst({
+                where: { id: 'default' }
+            })
             setting = await prisma.setting.create({
                 data: {
-                    companyName: 'اسم الشركة',
-                    vatRate: 0
+                    id: `branch-${branchId}`,
+                    companyName: defaultSetting?.companyName || 'اسم الشركة',
+                    vatRate: defaultSetting?.vatRate || 0,
+                    exchangeRate: defaultSetting?.exchangeRate || 0,
+                    address: defaultSetting?.address || null,
+                    phone: defaultSetting?.phone || null,
+                    branchId: branchId
                 }
             })
         }
@@ -33,11 +44,23 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+        const branchId = getActiveBranchId()
         const body = await request.json()
         const { companyName, phone, vatRate, address, logoUrl, initialBalance, initialBalanceDate, transportCostUSD } = body
 
+        // Find existing setting for this branch
+        let existingSetting = await prisma.setting.findFirst({
+            where: { branchId }
+        })
+
+        const settingId = existingSetting?.id || `branch-${branchId}`
+
         const updateData: any = {}
-        const createData: any = { id: 'default', companyName: companyName || 'اسم الشركة' }
+        const createData: any = { 
+            id: settingId, 
+            companyName: companyName || 'اسم الشركة',
+            branchId
+        }
 
         if (companyName !== undefined) { updateData.companyName = companyName; createData.companyName = companyName; }
         if (phone !== undefined) { updateData.phone = phone; createData.phone = phone; }
@@ -67,7 +90,7 @@ export async function POST(request: Request) {
         }
 
         const setting = await prisma.setting.upsert({
-            where: { id: 'default' },
+            where: { id: settingId },
             update: updateData,
             create: createData,
         })

@@ -11,6 +11,7 @@ type User = {
     username: string
     role: string
     createdAt: string
+    branchId?: number | null
 }
 
 export default function UsersManagement() {
@@ -22,12 +23,25 @@ export default function UsersManagement() {
     // Form state
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [editingUserId, setEditingUserId] = useState<number | null>(null)
-    const [formData, setFormData] = useState({ username: '', password: '', role: 'CASHIER' })
+    const [formData, setFormData] = useState({ username: '', password: '', role: 'CASHIER', branchId: '' })
+
+    const [branches, setBranches] = useState<any[]>([])
 
     useEffect(() => {
         fetchCurrentUser()
         fetchUsers()
+        fetchBranches()
     }, [])
+
+    const fetchBranches = async () => {
+        try {
+            const res = await fetch('/api/branches')
+            const data = await res.json()
+            if (Array.isArray(data)) setBranches(data)
+        } catch (error) {
+            console.error('Failed to fetch branches')
+        }
+    }
 
     const fetchCurrentUser = async () => {
         try {
@@ -75,7 +89,7 @@ export default function UsersManagement() {
             }
 
             setIsFormOpen(false)
-            setFormData({ username: '', password: '', role: 'CASHIER' })
+            setFormData({ username: '', password: '', role: 'CASHIER', branchId: '' })
             setEditingUserId(null)
             fetchUsers()
         } catch (error) {
@@ -99,7 +113,12 @@ export default function UsersManagement() {
     }
 
     const openEdit = (u: User) => {
-        setFormData({ username: u.username, password: '', role: u.role })
+        setFormData({ 
+            username: u.username, 
+            password: '', 
+            role: u.role, 
+            branchId: u.branchId ? u.branchId.toString() : '' 
+        })
         setEditingUserId(u.id)
         setIsFormOpen(true)
     }
@@ -143,7 +162,7 @@ export default function UsersManagement() {
                     </div>
                     <button
                         onClick={() => {
-                            setFormData({ username: '', password: '', role: 'CASHIER' })
+                            setFormData({ username: '', password: '', role: 'CASHIER', branchId: '' })
                             setEditingUserId(null)
                             setIsFormOpen(true)
                         }}
@@ -193,6 +212,22 @@ export default function UsersManagement() {
                                     <option value="WAREHOUSE">أمين المخزن (Warehouse)</option>
                                 </select>
                             </div>
+                            {formData.role !== 'ADMIN' && (
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">الفرع المخصص</label>
+                                    <select
+                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                                        value={formData.branchId}
+                                        onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">اختر الفرع...</option>
+                                        {branches.map(b => (
+                                            <option key={b.id} value={b.id}>{b.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div className="md:col-span-3 flex justify-end gap-2 mt-4">
                                 <button type="button" onClick={() => setIsFormOpen(false)} className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-bold">
                                     إلغاء
@@ -212,6 +247,7 @@ export default function UsersManagement() {
                                 <tr>
                                     <th className="p-4 text-sm font-bold text-slate-800">اسم المستخدم</th>
                                     <th className="p-4 text-sm font-bold text-slate-800">الصلاحية</th>
+                                    <th className="p-4 text-sm font-bold text-slate-800">الفرع</th>
                                     <th className="p-4 text-sm font-bold text-slate-800">تاريخ الإضافة</th>
                                     <th className="p-4 text-sm font-bold text-slate-800 text-center">إجراءات</th>
                                 </tr>
@@ -227,6 +263,9 @@ export default function UsersManagement() {
                                                 }`}>
                                                 {u.role === 'ADMIN' ? 'مدير' : u.role === 'WAREHOUSE' ? 'أمين مخزن' : 'كاشير'}
                                             </span>
+                                        </td>
+                                        <td className="p-4 text-sm font-bold text-slate-700">
+                                            {u.role === 'ADMIN' ? 'كل الفروع (مدير)' : (branches.find(b => b.id === u.branchId)?.name || 'غير محدد')}
                                         </td>
                                         <td className="p-4 text-sm text-gray-500 font-mono">
                                             {new Date(u.createdAt).toLocaleDateString('ar-SD')}

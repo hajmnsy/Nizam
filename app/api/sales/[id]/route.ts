@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function GET(
     request: Request,
@@ -80,9 +81,13 @@ export async function PUT(
                 }
 
                 // Determine new invoice number
+                const branchId = getActiveBranchId()
                 let newInvoiceNumber = sale.invoiceNumber;
                 if (!newInvoiceNumber) {
-                    const maxInvoice = await tx.sale.aggregate({ _max: { invoiceNumber: true } });
+                    const maxInvoice = await tx.sale.aggregate({ 
+                        where: { branchId },
+                        _max: { invoiceNumber: true } 
+                    });
                     newInvoiceNumber = (maxInvoice._max.invoiceNumber || 0) + 1;
                 }
 
@@ -166,9 +171,13 @@ export async function PUT(
                 actualRemainingAmount = Math.max(0, newTotal - adjustedPaidAmount);
 
                 // Invoice Number logic
+                const branchId = getActiveBranchId()
                 let newInvoiceNumber = originalSale.invoiceNumber;
                 if (!newInvoiceNumber && finalStatus !== 'QUOTATION') {
-                    const maxInvoice = await tx.sale.aggregate({ _max: { invoiceNumber: true } });
+                    const maxInvoice = await tx.sale.aggregate({ 
+                        where: { branchId },
+                        _max: { invoiceNumber: true } 
+                    });
                     newInvoiceNumber = (maxInvoice._max.invoiceNumber || 0) + 1;
                 }
 

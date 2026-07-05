@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
@@ -11,10 +12,14 @@ export async function GET(request: Request) {
 
     try {
         const pId = parseInt(productId)
+        const branchId = getActiveBranchId()
 
         // Get Sales History
         const sales = await prisma.saleItem.findMany({
-            where: { productId: pId },
+            where: { 
+                productId: pId,
+                sale: { branchId }
+            },
             include: {
                 sale: true
             }
@@ -22,7 +27,10 @@ export async function GET(request: Request) {
 
         // Get Purchases History
         const purchases = await prisma.purchaseItem.findMany({
-            where: { productId: pId },
+            where: { 
+                productId: pId,
+                purchase: { branchId }
+            },
             include: {
                 purchase: true
             }

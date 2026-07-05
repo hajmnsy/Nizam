@@ -2,11 +2,13 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getActiveBranchId } from '@/lib/branch';
 
 export async function GET(request: Request) {
     try {
-        const setting = await prisma.setting.findUnique({
-            where: { id: 'default' },
+        const branchId = getActiveBranchId()
+        const setting = await prisma.setting.findFirst({
+            where: { branchId },
             select: { exchangeRate: true }
         });
 
@@ -25,9 +27,16 @@ export async function POST(request: Request) {
         if (isNaN(rate) || rate <= 0) {
             return NextResponse.json({ error: 'معدل صرف غير صالح' }, { status: 400 });
         }
-        const setting = await prisma.setting.upsert({
-            where: { id: 'default' },
-            create: { id: 'default', exchangeRate: rate },
+        
+        const branchId = getActiveBranchId()
+        const setting = await prisma.setting.findFirst({
+            where: { branchId }
+        })
+        const settingId = setting?.id || `branch-${branchId}`
+
+        const updatedSetting = await prisma.setting.upsert({
+            where: { id: settingId },
+            create: { id: settingId, exchangeRate: rate, branchId },
             update: { exchangeRate: rate }
         });
 
@@ -42,6 +51,7 @@ export async function POST(request: Request) {
         const existingExpense = await prisma.expense.findFirst({
             where: {
                 category: 'سعر الصرف',
+                branchId,
                 date: {
                     gte: today.toISOString(),
                     lt: tomorrow.toISOString()
@@ -60,12 +70,13 @@ export async function POST(request: Request) {
                     description: 'سعر الصرف اليومي (تلقائي)',
                     amount: rate,
                     category: 'سعر الصرف',
-                    date: new Date().toISOString()
+                    date: new Date().toISOString(),
+                    branchId
                 }
             });
         }
 
-        return NextResponse.json({ rate: setting.exchangeRate, success: true });
+        return NextResponse.json({ rate: updatedSetting.exchangeRate, success: true });
     } catch (error) {
         console.error('Exchange Rate Update Error:', error);
         return NextResponse.json({ error: 'فشل حفظ التحديث' }, { status: 500 });

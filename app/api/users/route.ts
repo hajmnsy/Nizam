@@ -11,7 +11,7 @@ function hashPassword(password: string): string {
 export async function GET(request: Request) {
     try {
         const users = await prisma.user.findMany({
-            select: { id: true, username: true, role: true, createdAt: true },
+            select: { id: true, username: true, role: true, createdAt: true, branchId: true },
             orderBy: { createdAt: 'desc' }
         })
         return NextResponse.json(users)
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 // Create a new user
 export async function POST(request: Request) {
     try {
-        const { username, password, role } = await request.json()
+        const { username, password, role, branchId } = await request.json()
 
         if (!username || !password) {
             return NextResponse.json({ error: 'Username and password are required' }, { status: 400 })
@@ -38,13 +38,16 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'اسم المستخدم مسجل مسبقاً' }, { status: 400 })
         }
 
+        const finalBranchId = role === 'ADMIN' ? null : (branchId ? parseInt(branchId) : null)
+
         const user = await prisma.user.create({
             data: {
                 username,
                 password: hashPassword(password),
-                role: role || 'CASHIER'
+                role: role || 'CASHIER',
+                branchId: finalBranchId
             },
-            select: { id: true, username: true, role: true, createdAt: true }
+            select: { id: true, username: true, role: true, createdAt: true, branchId: true }
         })
 
         return NextResponse.json(user)

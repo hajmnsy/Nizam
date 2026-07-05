@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function GET() {
     try {
@@ -19,13 +20,15 @@ export async function GET() {
             return d
         }).reverse()
 
+        const branchId = getActiveBranchId()
+
         // 1. Cashflow Chart Data (Last 30 Days)
         const salesPeriod = await prisma.sale.findMany({
-            where: { createdAt: { gte: thirtyDaysAgo }, status: { not: 'QUOTATION' } },
+            where: { branchId, createdAt: { gte: thirtyDaysAgo }, status: { not: 'QUOTATION' } },
             select: { createdAt: true, total: true }
         })
         const expensesPeriod = await prisma.expense.findMany({
-            where: { date: { gte: thirtyDaysAgo }, category: { not: 'سعر الصرف' } },
+            where: { branchId, date: { gte: thirtyDaysAgo }, category: { not: 'سعر الصرف' } },
             select: { date: true, amount: true }
         })
 
@@ -61,7 +64,7 @@ export async function GET() {
         // 2. Expenses By Category (This Month)
         const monthlyExpensesRaw = await prisma.expense.groupBy({
             by: ['category'],
-            where: { date: { gte: firstDayOfMonth }, category: { not: 'سعر الصرف' } },
+            where: { branchId, date: { gte: firstDayOfMonth }, category: { not: 'سعر الصرف' } },
             _sum: { amount: true }
         })
         const expensesByCategory = monthlyExpensesRaw.map(e => ({
@@ -71,7 +74,7 @@ export async function GET() {
 
         // 3. Sales By Category (This Month)
         const monthlySaleItems = await prisma.saleItem.findMany({
-            where: { sale: { createdAt: { gte: firstDayOfMonth }, status: { not: 'QUOTATION' } } },
+            where: { sale: { branchId, createdAt: { gte: firstDayOfMonth }, status: { not: 'QUOTATION' } } },
             include: { product: { include: { category: true } } }
         })
         
@@ -87,7 +90,7 @@ export async function GET() {
         const topSelling = await prisma.saleItem.groupBy({
             by: ['productId'],
             _sum: { quantity: true },
-            where: { sale: { createdAt: { gte: firstDayOfMonth }, status: { not: 'QUOTATION' } } },
+            where: { sale: { branchId, createdAt: { gte: firstDayOfMonth }, status: { not: 'QUOTATION' } } },
             orderBy: { _sum: { quantity: 'desc' } },
             take: 5
         })
@@ -107,7 +110,7 @@ export async function GET() {
         // 5. Top Customers (By Revenue)
         const topCustomersRaw = await prisma.sale.groupBy({
             by: ['customer'],
-            where: { createdAt: { gte: firstDayOfMonth }, status: { not: 'QUOTATION' } },
+            where: { branchId, createdAt: { gte: firstDayOfMonth }, status: { not: 'QUOTATION' } },
             _sum: { total: true },
             orderBy: { _sum: { total: 'desc' } },
             take: 5
@@ -120,7 +123,7 @@ export async function GET() {
 
         // 6. Global Stats (Low Stock, Month totals)
         const lowStock = await prisma.product.count({
-            where: { quantity: { lt: 10 } }
+            where: { branchId, quantity: { lt: 10 } }
         })
         
         const totalSalesMonth = Array.from(salesCategoryMap.values()).reduce((a,b)=>a+b, 0)

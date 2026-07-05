@@ -2,16 +2,18 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function GET(request: Request) {
     try {
+        const branchId = getActiveBranchId()
         const { searchParams } = new URL(request.url)
         const startDateParam = searchParams.get('startDate')
         const endDateParam = searchParams.get('endDate')
 
         const dateParam = searchParams.get('date')
 
-        let whereClause: any = {}
+        let whereClause: any = { branchId }
 
         if (dateParam) {
             const specificDate = new Date(dateParam)
@@ -58,13 +60,15 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
 
+        const branchId = getActiveBranchId()
         const expense = await prisma.expense.create({
             data: {
                 description,
                 amount: parseFloat(amount),
                 date: new Date(date),
                 category: category || 'تشغيلية',
-                employeeId: employeeId ? parseInt(employeeId) : null
+                employeeId: employeeId ? parseInt(employeeId) : null,
+                branchId
             }
         })
 

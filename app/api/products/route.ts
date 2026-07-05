@@ -1,10 +1,13 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function GET() {
     try {
+        const branchId = getActiveBranchId()
         const products = await prisma.product.findMany({
+            where: { branchId },
             include: { category: true },
             orderBy: { createdAt: 'desc' }
         })
@@ -16,6 +19,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+        const branchId = getActiveBranchId()
         const json = await request.json()
         const product = await prisma.product.create({
             data: {
@@ -29,7 +33,8 @@ export async function POST(request: Request) {
                 length: parseFloat(json.length),
                 thickness: parseFloat(json.thickness),
                 width: parseFloat(json.width),
-                categoryId: parseInt(json.categoryId) || 1
+                categoryId: parseInt(json.categoryId) || 1,
+                branchId
             }
         })
         return NextResponse.json(product)

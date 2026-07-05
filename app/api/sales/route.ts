@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function POST(request: Request) {
     try {
@@ -53,10 +54,13 @@ export async function POST(request: Request) {
         const actualRemainingAmount = Math.max(0, total - adjustedPaidAmount);
         const finalStatus = actualRemainingAmount === 0 && status === 'CREDIT' ? 'PAID' : status;
 
+        const branchId = getActiveBranchId()
+
         const result = await prisma.$transaction(async (tx) => {
             let invoiceNumber = null;
             if (finalStatus !== 'QUOTATION') {
                 const maxInvoice = await tx.sale.aggregate({
+                    where: { branchId },
                     _max: {
                         invoiceNumber: true
                     }
@@ -74,6 +78,7 @@ export async function POST(request: Request) {
                     remainingAmount: actualRemainingAmount,
                     status: finalStatus,
                     createdAt: finalCreatedAt,
+                    branchId,
                     items: {
                         create: newItemsData
                     },
@@ -107,7 +112,8 @@ export async function POST(request: Request) {
                             data: {
                                 title: 'تنبيه مخزون منخفض',
                                 message: `انخفض مخزون ${updatedProduct.name} إلى ${updatedProduct.quantity} قطعة بقسم ${updatedProduct.type || 'عام'}. يرجى إعادة الطلب.`,
-                                type: 'WARNING'
+                                type: 'WARNING',
+                                branchId
                             }
                         })
                     }
@@ -135,7 +141,8 @@ export async function GET(request: Request) {
     const endDateParam = searchParams.get('endDate')
 
     try {
-        let whereClause: any = {}
+        const branchId = getActiveBranchId()
+        let whereClause: any = { branchId }
 
         const customer = searchParams.get('customer')
         if (customer) {

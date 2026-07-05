@@ -1,10 +1,13 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function GET() {
     try {
+        const branchId = getActiveBranchId()
         const notifications = await prisma.notification.findMany({
+            where: { branchId },
             orderBy: { createdAt: 'desc' },
             take: 20 // Only fetch the last 20 notifications 
         })

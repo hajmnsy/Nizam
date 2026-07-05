@@ -2,10 +2,14 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function GET() {
     try {
-        const categories = await prisma.category.findMany()
+        const branchId = getActiveBranchId()
+        const categories = await prisma.category.findMany({
+            where: { branchId }
+        })
         return NextResponse.json(categories)
     } catch (error) {
         return NextResponse.json({ error: 'Error fetching categories' }, { status: 500 })

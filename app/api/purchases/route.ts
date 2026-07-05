@@ -2,11 +2,13 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getActiveBranchId } from '@/lib/branch'
 
 export async function POST(request: Request) {
     try {
         const json = await request.json()
         
+        const branchId = getActiveBranchId()
         const total = json.items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
 
         const result = await prisma.$transaction(async (tx) => {
@@ -17,6 +19,7 @@ export async function POST(request: Request) {
                     total: total,
                     status: 'COMPLETED',
                     createdAt: json.createdAt ? new Date(`${json.createdAt}T00:00:00.000+02:00`) : new Date(),
+                    branchId,
                     items: {
                         create: json.items.map((item: any) => ({
                             productId: parseInt(item.productId),
@@ -60,7 +63,8 @@ export async function GET(request: Request) {
     const dateParam = searchParams.get('date')
 
     try {
-        let whereClause: any = {}
+        const branchId = getActiveBranchId()
+        let whereClause: any = { branchId }
 
         const supplier = searchParams.get('supplier')
         if (supplier) {
