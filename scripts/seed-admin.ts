@@ -23,6 +23,7 @@ async function main() {
             data: {
                 username: 'admin',
                 password: hashPassword('admin123'),
+                role: 'ADMIN'
             }
         })
     }
