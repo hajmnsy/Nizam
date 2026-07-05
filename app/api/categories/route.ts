@@ -16,6 +16,41 @@ export async function GET() {
     }
 }
 
+export async function POST(request: Request) {
+    try {
+        const branchId = getActiveBranchId()
+        const { name, sellingPricePerTonUSD } = await request.json()
+
+        if (!name) {
+            return NextResponse.json({ error: 'اسم التصنيف مطلوب' }, { status: 400 })
+        }
+
+        const existing = await prisma.category.findFirst({
+            where: {
+                branchId,
+                name: name.trim()
+            }
+        })
+
+        if (existing) {
+            return NextResponse.json({ error: 'اسم التصنيف مسجل مسبقاً في هذا الفرع' }, { status: 400 })
+        }
+
+        const category = await prisma.category.create({
+            data: {
+                name: name.trim(),
+                sellingPricePerTonUSD: parseFloat(sellingPricePerTonUSD) || 0,
+                branchId
+            }
+        })
+
+        return NextResponse.json(category)
+    } catch (error) {
+        console.error('Error creating category:', error)
+        return NextResponse.json({ error: 'Failed to create category' }, { status: 500 })
+    }
+}
+
 export async function PUT(request: Request) {
     try {
         const { id, sellingPricePerTonUSD } = await request.json()

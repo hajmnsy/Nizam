@@ -39,6 +39,11 @@ export default function Inventory() {
     const [exchangeRate, setExchangeRate] = useState<number>(0)
     const [sellingPricePerTonUSD, setSellingPricePerTonUSD] = useState<number>(0)
 
+    // Add category states
+    const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false)
+    const [newCategoryName, setNewCategoryName] = useState('')
+    const [newCategoryPrice, setNewCategoryPrice] = useState('')
+
     useEffect(() => {
         fetchProducts()
     }, [])
@@ -148,6 +153,29 @@ export default function Inventory() {
         }
     }
 
+    const handleAddCategory = async () => {
+        if (!newCategoryName.trim()) return
+        try {
+            const res = await fetch('/api/categories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newCategoryName, sellingPricePerTonUSD: parseFloat(newCategoryPrice) || 0 })
+            })
+            const data = await res.json()
+            if (res.ok) {
+                // Refresh products and categories list
+                fetchProducts()
+                setIsAddCategoryOpen(false)
+                setNewCategoryName('')
+                setNewCategoryPrice('')
+            } else {
+                alert(data.error || 'حدث خطأ أثناء إضافة التصنيف')
+            }
+        } catch (e) {
+            alert('حدث خطأ بالاتصال')
+        }
+    }
+
     useEffect(() => {
         if (selectedCategoryId) {
             const cat = categories.find(c => c.id === selectedCategoryId);
@@ -248,7 +276,16 @@ export default function Inventory() {
 
                             {/* Selling Price per Ton Input */}
                             <div className="flex flex-col items-center flex-1 max-w-[280px] w-full">
-                                <label className="text-xs font-bold text-slate-500 mb-2">سعر بيع الطن بالدولار (حسب التصنيف)</label>
+                                <div className="flex justify-between items-center w-full mb-2 px-1">
+                                    <label className="text-xs font-bold text-slate-500">سعر بيع الطن بالدولار (حسب التصنيف)</label>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setIsAddCategoryOpen(true)}
+                                        className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-0.5 hover:underline"
+                                    >
+                                        <Plus size={12} /> تصنيف جديد
+                                    </button>
+                                </div>
                                 <div className="flex items-center gap-1 w-full bg-slate-50 p-1.5 rounded-xl border border-slate-200">
                                     <select
                                         className="bg-white border text-center border-slate-200 outline-none text-xs font-bold text-slate-700 py-1.5 px-2 rounded-lg cursor-pointer w-1/2 focus:ring-2 focus:ring-blue-500/20"
@@ -454,6 +491,56 @@ export default function Inventory() {
                     </div>
                 </Card>
             </div>
+
+            {/* Add Category Modal */}
+            {isAddCategoryOpen && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <Card className="max-w-md w-full p-6 border-slate-200 shadow-xl bg-white">
+                        <h3 className="text-lg font-black text-slate-800 mb-4 border-b pb-2 flex items-center justify-between">
+                            <span>إضافة تصنيف جديد</span>
+                            <button onClick={() => setIsAddCategoryOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <X size={20} />
+                            </button>
+                        </h3>
+                        <div className="space-y-4 text-right" dir="rtl">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">اسم التصنيف</label>
+                                <Input
+                                    placeholder="مثال: زنك أمريكي، صاج، إلخ..."
+                                    value={newCategoryName}
+                                    onChange={(e) => setNewCategoryName(e.target.value)}
+                                    className="h-10"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">سعر بيع الطن التلقائي ($)</label>
+                                <Input
+                                    type="number"
+                                    placeholder="مثال: 1250"
+                                    value={newCategoryPrice}
+                                    onChange={(e) => setNewCategoryPrice(e.target.value)}
+                                    className="h-10 font-mono"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    onClick={() => setIsAddCategoryOpen(false)}
+                                    className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50"
+                                >
+                                    إلغاء
+                                </button>
+                                <button
+                                    onClick={handleAddCategory}
+                                    disabled={!newCategoryName.trim()}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-750 disabled:opacity-50 text-white text-sm font-bold rounded-lg shadow-sm"
+                                >
+                                    إضافة التصنيف
+                                </button>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+            )}
         </main>
     )
 }
