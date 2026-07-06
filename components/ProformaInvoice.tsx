@@ -20,9 +20,17 @@ export const ProformaInvoice = React.forwardRef<HTMLDivElement, ProformaInvoiceP
                 </div>
 
                 {/* Center: Logo */}
-                <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <div className="text-3xl font-black text-slate-950 tracking-widest border-4 border-slate-950 px-5 py-1.5 rounded-lg font-sans uppercase select-none">
-                        مركز الجودة
+                <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-5/12">
+                    <div className="relative w-full py-3 px-4 bg-slate-50 border-4 border-double border-slate-900 rounded-lg flex items-center justify-center select-none">
+                        {/* Corner industrial rivets */}
+                        <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                        <div className="absolute top-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                        <div className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                        <div className="absolute bottom-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                        
+                        <span className="text-2xl font-black text-slate-950 tracking-[0.25em] font-sans">
+                            مـركـز الـجـودة
+                        </span>
                     </div>
                 </div>
 
