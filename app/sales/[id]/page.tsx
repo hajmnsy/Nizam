@@ -304,7 +304,9 @@ export default function InvoiceDetails() {
                             {settings?.logoUrl ? (
                                 <img src={settings.logoUrl} alt="Logo" className="h-28 print:h-24 max-w-full w-auto object-contain mix-blend-multiply print:contrast-125 print:grayscale" onError={(e) => (e.currentTarget.style.display = 'none')} />
                             ) : (
-                                <img src="/emblem.png" alt="Logo" className="h-28 w-28 print:h-24 print:w-24 object-contain mix-blend-multiply print:contrast-125 print:grayscale" />
+                                <div className="text-4xl print:text-3xl font-black text-slate-950 tracking-widest border-4 border-slate-950 px-6 py-2 rounded-lg font-sans uppercase select-none">
+                                    مركز الجودة
+                                </div>
                             )}
                         </div>
                         <div className="w-1/4 text-left space-y-0.5 print:space-y-0 mt-1 print:mt-0">

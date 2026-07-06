@@ -21,12 +21,8 @@ export const ProformaInvoice = React.forwardRef<HTMLDivElement, ProformaInvoiceP
 
                 {/* Center: Logo */}
                 <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <div className="w-32 h-32">
-                        <img
-                            src="/emblem.png"
-                            alt="شعار مصنع الجودة"
-                            className="w-full h-full object-contain"
-                        />
+                    <div className="text-3xl font-black text-slate-950 tracking-widest border-4 border-slate-950 px-5 py-1.5 rounded-lg font-sans uppercase select-none">
+                        مركز الجودة
                     </div>
                 </div>
 
