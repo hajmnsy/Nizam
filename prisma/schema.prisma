@@ -41,7 +41,7 @@ model Product {
 
 model Sale {
   id              Int        @id @default(autoincrement())
-  invoiceNumber   Int?       @unique
+  invoiceNumber   Int?
   customer        String?
   total           Float
   paidAmount      Float      @default(0)
@@ -53,6 +53,8 @@ model Sale {
   payments        Payment[]
   branchId        Int        @default(1)
   branch          Branch     @relation(fields: [branchId], references: [id])
+
+  @@unique([branchId, invoiceNumber])
 }
 
 model SaleItem {
