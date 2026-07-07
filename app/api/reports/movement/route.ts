@@ -35,8 +35,11 @@ export async function GET(request: Request) {
 
         // Fetch Settings to check for manual Initial Balance
         const setting: any = await prisma.setting.findFirst({ where: { branchId } })
-        const hasInitialBalance = setting && setting.initialBalanceDate;
-        const initialDate = hasInitialBalance ? new Date(setting.initialBalanceDate) : undefined;
+        const hasInitialBalance = setting && setting.initialBalance !== null && setting.initialBalance !== undefined;
+        // If initialBalanceDate is null, default to 1970-01-01 (beginning of time)
+        const initialDate = hasInitialBalance 
+            ? (setting.initialBalanceDate ? new Date(setting.initialBalanceDate) : new Date(0)) 
+            : undefined;
 
         // 1. Calculate Opening Balance
         let openingBalance = 0;
