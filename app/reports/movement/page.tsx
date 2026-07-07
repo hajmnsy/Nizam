@@ -18,6 +18,7 @@ interface DailyData {
 
 interface ReportData {
     openingBalance: number
+    openingBalanceRate: number
     startDate: string
     endDate: string
     data: DailyData[]
@@ -329,14 +330,26 @@ export default function CashFlowMovement() {
                             </h3>
 
                             <h3 className="text-lg font-bold border-b border-black pb-1">
-                                رصيد مرحل من يوم <span dir="ltr" className="inline-block mx-1">
-                                    {/* The day *before* the start date */}
-                                    {(() => {
-                                        const d = new Date(startDate);
-                                        d.setDate(d.getDate() - 1);
-                                        return d.toLocaleDateString('en-CA').replace(/-/g, '/');
-                                    })()}
-                                </span> <span className="mr-8">{reportData.openingBalance ? reportData.openingBalance.toLocaleString() : '0'}</span>
+                                 رصيد مرحل من يوم <span dir="ltr" className="inline-block mx-1">
+                                     {/* The day *before* the start date */}
+                                     {(() => {
+                                         const d = new Date(startDate);
+                                         d.setDate(d.getDate() - 1);
+                                         return d.toLocaleDateString('en-CA').replace(/-/g, '/');
+                                     })()}
+                                 </span> 
+                                 <span className="mr-8">{reportData.openingBalance ? reportData.openingBalance.toLocaleString() : '0'} ج.س</span>
+                                 {(() => {
+                                     const rate = reportData.openingBalanceRate > 0 ? reportData.openingBalanceRate : exchangeRate;
+                                     if (rate > 0 && reportData.openingBalance > 0) {
+                                         return (
+                                             <span className="mr-4 text-emerald-600 font-bold print:text-black">
+                                                 (${Math.round(reportData.openingBalance / rate).toLocaleString()})
+                                             </span>
+                                         );
+                                     }
+                                     return null;
+                                 })()}
                             </h3>
                         </div>
 

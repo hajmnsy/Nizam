@@ -143,8 +143,20 @@ export async function GET(request: Request) {
             };
         });
 
+        // Find exchange rate for the opening balance (the rate on or closest before startDate)
+        const lastRateExpense = await prisma.expense.findFirst({
+            where: {
+                branchId,
+                category: 'سعر الصرف',
+                date: { lt: startDate }
+            },
+            orderBy: { date: 'desc' }
+        });
+        const openingBalanceRate = lastRateExpense?.amount || setting?.exchangeRate || 0;
+
         return NextResponse.json({
             openingBalance,
+            openingBalanceRate,
             startDate: startDate.toISOString(),
             endDate: endDate.toISOString(),
             data: reportData,
