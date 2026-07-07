@@ -27,6 +27,11 @@ export async function POST(request: Request) {
             const parsedBalance = isNaN(parseFloat(initialBalance as string)) ? 0 : parseFloat(initialBalance as string);
             updateData.initialBalance = parsedBalance;
             createData.initialBalance = parsedBalance;
+
+            // Capture the current exchangeRate of the branch as the locked rate for this initial balance
+            const currentRate = existingSetting?.exchangeRate || 0;
+            updateData.initialBalanceRate = currentRate;
+            createData.initialBalanceRate = currentRate;
         }
 
         if (initialBalanceDate !== undefined) {

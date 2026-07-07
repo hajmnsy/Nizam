@@ -121,6 +121,7 @@ model Setting {
   logoUrl            String?   @db.Text
   initialBalance     Float     @default(0)
   initialBalanceDate DateTime?
+  initialBalanceRate Float     @default(0)
   updatedAt          DateTime  @updatedAt
   branchId           Int       @unique @default(1)
   branch             Branch    @relation(fields: [branchId], references: [id])

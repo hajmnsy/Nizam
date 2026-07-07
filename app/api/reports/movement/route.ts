@@ -155,7 +155,7 @@ export async function GET(request: Request) {
             },
             orderBy: { date: 'desc' }
         });
-        const openingBalanceRate = lastRateExpense?.amount || setting?.exchangeRate || 0;
+        const openingBalanceRate = lastRateExpense?.amount || setting?.initialBalanceRate || setting?.exchangeRate || 0;
 
         return NextResponse.json({
             openingBalance,
