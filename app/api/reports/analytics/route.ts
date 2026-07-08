@@ -25,7 +25,13 @@ export async function GET() {
         // 1. Cashflow Chart Data (Last 30 Days)
         const salesPeriod = await prisma.sale.findMany({
             where: { branchId, createdAt: { gte: thirtyDaysAgo }, status: { not: 'QUOTATION' } },
-            select: { createdAt: true, total: true }
+            include: {
+                items: {
+                    include: {
+                        product: true
+                    }
+                }
+            }
         })
         const expensesPeriod = await prisma.expense.findMany({
             where: { branchId, date: { gte: thirtyDaysAgo }, category: { not: 'سعر الصرف' } },
@@ -44,9 +50,38 @@ export async function GET() {
             })
         })
 
+        const setting = await prisma.setting.findFirst({ where: { branchId } })
+        const globalRate = setting?.exchangeRate || 1;
+
+        const rateExpenses = await prisma.expense.findMany({
+            where: {
+                branchId,
+                category: 'سعر الصرف',
+                date: { gte: thirtyDaysAgo }
+            },
+            select: { date: true, amount: true }
+        })
+        const rateMap = new Map<string, number>()
+        rateExpenses.forEach(exp => {
+            const dateStr = new Date(exp.date).toLocaleDateString('en-CA', { timeZone: 'Africa/Khartoum' })
+            rateMap.set(dateStr, exp.amount)
+        })
+
         salesPeriod.forEach(sale => {
             const str = new Date(sale.createdAt).toLocaleDateString('en-CA', { timeZone: 'Africa/Khartoum' })
-            if (cashflowDataMap.has(str)) cashflowDataMap.get(str).sales += sale.total
+            if (cashflowDataMap.has(str)) {
+                const dayData = cashflowDataMap.get(str)
+                dayData.sales += sale.total
+
+                // Calculate sale profit
+                const saleRate = rateMap.get(str) || globalRate;
+                let saleCostSDG = 0;
+                sale.items.forEach(item => {
+                    const productCostUSD = (item.product?.purchasePriceUSD || 0) + (item.product?.transportCostUSD || 0);
+                    saleCostSDG += productCostUSD * saleRate * item.quantity;
+                });
+                dayData.profit += (sale.total - saleCostSDG);
+            }
         })
 
         expensesPeriod.forEach(exp => {
@@ -58,7 +93,7 @@ export async function GET() {
             date: d.date,
             sales: d.sales,
             expenses: d.expenses,
-            profit: d.sales - d.expenses
+            profit: Math.round(d.profit)
         }))
 
         // 2. Expenses By Category (This Month)
@@ -129,6 +164,21 @@ export async function GET() {
         const totalSalesMonth = Array.from(salesCategoryMap.values()).reduce((a,b)=>a+b, 0)
         const totalExpensesMonth = expensesByCategory.reduce((sum, e) => sum + e.value, 0)
 
+        // Calculate actual net profit from trading (selling price SDG - cost price USD * rate) for the current month
+        let totalProfitMonth = 0;
+        salesPeriod.forEach(sale => {
+            if (new Date(sale.createdAt) >= firstDayOfMonth) {
+                const str = new Date(sale.createdAt).toLocaleDateString('en-CA', { timeZone: 'Africa/Khartoum' })
+                const saleRate = rateMap.get(str) || globalRate;
+                let saleCostSDG = 0;
+                sale.items.forEach(item => {
+                    const productCostUSD = (item.product?.purchasePriceUSD || 0) + (item.product?.transportCostUSD || 0);
+                    saleCostSDG += productCostUSD * saleRate * item.quantity;
+                });
+                totalProfitMonth += (sale.total - saleCostSDG);
+            }
+        })
+
         return NextResponse.json({
             cashflowChart,
             expensesByCategory,
@@ -138,7 +188,7 @@ export async function GET() {
             stats: {
                 monthlySales: totalSalesMonth,
                 monthlyExpenses: totalExpensesMonth,
-                netProfit: totalSalesMonth - totalExpensesMonth,
+                netProfit: Math.round(totalProfitMonth),
                 lowStockCount: lowStock
             }
         })
