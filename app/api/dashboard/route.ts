@@ -80,7 +80,7 @@ export async function GET() {
 
             let saleCostSDG = 0;
             sale.items.forEach(item => {
-                const productCostUSD = (item.product?.purchasePriceUSD || 0) + (item.product?.transportCostUSD || 0);
+                const productCostUSD = item.product?.purchasePriceUSD || 0;
                 saleCostSDG += productCostUSD * saleRate * item.quantity;
             });
 

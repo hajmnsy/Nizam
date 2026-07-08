@@ -77,7 +77,7 @@ export async function GET() {
                 const saleRate = rateMap.get(str) || globalRate;
                 let saleCostSDG = 0;
                 sale.items.forEach(item => {
-                    const productCostUSD = (item.product?.purchasePriceUSD || 0) + (item.product?.transportCostUSD || 0);
+                    const productCostUSD = item.product?.purchasePriceUSD || 0;
                     saleCostSDG += productCostUSD * saleRate * item.quantity;
                 });
                 dayData.profit += (sale.total - saleCostSDG);
@@ -172,7 +172,7 @@ export async function GET() {
                 const saleRate = rateMap.get(str) || globalRate;
                 let saleCostSDG = 0;
                 sale.items.forEach(item => {
-                    const productCostUSD = (item.product?.purchasePriceUSD || 0) + (item.product?.transportCostUSD || 0);
+                    const productCostUSD = item.product?.purchasePriceUSD || 0;
                     saleCostSDG += productCostUSD * saleRate * item.quantity;
                 });
                 totalProfitMonth += (sale.total - saleCostSDG);
