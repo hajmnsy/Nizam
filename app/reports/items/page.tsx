@@ -26,9 +26,21 @@ interface HistoryItem {
 export default function ItemsReport() {
     const [products, setProducts] = useState<Product[]>([])
     const [selectedProduct, setSelectedProduct] = useState<string>('')
+    const [productSearchQuery, setProductSearchQuery] = useState<string>('')
     const [history, setHistory] = useState<HistoryItem[]>([])
     const [loading, setLoading] = useState(false)
     const [initialLoad, setInitialLoad] = useState(true)
+
+    const filteredSelectProducts = products.filter(p => {
+        const searchString = `${p.name} ${p.type || ''} ${p.thickness || ''}`.toLowerCase();
+        return searchString.includes(productSearchQuery.toLowerCase());
+    });
+
+    const getTotalSold = () => {
+        return history
+            .filter(h => h.type === 'SALE')
+            .reduce((sum, h) => sum + h.quantity, 0);
+    }
 
     useEffect(() => {
         fetch('/api/products')
@@ -103,32 +115,54 @@ export default function ItemsReport() {
                     <p className="text-sm text-gray-500 mt-2">تاريخ الطباعة: {new Date().toLocaleDateString('ar-SD')}</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 print:hidden">
-                    <Card className="col-span-1 md:col-span-2 p-6 border border-slate-200 shadow-sm flex flex-col justify-center">
-                        <label className="block text-sm font-bold text-slate-700 mb-2">اختر الصنف لعرض حركته:</label>
-                        {initialLoad ? (
-                            <div className="flex items-center gap-2 text-slate-500"><Loader2 className="animate-spin" size={16}/> جاري تحميل الأصناف...</div>
-                        ) : (
-                            <select
-                                value={selectedProduct}
-                                onChange={e => setSelectedProduct(e.target.value)}
-                                className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 font-bold text-slate-800 transition-all bg-white"
-                            >
-                                <option value="">-- اختر الصنف --</option>
-                                {products.map(p => (
-                                    <option key={p.id} value={p.id}>
-                                        {p.name} {p.type ? `| النوع: ${p.type}` : ''} {p.thickness ? `| السماكة: ${p.thickness}مم` : ''}
-                                    </option>
-                                ))}
-                            </select>
-                        )}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 print:hidden">
+                    <Card className="col-span-1 md:col-span-2 p-6 border border-slate-200 shadow-sm flex flex-col justify-center gap-3">
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1.5">البحث السريع عن صنف:</label>
+                            <input
+                                type="text"
+                                placeholder="اكتب اسم الصنف، سمكه، أو نوعه للتصفية..."
+                                value={productSearchQuery}
+                                onChange={e => setProductSearchQuery(e.target.value)}
+                                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-blue-500 font-bold text-slate-800 transition-all bg-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-1.5 font-sans">اختر الصنف لعرض حركته:</label>
+                            {initialLoad ? (
+                                <div className="flex items-center gap-2 text-slate-500"><Loader2 className="animate-spin" size={16}/> جاري تحميل الأصناف...</div>
+                            ) : (
+                                <select
+                                    value={selectedProduct}
+                                    onChange={e => setSelectedProduct(e.target.value)}
+                                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-blue-500 font-bold text-slate-800 transition-all bg-white"
+                                >
+                                    <option value="">-- اختر الصنف --</option>
+                                    {filteredSelectProducts.map(p => (
+                                        <option key={p.id} value={p.id}>
+                                            {p.name} {p.type ? `| النوع: ${p.type}` : ''} {p.thickness ? `| السماكة: ${p.thickness}مم` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                        </div>
                     </Card>
 
                     <Card className="col-span-1 p-6 border border-slate-200 shadow-sm bg-blue-50 flex flex-col items-center justify-center text-center">
                         <Package size={32} className="text-blue-400 mb-2" />
-                        <h3 className="text-sm font-bold text-slate-600 mb-1">الرصيد الحالي بالمخزن</h3>
+                        <h3 className="text-sm font-bold text-slate-600 mb-1">الكمية المتبقية (بالمخزن)</h3>
                         {selectedProduct ? (
                             <p className="text-3xl font-black text-blue-700">{getProductStock()}</p>
+                        ) : (
+                            <p className="text-slate-400 text-sm">-</p>
+                        )}
+                    </Card>
+
+                    <Card className="col-span-1 p-6 border border-slate-200 shadow-sm bg-rose-50 flex flex-col items-center justify-center text-center">
+                        <Activity size={32} className="text-rose-400 mb-2" />
+                        <h3 className="text-sm font-bold text-slate-600 mb-1">الكمية المباعة (إجمالي)</h3>
+                        {selectedProduct ? (
+                            <p className="text-3xl font-black text-rose-700">{getTotalSold()}</p>
                         ) : (
                             <p className="text-slate-400 text-sm">-</p>
                         )}
