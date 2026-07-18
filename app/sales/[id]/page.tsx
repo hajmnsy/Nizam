@@ -93,6 +93,18 @@ export default function InvoiceDetails() {
             .catch(err => console.error(err))
     }, [params.id])
 
+    useEffect(() => {
+        if (!loading && sale && settings) {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('print') === 'true') {
+                const timer = setTimeout(() => {
+                    window.print();
+                }, 500);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [loading, sale, settings])
+
     const handleConvertToSale = async () => {
         if (!confirm('هل أنت متأكد من تحويل عرض السعر إلى فاتورة بيع؟ سيتم خصم الكميات من المخزون.')) return
 

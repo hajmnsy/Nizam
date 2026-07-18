@@ -3,7 +3,7 @@
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { Plus, Eye, FileText, CheckCircle, Clock, ChevronRight, ChevronLeft, CreditCard, X, Loader2 } from 'lucide-react'
+import { Plus, Eye, FileText, CheckCircle, Clock, ChevronRight, ChevronLeft, CreditCard, X, Loader2, Printer, Edit } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -319,11 +319,26 @@ export default function SalesList() {
                                                     </Button>
                                                 )}
                                                 <Link href={`/sales/${sale.id}`}>
-                                                    <Button variant="outline" className="px-3 py-1 text-xs border-blue-200 text-blue-600 hover:bg-blue-50">
+                                                    <Button variant="outline" className="px-2 py-1 text-xs border-blue-200 text-blue-600 hover:bg-blue-50 font-bold" title="عرض التفاصيل">
                                                         <Eye size={14} className="ml-1" />
                                                         عرض
                                                     </Button>
                                                 </Link>
+                                                <Link href={`/sales/${sale.id}/edit`}>
+                                                    <Button variant="outline" className="px-2 py-1 text-xs border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold" title="تعديل الفاتورة">
+                                                        <Edit size={14} className="ml-1" />
+                                                        تعديل
+                                                    </Button>
+                                                </Link>
+                                                <Button 
+                                                    variant="outline" 
+                                                    onClick={() => window.open(`/sales/${sale.id}?print=true`, '_blank')}
+                                                    className="px-2 py-1 text-xs border-emerald-200 text-emerald-600 hover:bg-emerald-50 font-bold"
+                                                    title="طباعة الإيصال"
+                                                >
+                                                    <Printer size={14} className="ml-1" />
+                                                    طباعة
+                                                </Button>
                                             </td>
                                         </tr>
                                     ))
