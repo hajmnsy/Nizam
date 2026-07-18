@@ -3,7 +3,7 @@
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { Trash2, Plus, Wallet, Receipt, Calendar as CalendarIcon, Filter, Tag, Package, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Trash2, Plus, Wallet, Receipt, Calendar as CalendarIcon, Filter, Tag, Package, ChevronRight, ChevronLeft, Pencil } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
@@ -13,6 +13,7 @@ interface Expense {
     amount: number
     date: string
     category: string
+    employeeId?: number | null
     employee?: {
         name: string
     }
@@ -26,6 +27,7 @@ interface Employee {
 
 const CATEGORIES = [
     { id: 'توريدات', label: 'توريدات', color: 'bg-emerald-100 text-emerald-700' },
+    { id: 'مشتريات', label: 'مشتريات', color: 'bg-teal-100 text-teal-700' },
     { id: 'عتالة وترحيل', label: 'عتالة وترحيل', color: 'bg-blue-100 text-blue-700' },
     { id: 'عام', label: 'عام', color: 'bg-indigo-100 text-indigo-600' },
     { id: 'الفطور', label: 'الفطور', color: 'bg-rose-100 text-rose-700' },
@@ -56,6 +58,7 @@ export default function ExpensesPage() {
         const newDateStr = currentDate.toISOString().split('T')[0];
         setDate(newDateStr);
     }
+    const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null)
     const [newExpense, setNewExpense] = useState({
         description: '',
         amount: '',
@@ -66,6 +69,17 @@ export default function ExpensesPage() {
     const [submitting, setSubmitting] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
     const [employees, setEmployees] = useState<Employee[]>([])
+
+    const startEdit = (expense: Expense) => {
+        setEditingExpenseId(expense.id)
+        setNewExpense({
+            description: expense.description,
+            amount: expense.amount.toString(),
+            date: new Date(expense.date).toISOString().split('T')[0],
+            category: expense.category,
+            employeeId: expense.employeeId ? expense.employeeId.toString() : ''
+        })
+    }
 
     useEffect(() => {
         fetchExpenses(date)
@@ -101,8 +115,10 @@ export default function ExpensesPage() {
 
         setSubmitting(true)
         try {
-            const res = await fetch('/api/expenses', {
-                method: 'POST',
+            const url = editingExpenseId ? `/api/expenses/${editingExpenseId}` : '/api/expenses'
+            const method = editingExpenseId ? 'PUT' : 'POST'
+            const res = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newExpense)
             })
@@ -115,6 +131,7 @@ export default function ExpensesPage() {
                     category: 'توريدات',
                     employeeId: ''
                 })
+                setEditingExpenseId(null)
                 fetchExpenses(date)
             }
         } catch (error) {
@@ -204,7 +221,7 @@ export default function ExpensesPage() {
                     <Card className="lg:col-span-1 h-fit sticky top-4">
                         <h2 className="font-bold mb-4 flex items-center gap-2">
                             <Plus className="text-blue-500" size={20} />
-                            تسجيل مصروف جديد
+                            {editingExpenseId ? 'تعديل المصروف' : 'تسجيل مصروف جديد'}
                         </h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
@@ -274,9 +291,29 @@ export default function ExpensesPage() {
                                     required
                                 />
                             </div>
-                            <Button type="submit" className="w-full bg-slate-900 hover:bg-slate-800" disabled={submitting}>
-                                {submitting ? 'جاري الحفظ...' : 'حفظ المصروف'}
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800" disabled={submitting}>
+                                    {submitting ? 'جاري الحفظ...' : (editingExpenseId ? 'تحديث المصروف' : 'حفظ المصروف')}
+                                </Button>
+                                {editingExpenseId && (
+                                    <Button 
+                                        type="button" 
+                                        onClick={() => {
+                                            setEditingExpenseId(null)
+                                            setNewExpense({
+                                                description: '',
+                                                amount: '',
+                                                date: date,
+                                                category: 'توريدات',
+                                                employeeId: ''
+                                            })
+                                        }} 
+                                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4"
+                                    >
+                                        إلغاء
+                                    </Button>
+                                )}
+                            </div>
                         </form>
                     </Card>
 
@@ -344,12 +381,22 @@ export default function ExpensesPage() {
                                             <span className="font-bold text-lg text-slate-800">
                                                 {expense.amount.toLocaleString()}
                                             </span>
-                                            <button
-                                                onClick={() => handleDelete(expense.id)}
-                                                className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
+                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => startEdit(expense)}
+                                                    className="text-gray-400 hover:text-blue-500 transition-colors"
+                                                    title="تعديل"
+                                                >
+                                                    <Pencil size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(expense.id)}
+                                                    className="text-gray-400 hover:text-red-500 transition-colors"
+                                                    title="حذف"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
