@@ -106,6 +106,19 @@ export default function ExpensesReportPage() {
         return total
     }
 
+    const calculateColumnTotalUSD = (colId: string) => {
+        if (colId === 'سعر الصرف') return 0
+        let totalUSD = 0
+        sortedDates.forEach(dateStr => {
+            const dailyRate = grouped[dateStr]['سعر الصرف']?.[0]?.amount || 0
+            if (dailyRate > 0) {
+                const dailyColumnSum = grouped[dateStr][colId]?.reduce((sum, e) => sum + e.amount, 0) || 0
+                totalUSD += dailyColumnSum / dailyRate
+            }
+        })
+        return totalUSD
+    }
+
     const grandTotal = sortedDates.reduce((sum, d) => sum + calculateDailyTotal(d), 0)
 
     let grandTotalUSD = 0
@@ -279,11 +292,29 @@ export default function ExpensesReportPage() {
                                             )}
                                         </div>
                                     </td>
-                                    {COLUMNS.map(col => (
-                                        <td key={col.id} className="py-3 px-2 border-2 border-slate-800">
-                                            {col.id === 'سعر الصرف' ? '-' : calculateColumnTotal(col.id).toLocaleString()}
-                                        </td>
-                                    ))}
+                                    {COLUMNS.map(col => {
+                                        if (col.id === 'سعر الصرف') {
+                                            return (
+                                                <td key={col.id} className="py-3 px-2 border-2 border-slate-800">
+                                                    -
+                                                </td>
+                                            )
+                                        }
+                                        const colTotal = calculateColumnTotal(col.id);
+                                        const colTotalUSD = calculateColumnTotalUSD(col.id);
+                                        return (
+                                            <td key={col.id} className="py-3 px-2 border-2 border-slate-800">
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <span>{colTotal.toLocaleString()}</span>
+                                                    {colTotalUSD > 0 && (
+                                                        <span className="text-emerald-600 font-black text-xs mt-1 block tracking-wider print:text-black">
+                                                            ${colTotalUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        )
+                                    })}
                                     <td className="py-3 px-2 border-2 border-slate-800">الجملة</td>
                                 </tr>
                             </tbody>
