@@ -12,16 +12,19 @@ import { useRouter, useParams } from 'next/navigation'
 interface Category {
     id: number
     name: string
+    sellingPricePerTonUSD?: number
 }
 
 interface Product {
     id: number
     name: string
     price: number
+    purchasePriceUSD?: number
     quantity: number
     weightPerUnit: number
     type?: string | null
     thickness?: number | null
+    transportCostUSD?: number | null
     categoryId: number
     category?: Category
 }
@@ -59,15 +62,21 @@ export default function EditSale() {
 
     const [createdAt, setCreatedAt] = useState(getTodayLocal())
     const [originalStatus, setOriginalStatus] = useState<string>('PAID')
+    const [exchangeRate, setExchangeRate] = useState<number>(0)
 
     useEffect(() => {
-        // Fetch products, categories, AND the specific sale
+        // Fetch products, categories, sale, AND exchange rate
         Promise.all([
             fetch('/api/products', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()),
-            fetch(`/api/sales/${saleId}`, { cache: 'no-store' }).then(res => res.json())
-        ]).then(([productsData, categoriesData, saleData]) => {
+            fetch(`/api/sales/${saleId}`, { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json())
+        ]).then(([productsData, categoriesData, saleData, exchangeRateData]) => {
             setProducts(productsData)
+
+            if (exchangeRateData && exchangeRateData.rate > 0) {
+                setExchangeRate(exchangeRateData.rate)
+            }
 
             // Setup Categories
             const hiddenCategories = ['قطاعات', 'مسطحات', 'مواسير', 'سيخ']
@@ -311,36 +320,78 @@ export default function EditSale() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y">
-                                            {filteredProducts.map(product => (
-                                                <tr key={product.id} className="hover:bg-blue-50/50 transition-colors group">
-                                                    <td className="p-3 font-bold text-slate-800">{product.name}</td>
-                                                    <td className="p-3 text-gray-500 text-xs font-medium max-w-[80px] break-words">{product.type || '-'}</td>
-                                                    <td className="p-3">
-                                                        {product.thickness ? (
-                                                            <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 font-bold">
-                                                                {product.thickness} مم
+                                            {filteredProducts.map(product => {
+                                                const itemWeight = product.weightPerUnit || 0;
+                                                const itemPPU = product.purchasePriceUSD || 0;
+                                                const itemTransport = product.transportCostUSD || 15;
+                                                const sellingPricePerTonUSD = product.category?.sellingPricePerTonUSD || 0;
+
+                                                const unitCostSDG = (itemPPU + ((itemWeight / 1000) * itemTransport)) * exchangeRate;
+                                                const netProfit = product.price - unitCostSDG;
+                                                const finalProfit = product.price - (unitCostSDG * 1.15);
+                                                const priceByWeight = (itemWeight / 1000) * sellingPricePerTonUSD * exchangeRate;
+
+                                                return (
+                                                    <tr key={product.id} className="hover:bg-blue-50/50 transition-colors group">
+                                                        <td className="p-3">
+                                                            <div className="font-bold text-slate-800">{product.name}</div>
+                                                            {exchangeRate > 0 && (itemPPU > 0 || (sellingPricePerTonUSD > 0 && itemWeight > 0)) && (
+                                                                <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px]">
+                                                                    {itemPPU > 0 && (
+                                                                        <>
+                                                                            <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200 whitespace-nowrap" title="صافي الربح للقطعة الحالية">
+                                                                                صافي الربح: {Math.round(netProfit).toLocaleString()} ج.س
+                                                                            </span>
+                                                                            <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold border border-blue-200 whitespace-nowrap" title="الربح بعد خصم 15% مصاريف وهامش مستهدف">
+                                                                                الربح النهائي: {Math.round(finalProfit).toLocaleString()} ج.س
+                                                                            </span>
+                                                                        </>
+                                                                    )}
+                                                                    {sellingPricePerTonUSD > 0 && itemWeight > 0 && (
+                                                                        <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold border border-purple-200 whitespace-nowrap" title="السعر المقترح بناءً على وزن القطعة وسعر الطن بالدولار لهذا التصنيف">
+                                                                            السعر بالوزن: {Math.round(priceByWeight).toLocaleString()} ج.س
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3 text-gray-500 text-xs font-medium max-w-[80px] break-words">{product.type || '-'}</td>
+                                                        <td className="p-3">
+                                                            {product.thickness ? (
+                                                                <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 font-bold">
+                                                                    {product.thickness} مم
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-gray-400">-</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${product.quantity > 0 ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                                                                {product.quantity}
                                                             </span>
-                                                        ) : (
-                                                            <span className="text-gray-400">-</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-3 text-center">
-                                                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${product.quantity > 0 ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-                                                            {product.quantity}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-3 font-bold text-slate-800">{product.price.toLocaleString()}</td>
-                                                    <td className="p-3">
-                                                        <button
-                                                            onClick={() => addToCart(product)}
-                                                            className="bg-slate-100 text-blue-600 hover:bg-blue-600 hover:text-white p-2 rounded-lg transition-colors w-full flex justify-center items-center"
-                                                            title="إضافة للسلة"
-                                                        >
-                                                            <Plus size={18} />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                                        </td>
+                                                        <td className="p-3 font-bold text-slate-800">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold text-slate-800 leading-tight">{product.price.toLocaleString()}</span>
+                                                                {exchangeRate > 0 && product.price > 0 && (
+                                                                    <span className="text-[10px] font-black text-emerald-600 tracking-wider">
+                                                                        ${(product.price / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-3">
+                                                            <button
+                                                                onClick={() => addToCart(product)}
+                                                                className="bg-slate-100 text-blue-600 hover:bg-blue-600 hover:text-white p-2 rounded-lg transition-colors w-full flex justify-center items-center"
+                                                                title="إضافة للسلة"
+                                                            >
+                                                                <Plus size={18} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

@@ -307,45 +307,78 @@ export default function NewSale() {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-100">
-                                                {filteredProducts.map(product => (
-                                                    <tr key={product.id} className="hover:bg-blue-50 transition-colors">
-                                                        <td className="p-2 font-bold text-slate-800">{product.name}</td>
-                                                        <td className="p-2 text-gray-500 text-xs font-medium max-w-[80px] break-words">{product.type || '-'}</td>
-                                                        <td className="p-2">
-                                                            {product.thickness ? (
-                                                                <span className="text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 font-bold whitespace-nowrap text-xs">
-                                                                    {product.thickness} مم
-                                                                </span>
-                                                            ) : (
-                                                                <span className="text-gray-400">-</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="p-2 text-center">
-                                                            <span className={`px-1.5 py-0.5 rounded text-xs font-bold inline-block w-full ${product.quantity > 0 ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-                                                                {product.quantity}
-                                                            </span>
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <div className="flex flex-col">
-                                                                <span className="font-bold text-slate-800 leading-tight">{product.price.toLocaleString()}</span>
-                                                                {exchangeRate > 0 && product.price > 0 && (
-                                                                    <span className="text-[10px] font-black text-emerald-600 tracking-wider">
-                                                                        ${(product.price / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                    </span>
+                                                {filteredProducts.map(product => {
+                                                    const itemWeight = product.weightPerUnit || 0;
+                                                    const itemPPU = product.purchasePriceUSD || 0;
+                                                    const itemTransport = product.transportCostUSD || 15;
+                                                    const sellingPricePerTonUSD = product.category?.sellingPricePerTonUSD || 0;
+
+                                                    const unitCostSDG = (itemPPU + ((itemWeight / 1000) * itemTransport)) * exchangeRate;
+                                                    const netProfit = product.price - unitCostSDG;
+                                                    const finalProfit = product.price - (unitCostSDG * 1.15);
+                                                    const priceByWeight = (itemWeight / 1000) * sellingPricePerTonUSD * exchangeRate;
+
+                                                    return (
+                                                        <tr key={product.id} className="hover:bg-blue-50 transition-colors">
+                                                            <td className="p-2">
+                                                                <div className="font-bold text-slate-800">{product.name}</div>
+                                                                {exchangeRate > 0 && (itemPPU > 0 || (sellingPricePerTonUSD > 0 && itemWeight > 0)) && (
+                                                                    <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px]">
+                                                                        {itemPPU > 0 && (
+                                                                            <>
+                                                                                <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200 whitespace-nowrap" title="صافي الربح للقطعة الحالية">
+                                                                                    صافي الربح: {Math.round(netProfit).toLocaleString()} ج.س
+                                                                                </span>
+                                                                                <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold border border-blue-200 whitespace-nowrap" title="الربح بعد خصم 15% مصاريف وهامش مستهدف">
+                                                                                    الربح النهائي: {Math.round(finalProfit).toLocaleString()} ج.س
+                                                                                </span>
+                                                                            </>
+                                                                        )}
+                                                                        {sellingPricePerTonUSD > 0 && itemWeight > 0 && (
+                                                                            <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold border border-purple-200 whitespace-nowrap" title="السعر المقترح بناءً على وزن القطعة وسعر الطن بالدولار لهذا التصنيف">
+                                                                                السعر بالوزن: {Math.round(priceByWeight).toLocaleString()} ج.س
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 )}
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-1 px-2 text-center">
-                                                            <button
-                                                                onClick={() => addToCart(product)}
-                                                                className="bg-slate-100 text-blue-600 hover:bg-blue-600 hover:text-white p-1.5 rounded-lg transition-colors w-full flex justify-center items-center shadow-sm border border-gray-200"
-                                                                title="إضافة للسلة"
-                                                            >
-                                                                <Plus size={18} />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                                            </td>
+                                                            <td className="p-2 text-gray-500 text-xs font-medium max-w-[80px] break-words">{product.type || '-'}</td>
+                                                            <td className="p-2">
+                                                                {product.thickness ? (
+                                                                    <span className="text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 font-bold whitespace-nowrap text-xs">
+                                                                        {product.thickness} مم
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-gray-400">-</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="p-2 text-center">
+                                                                <span className={`px-1.5 py-0.5 rounded text-xs font-bold inline-block w-full ${product.quantity > 0 ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                                                                    {product.quantity}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-2">
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-bold text-slate-800 leading-tight">{product.price.toLocaleString()}</span>
+                                                                    {exchangeRate > 0 && product.price > 0 && (
+                                                                        <span className="text-[10px] font-black text-emerald-600 tracking-wider">
+                                                                            ${(product.price / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-1 px-2 text-center">
+                                                                <button
+                                                                    onClick={() => addToCart(product)}
+                                                                    className="bg-slate-100 text-blue-600 hover:bg-blue-600 hover:text-white p-1.5 rounded-lg transition-colors w-full flex justify-center items-center shadow-sm border border-gray-200"
+                                                                    title="إضافة للسلة"
+                                                                >
+                                                                    <Plus size={18} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })}
                                             </tbody>
                                         </table>
                                     )}
