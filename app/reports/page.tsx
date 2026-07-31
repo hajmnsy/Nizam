@@ -2,7 +2,7 @@
 
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
-import { TrendingUp, TrendingDown, Activity, BarChart2, AlertCircle, Download, Users, Package, FileText } from 'lucide-react'
+import { TrendingUp, TrendingDown, Activity, BarChart2, AlertCircle, Download, Users, Package, FileText, Calendar, DollarSign, Filter } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
@@ -16,6 +16,33 @@ export default function Reports() {
     const [data, setData] = useState<any>(null)
     const [loading, setLoading] = useState(true)
 
+    const getTodayStr = () => {
+        const d = new Date()
+        const offset = d.getTimezoneOffset()
+        const local = new Date(d.getTime() - (offset * 60 * 1000))
+        return local.toISOString().split('T')[0]
+    }
+
+    const [profitPeriodType, setProfitPeriodType] = useState<'today' | 'yesterday' | 'week' | 'month' | 'custom'>('today')
+    const [profitStartDate, setProfitStartDate] = useState<string>(getTodayStr())
+    const [profitEndDate, setProfitEndDate] = useState<string>(getTodayStr())
+    const [profitData, setProfitData] = useState<any>(null)
+    const [loadingProfit, setLoadingProfit] = useState(false)
+
+    const fetchProfitData = (start = profitStartDate, end = profitEndDate) => {
+        setLoadingProfit(true)
+        fetch(`/api/reports/profit?startDate=${start}&endDate=${end}`, { cache: 'no-store' })
+            .then(res => res.json())
+            .then(resData => {
+                setProfitData(resData)
+                setLoadingProfit(false)
+            })
+            .catch(err => {
+                console.error(err)
+                setLoadingProfit(false)
+            })
+    }
+
     useEffect(() => {
         fetch('/api/reports/analytics', { cache: 'no-store' })
             .then(res => res.json())
@@ -24,7 +51,42 @@ export default function Reports() {
                 setLoading(false)
             })
             .catch(console.error)
+
+        fetchProfitData(getTodayStr(), getTodayStr())
     }, [])
+
+    const setQuickProfitPeriod = (type: 'today' | 'yesterday' | 'week' | 'month') => {
+        setProfitPeriodType(type)
+        const today = new Date()
+        const todayStr = getTodayStr()
+
+        if (type === 'today') {
+            setProfitStartDate(todayStr)
+            setProfitEndDate(todayStr)
+            fetchProfitData(todayStr, todayStr)
+        } else if (type === 'yesterday') {
+            const y = new Date(today)
+            y.setDate(y.getDate() - 1)
+            const offset = y.getTimezoneOffset()
+            const yStr = new Date(y.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0]
+            setProfitStartDate(yStr)
+            setProfitEndDate(yStr)
+            fetchProfitData(yStr, yStr)
+        } else if (type === 'week') {
+            const w = new Date(today)
+            w.setDate(w.getDate() - 6)
+            const offset = w.getTimezoneOffset()
+            const wStr = new Date(w.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0]
+            setProfitStartDate(wStr)
+            setProfitEndDate(todayStr)
+            fetchProfitData(wStr, todayStr)
+        } else if (type === 'month') {
+            const mStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`
+            setProfitStartDate(mStr)
+            setProfitEndDate(todayStr)
+            fetchProfitData(mStr, todayStr)
+        }
+    }
 
     // Professional, subdued color palette commonly used in enterprise apps
     const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b', '#14b8a6', '#0ea5e9'];
@@ -175,6 +237,197 @@ export default function Reports() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Profit Query Section by Date / Range in SDG & USD */}
+                        <div className="bg-white rounded-2xl p-5 md:p-6 border-2 border-emerald-200 shadow-sm">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-gray-100 pb-4">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                        <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
+                                            <DollarSign size={22} />
+                                        </div>
+                                        استعلام الأرباح بالتاريخ والعملتين (ج.س & USD)
+                                    </h2>
+                                    <p className="text-sm text-gray-500 mt-1">عرض أرباح يوم معين أو فترة زمنية مخصصة بالجنيه السوداني والدولار</p>
+                                </div>
+
+                                {/* Quick Date Filters */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                        onClick={() => setQuickProfitPeriod('today')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${profitPeriodType === 'today' ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
+                                    >
+                                        أرباح اليوم
+                                    </button>
+                                    <button
+                                        onClick={() => setQuickProfitPeriod('yesterday')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${profitPeriodType === 'yesterday' ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
+                                    >
+                                        أمس
+                                    </button>
+                                    <button
+                                        onClick={() => setQuickProfitPeriod('week')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${profitPeriodType === 'week' ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
+                                    >
+                                        آخر 7 أيام
+                                    </button>
+                                    <button
+                                        onClick={() => setQuickProfitPeriod('month')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${profitPeriodType === 'month' ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
+                                    >
+                                        الشهر الحالي
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Date Inputs Controls */}
+                            <div className="flex flex-col sm:flex-row items-end gap-4 mb-6 bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                                <div className="w-full sm:w-auto flex-1">
+                                    <label className="text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1">
+                                        <Calendar size={14} className="text-emerald-600" />
+                                        من تاريخ:
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={profitStartDate}
+                                        onChange={e => {
+                                            setProfitStartDate(e.target.value);
+                                            setProfitPeriodType('custom');
+                                        }}
+                                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-emerald-500 shadow-sm"
+                                    />
+                                </div>
+                                <div className="w-full sm:w-auto flex-1">
+                                    <label className="text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1">
+                                        <Calendar size={14} className="text-emerald-600" />
+                                        إلى تاريخ:
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={profitEndDate}
+                                        onChange={e => {
+                                            setProfitEndDate(e.target.value);
+                                            setProfitPeriodType('custom');
+                                        }}
+                                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 outline-none focus:border-emerald-500 shadow-sm"
+                                    />
+                                </div>
+                                <button
+                                    onClick={() => fetchProfitData(profitStartDate, profitEndDate)}
+                                    disabled={loadingProfit}
+                                    className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm px-6 py-2.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+                                >
+                                    {loadingProfit ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    ) : (
+                                        <Filter size={16} />
+                                    )}
+                                    عرض الأرباح
+                                </button>
+                            </div>
+
+                            {/* Profit Display Cards */}
+                            {loadingProfit ? (
+                                <div className="flex justify-center items-center py-12">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                                </div>
+                            ) : profitData ? (
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {/* 1. Product Trading Profit Card */}
+                                        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-xl p-5 shadow-sm">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-200">
+                                                    أرباح البضاعة المباعة
+                                                </span>
+                                                <TrendingUp size={20} className="text-emerald-600" />
+                                            </div>
+                                            <h4 className="text-sm font-bold text-gray-600 mb-2">أرباح النشاط التجاري</h4>
+                                            <div className="space-y-1">
+                                                <div className="flex items-baseline justify-between">
+                                                    <span className="text-2xl font-black text-emerald-700">
+                                                        {profitData.profitSDG.toLocaleString()}
+                                                    </span>
+                                                    <span className="text-sm font-bold text-emerald-800">ج.س</span>
+                                                </div>
+                                                <div className="flex items-baseline justify-between pt-1.5 border-t border-emerald-200/60">
+                                                    <span className="text-xl font-black text-emerald-900">
+                                                        ${profitData.profitUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </span>
+                                                    <span className="text-xs font-bold text-emerald-700">USD</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 2. Total Sales Card */}
+                                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 shadow-sm">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-xs font-bold text-blue-800 bg-blue-100 px-2.5 py-1 rounded-full border border-blue-200">
+                                                    إجمالي الإيرادات
+                                                </span>
+                                                <Activity size={20} className="text-blue-600" />
+                                            </div>
+                                            <h4 className="text-sm font-bold text-gray-600 mb-2">إجمالي المبيعات</h4>
+                                            <div className="space-y-1">
+                                                <div className="flex items-baseline justify-between">
+                                                    <span className="text-2xl font-black text-blue-700">
+                                                        {profitData.totalSalesSDG.toLocaleString()}
+                                                    </span>
+                                                    <span className="text-sm font-bold text-blue-800">ج.س</span>
+                                                </div>
+                                                <div className="flex items-baseline justify-between pt-1.5 border-t border-blue-200/60">
+                                                    <span className="text-xl font-black text-blue-900">
+                                                        ${profitData.totalSalesUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </span>
+                                                    <span className="text-xs font-bold text-blue-700">USD</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 3. Total Cost Card */}
+                                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5 shadow-sm">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2.5 py-1 rounded-full border border-amber-200">
+                                                    تكلفة الشراء الأصلية
+                                                </span>
+                                                <TrendingDown size={20} className="text-amber-600" />
+                                            </div>
+                                            <h4 className="text-sm font-bold text-gray-600 mb-2">إجمالي تكلفة المبيعات</h4>
+                                            <div className="space-y-1">
+                                                <div className="flex items-baseline justify-between">
+                                                    <span className="text-2xl font-black text-amber-700">
+                                                        {profitData.totalCostSDG.toLocaleString()}
+                                                    </span>
+                                                    <span className="text-sm font-bold text-amber-800">ج.س</span>
+                                                </div>
+                                                <div className="flex items-baseline justify-between pt-1.5 border-t border-amber-200/60">
+                                                    <span className="text-xl font-black text-amber-900">
+                                                        ${profitData.totalCostUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </span>
+                                                    <span className="text-xs font-bold text-amber-700">USD</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Operational Summary Strip */}
+                                    <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200 text-xs font-bold text-gray-700">
+                                        <div className="flex items-center gap-4">
+                                            <span>عدد الفواتير: <span className="text-blue-700 font-mono text-sm">{profitData.salesCount}</span></span>
+                                            <span>عدد القطع: <span className="text-purple-700 font-mono text-sm">{profitData.totalItemsQuantity}</span></span>
+                                            <span>متوسط سعر الصرف: <span className="text-emerald-700 font-mono text-sm">{profitData.averageExchangeRate.toLocaleString()} ج.س/دولار</span></span>
+                                        </div>
+                                        {profitData.expensesSDG > 0 && (
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <span>المصروفات التشغيلية: <span className="text-rose-600 font-mono">{profitData.expensesSDG.toLocaleString()} ج.س (${profitData.expensesUSD.toLocaleString()})</span></span>
+                                                <span>•</span>
+                                                <span>الربح النهائي بعد الخصم: <span className="text-emerald-800 font-black">{profitData.netProfitAfterExpensesSDG.toLocaleString()} ج.س (${profitData.netProfitAfterExpensesUSD.toLocaleString()})</span></span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
 
                         {/* Action Cards Row */}
