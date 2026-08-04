@@ -38,6 +38,14 @@ export default function Inventory() {
     const [saving, setSaving] = useState(false)
     const [exchangeRate, setExchangeRate] = useState<number>(0)
     const [sellingPricePerTonUSD, setSellingPricePerTonUSD] = useState<number>(0)
+    const [inventoryTab, setInventoryTab] = useState<'MAIN' | 'SCRAP' | 'ALL'>('MAIN')
+
+    const isScrapProduct = (p: Product) => {
+        const catName = p.category?.name?.toLowerCase() || '';
+        const prodName = p.name?.toLowerCase() || '';
+        return catName.includes('اسكراب') || catName.includes('سكراب') || catName.includes('scrap') ||
+               prodName.includes('اسكراب') || prodName.includes('سكراب') || prodName.includes('scrap');
+    };
 
     // Add category states
     const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false)
@@ -205,9 +213,19 @@ export default function Inventory() {
         }
     }, [selectedCategoryId, categories]);
 
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const mainProductsCount = products.filter(p => !isScrapProduct(p)).length;
+    const scrapProductsCount = products.filter(p => isScrapProduct(p)).length;
+
+    const filteredProducts = products.filter(p => {
+        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const isScrap = isScrapProduct(p);
+
+        if (!matchesSearch) return false;
+
+        if (inventoryTab === 'MAIN') return !isScrap;
+        if (inventoryTab === 'SCRAP') return isScrap;
+        return true;
+    });
 
     const handlePrint = () => {
         window.print()
@@ -251,14 +269,57 @@ export default function Inventory() {
                 </div>
 
                 <div className="hidden print:block text-center mb-6">
-                    <h1 className="text-2xl font-bold text-slate-800 mb-1">تقرير جرد وتكلفة المخزون</h1>
+                    <h1 className="text-2xl font-bold text-slate-800 mb-1">
+                        {inventoryTab === 'MAIN' ? 'تقرير جرد المخزون الرئيسي (بدون الاسكراب)' : inventoryTab === 'SCRAP' ? 'تقرير جرد مخزون الاسكراب (الخردة)' : 'تقرير جرد كافة المخزون'}
+                    </h1>
                     <div className="flex justify-center items-center gap-6 text-sm font-bold text-slate-700 mt-2 border-y py-2 border-slate-300">
                         <span>تاريخ الطباعة: {new Date().toLocaleDateString('ar-SD')}</span>
-                        <span>إجمالي القيمة بالدولار: <span className="font-mono text-emerald-800">${(products.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0)), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></span>
+                        <span>إجمالي القيمة بالدولار: <span className="font-mono text-emerald-800">${(filteredProducts.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0)), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></span>
                         {exchangeRate > 0 && (
-                            <span>إجمالي القيمة بالجنيه: {(products.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0) * exchangeRate), 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س</span>
+                            <span>إجمالي القيمة بالجنيه: {(filteredProducts.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0) * exchangeRate), 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س</span>
                         )}
                     </div>
+                </div>
+
+                {/* Inventory Tabs: Main vs Scrap vs All */}
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-6 border-b border-slate-200 pb-3 print:hidden">
+                    <div className="flex items-center gap-2 bg-slate-200/60 p-1.5 rounded-xl">
+                        <button
+                            onClick={() => setInventoryTab('MAIN')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${inventoryTab === 'MAIN' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                        >
+                            <Package size={16} className="text-blue-600" />
+                            <span>المخزون الرئيسي</span>
+                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full font-mono">
+                                {mainProductsCount}
+                            </span>
+                        </button>
+                        <button
+                            onClick={() => setInventoryTab('SCRAP')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${inventoryTab === 'SCRAP' ? 'bg-white text-amber-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                        >
+                            <Trash2 size={16} className="text-amber-600" />
+                            <span>مخزون الاسكراب (الخردة)</span>
+                            <span className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-mono">
+                                {scrapProductsCount}
+                            </span>
+                        </button>
+                        <button
+                            onClick={() => setInventoryTab('ALL')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${inventoryTab === 'ALL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                        >
+                            <span>كل المخزون</span>
+                            <span className="bg-slate-300 text-slate-800 text-xs px-2 py-0.5 rounded-full font-mono">
+                                {products.length}
+                            </span>
+                        </button>
+                    </div>
+
+                    {inventoryTab === 'SCRAP' && (
+                        <div className="flex items-center gap-2 bg-amber-50 text-amber-800 px-3 py-1.5 rounded-lg border border-amber-200 text-xs font-bold">
+                            <span>يتم حالياً عرض الأصناف الخاصة بالاسكراب فقط</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Total Value Summary Card */}
@@ -273,10 +334,10 @@ export default function Inventory() {
                             {/* Value in SDG */}
                             <div className="flex flex-col items-center md:items-start text-center md:text-right w-full md:w-auto">
                                 <span className="text-sm font-bold text-slate-500 mb-1 flex items-center gap-2">
-                                    إجمالي قيمة المخزون الحالية
+                                    {inventoryTab === 'MAIN' ? 'إجمالي قيمة المخزون الرئيسي' : inventoryTab === 'SCRAP' ? 'إجمالي قيمة مخزون الاسكراب' : 'إجمالي قيمة كل المخزون'}
                                 </span>
                                 <div className="text-3xl font-black text-slate-800">
-                                    {(products.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0) * exchangeRate), 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-lg text-slate-500 font-bold">ج.س</span>
+                                    {(filteredProducts.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0) * exchangeRate), 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-lg text-slate-500 font-bold">ج.س</span>
                                 </div>
                             </div>
 
@@ -357,10 +418,10 @@ export default function Inventory() {
 
                                 <div className="flex flex-col items-center md:items-end text-center md:text-left w-full md:w-auto bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 md:border-none md:bg-transparent md:p-0">
                                     <span className="text-sm font-bold text-emerald-600 mb-1 flex items-center gap-1">
-                                        إجمالي قيمة المخزون بالدولار
+                                        {inventoryTab === 'MAIN' ? 'قيمة المخزون الرئيسي بالدولار' : inventoryTab === 'SCRAP' ? 'قيمة الاسكراب بالدولار' : 'إجمالي قيمة المخزون بالدولار'}
                                     </span>
                                     <div className="text-3xl font-black text-emerald-700 font-mono">
-                                        ${(products.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0)), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        ${(filteredProducts.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0)), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </div>
                                 </div>
                             </>
