@@ -250,9 +250,15 @@ export default function Inventory() {
                     </div>
                 </div>
 
-                <div className="hidden print:block text-center mb-8">
-                    <h1 className="text-2xl font-bold text-slate-800 mb-2">تقرير جرد المخزون</h1>
-                    <p className="text-sm text-gray-500 mt-2">تاريخ الطباعة: {new Date().toLocaleDateString('ar-SD')}</p>
+                <div className="hidden print:block text-center mb-6">
+                    <h1 className="text-2xl font-bold text-slate-800 mb-1">تقرير جرد وتكلفة المخزون</h1>
+                    <div className="flex justify-center items-center gap-6 text-sm font-bold text-slate-700 mt-2 border-y py-2 border-slate-300">
+                        <span>تاريخ الطباعة: {new Date().toLocaleDateString('ar-SD')}</span>
+                        <span>إجمالي القيمة بالدولار: <span className="font-mono text-emerald-800">${(products.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0)), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></span>
+                        {exchangeRate > 0 && (
+                            <span>إجمالي القيمة بالجنيه: {(products.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0) * exchangeRate), 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س</span>
+                        )}
+                    </div>
                 </div>
 
                 {/* Total Value Summary Card */}
@@ -371,7 +377,8 @@ export default function Inventory() {
                                     <th className="p-4 print:p-2 hidden md:table-cell print:table-cell">النوع</th>
                                     <th className="p-4 print:p-2 hidden sm:table-cell print:table-cell">السماكة</th>
                                     <th className="p-4 print:p-2">الكمية</th>
-                                    <th className="p-4 print:p-2 print:hidden">سعر الشراء ($)</th>
+                                    <th className="p-4 print:p-2">سعر الشراء ($)</th>
+                                    <th className="p-4 print:p-2">جملة الصنف ($)</th>
                                     <th className="p-4 print:p-2 print:hidden">تكلفة الترحيل ($)</th>
                                     <th className="p-4 print:p-2">سعر البيع (ج.س)</th>
                                     <th className="p-4 print:p-2">الحالة</th>
@@ -381,11 +388,11 @@ export default function Inventory() {
                             <tbody className="divide-y divide-slate-100 print:divide-slate-200">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={9} className="p-8 text-center text-gray-500">جاري التحميل...</td>
+                                        <td colSpan={10} className="p-8 text-center text-gray-500">جاري التحميل...</td>
                                     </tr>
                                 ) : filteredProducts.length === 0 ? (
                                     <tr>
-                                        <td colSpan={9} className="p-8 text-center text-gray-500">لا توجد منتجات</td>
+                                        <td colSpan={10} className="p-8 text-center text-gray-500">لا توجد منتجات</td>
                                     </tr>
                                 ) : (
                                     filteredProducts.map(product => (
@@ -417,7 +424,7 @@ export default function Inventory() {
                                             </td>
 
                                             {/* Editable Purchase Price */}
-                                            <td className="p-4 print:hidden">
+                                            <td className="p-4 print:p-2 font-bold text-emerald-700 print:text-black">
                                                 {editingId === product.id ? (
                                                     <input
                                                         type="number"
@@ -427,8 +434,13 @@ export default function Inventory() {
                                                         onChange={e => setEditForm({ ...editForm, purchasePriceUSD: Number(e.target.value) })}
                                                     />
                                                 ) : (
-                                                    <span className="text-emerald-700 font-bold">${product.purchasePriceUSD || 0}</span>
+                                                    <span>${product.purchasePriceUSD || 0}</span>
                                                 )}
+                                            </td>
+
+                                            {/* Total Item Value in USD */}
+                                            <td className="p-4 print:p-2 font-bold font-mono text-emerald-800 print:text-black">
+                                                ${((product.quantity || 0) * (product.purchasePriceUSD || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </td>
 
                                             {/* Editable Transport Cost */}
@@ -521,6 +533,25 @@ export default function Inventory() {
                                     ))
                                 )}
                             </tbody>
+                            {!loading && filteredProducts.length > 0 && (
+                                <tfoot className="bg-slate-100 font-bold text-slate-800 border-t-2 border-slate-300 print:bg-transparent print:border-t-2 print:border-black">
+                                    <tr>
+                                        <td colSpan={3} className="p-4 print:p-2 text-right">المجموع الكلي:</td>
+                                        <td className="p-4 print:p-2 font-black">
+                                            {filteredProducts.reduce((sum, p) => sum + p.quantity, 0).toLocaleString()}
+                                        </td>
+                                        <td className="p-4 print:p-2 text-slate-400 print:text-black">-</td>
+                                        <td className="p-4 print:p-2 font-mono text-emerald-800 print:text-black font-black">
+                                            ${(filteredProducts.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0)), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="p-4 print:hidden">-</td>
+                                        <td className="p-4 print:p-2 font-black">
+                                            {exchangeRate > 0 ? `${(filteredProducts.reduce((sum, p) => sum + (p.quantity * (p.purchasePriceUSD || 0) * exchangeRate), 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س` : '-'}
+                                        </td>
+                                        <td className="p-4 print:p-2" colSpan={2}></td>
+                                    </tr>
+                                </tfoot>
+                            )}
                         </table>
                     </div>
                 </Card>
