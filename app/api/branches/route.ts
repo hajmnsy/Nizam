@@ -82,6 +82,22 @@ export async function POST(request: Request) {
             })
         }
 
+        // Automatically create default user credentials for this branch (username: branchCode, password: 123456)
+        const defaultUsername = cleanCode
+        const existingBranchUser = await prisma.user.findUnique({ where: { username: defaultUsername } })
+        if (!existingBranchUser) {
+            const crypto = await import('crypto')
+            const defaultPasswordHash = crypto.createHash('sha256').update('123456').digest('hex')
+            await prisma.user.create({
+                data: {
+                    username: defaultUsername,
+                    password: defaultPasswordHash,
+                    role: 'CASHIER',
+                    branchId: branch.id
+                }
+            })
+        }
+
         return NextResponse.json(branch)
     } catch (error) {
         console.error('Error creating branch:', error)

@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
@@ -12,7 +13,23 @@ export async function GET(request: Request) {
 
         const session = await prisma.session.findUnique({
             where: { token },
-            include: { user: { select: { id: true, username: true, role: true } } }
+            include: { 
+                user: { 
+                    select: { 
+                        id: true, 
+                        username: true, 
+                        role: true,
+                        branchId: true,
+                        branch: {
+                            select: {
+                                id: true,
+                                name: true,
+                                code: true
+                            }
+                        }
+                    } 
+                } 
+            }
         })
 
         if (!session || session.expiresAt < new Date()) {

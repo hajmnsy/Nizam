@@ -332,12 +332,12 @@ export default function Navbar() {
                             </div>
 
                             {/* Branch Switcher Widget */}
-                            {(currentUser?.role === 'ADMIN' || branches.length > 1) && (
+                            {currentUser?.role === 'ADMIN' ? (
                                 <div className="relative" ref={branchPopupRef}>
                                     <button
                                         onClick={() => setShowBranchModal(!showBranchModal)}
                                         className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-200/60 shadow-sm animate-fade-in"
-                                        title="تبديل الفرع"
+                                        title="تبديل الفرع (مدير النظام)"
                                     >
                                         <Rocket size={16} strokeWidth={2.5} className="text-indigo-500" />
                                         <span>{branches.find(b => b.id === activeBranchId)?.name || 'جاري التحميل...'}</span>
@@ -401,6 +401,11 @@ export default function Navbar() {
                                             )}
                                         </div>
                                     )}
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-slate-700 bg-slate-100/90 rounded-xl border border-slate-200/80 shadow-sm" title="فرعك المخصص">
+                                    <Rocket size={16} strokeWidth={2.5} className="text-indigo-500" />
+                                    <span>{currentUser?.branch?.name || branches.find(b => b.id === activeBranchId)?.name || 'الفرع المخصص'}</span>
                                 </div>
                             )}
 
@@ -491,7 +496,7 @@ export default function Navbar() {
                     <div className="xl:hidden absolute top-full left-0 w-full bg-white/95 backdrop-blur-2xl border-b border-slate-200 shadow-2xl animate-slide-down">
                         <div className="flex flex-col p-4 space-y-1">
                             {/* Branch Switcher on Mobile */}
-                            {branches.length > 1 && (
+                            {currentUser?.role === 'ADMIN' && branches.length > 1 && (
                                 <div className="mb-3 p-3 bg-slate-50 rounded-xl border border-slate-200/60">
                                     <span className="text-xs font-black text-slate-500 mb-2 block">تبديل الفرع / المحل النشط:</span>
                                     <div className="grid grid-cols-2 gap-2">

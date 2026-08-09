@@ -265,7 +265,7 @@ export default function UsersManagement() {
                                             </span>
                                         </td>
                                         <td className="p-4 text-sm font-bold text-slate-700">
-                                            {u.role === 'ADMIN' ? 'كل الفروع (مدير)' : (branches.find(b => b.id === u.branchId)?.name || 'غير محدد')}
+                                            {u.role === 'ADMIN' ? 'كل الفروع (مدير النظام)' : (branches.find(b => b.id === u.branchId)?.name || (u as any).branch?.name || 'غير محدد')}
                                         </td>
                                         <td className="p-4 text-sm text-gray-500 font-mono">
                                             {new Date(u.createdAt).toLocaleDateString('ar-SD')}

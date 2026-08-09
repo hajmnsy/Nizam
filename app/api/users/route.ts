@@ -11,7 +11,20 @@ function hashPassword(password: string): string {
 export async function GET(request: Request) {
     try {
         const users = await prisma.user.findMany({
-            select: { id: true, username: true, role: true, createdAt: true, branchId: true },
+            select: { 
+                id: true, 
+                username: true, 
+                role: true, 
+                createdAt: true, 
+                branchId: true,
+                branch: {
+                    select: {
+                        id: true,
+                        name: true,
+                        code: true
+                    }
+                }
+            },
             orderBy: { createdAt: 'desc' }
         })
         return NextResponse.json(users)
