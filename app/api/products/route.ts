@@ -3,12 +3,26 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getActiveBranchId } from '@/lib/branch'
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
+        const { searchParams } = new URL(request.url)
+        const allBranches = searchParams.get('allBranches') === 'true' || searchParams.get('crossBranch') === 'true'
         const branchId = getActiveBranchId()
+
+        const whereCondition = allBranches ? {} : { branchId }
+
         const products = await prisma.product.findMany({
-            where: { branchId },
-            include: { category: true },
+            where: whereCondition,
+            include: { 
+                category: true,
+                branch: {
+                    select: {
+                        id: true,
+                        name: true,
+                        code: true
+                    }
+                }
+            },
             orderBy: { createdAt: 'desc' }
         })
         return NextResponse.json(products)

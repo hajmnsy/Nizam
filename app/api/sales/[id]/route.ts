@@ -18,11 +18,15 @@ export async function GET(
         const sale = await prisma.sale.findUnique({
             where: { id },
             include: {
+                branch: { select: { id: true, name: true, code: true } },
+                dispatchBranch: { select: { id: true, name: true, code: true } },
                 items: {
                     include: {
-                        product: true
+                        product: true,
+                        dispatchBranch: { select: { id: true, name: true, code: true } }
                     }
-                }
+                },
+                payments: true
             }
         })
 

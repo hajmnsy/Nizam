@@ -39,11 +39,15 @@ export async function POST(request: Request) {
         paidAmount = Math.round(Math.min(paidAmount, total));
         const remainingAmount = Math.round(Math.max(0, total - paidAmount));
 
+        const branchId = getActiveBranchId()
+        const dispatchBranchId = json.dispatchBranchId ? parseInt(json.dispatchBranchId) : null
+
         // Use the exact custom prices from the client, but rounded!
         const newItemsData = json.items.map((item: any) => ({
             productId: parseInt(item.productId),
             quantity: parseInt(item.quantity),
-            price: Math.round(parseFloat(item.price))
+            price: Math.round(parseFloat(item.price)),
+            dispatchBranchId: item.dispatchBranchId ? parseInt(item.dispatchBranchId) : dispatchBranchId
         }));
 
         // Adjust paidAmount based on the actual new total if it was meant to be exactly full
@@ -53,8 +57,6 @@ export async function POST(request: Request) {
 
         const actualRemainingAmount = Math.max(0, total - adjustedPaidAmount);
         const finalStatus = actualRemainingAmount === 0 && status === 'CREDIT' ? 'PAID' : status;
-
-        const branchId = getActiveBranchId()
 
         const result = await prisma.$transaction(async (tx) => {
             let invoiceNumber = null;
@@ -79,6 +81,7 @@ export async function POST(request: Request) {
                     status: finalStatus,
                     createdAt: finalCreatedAt,
                     branchId,
+                    dispatchBranchId: dispatchBranchId || branchId,
                     items: {
                         create: newItemsData
                     },
@@ -90,7 +93,9 @@ export async function POST(request: Request) {
                 },
                 include: {
                     items: true,
-                    payments: true
+                    payments: true,
+                    branch: true,
+                    dispatchBranch: true
                 }
             });
 

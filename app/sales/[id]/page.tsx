@@ -343,12 +343,33 @@ export default function InvoiceDetails() {
                                     <p className="font-mono text-lg font-bold text-slate-700 leading-tight">{sale.invoiceNumber || sale.id}</p>
                                 </div>
                             )}
-                            <div className="text-xs text-slate-600 font-medium">
-                                <div>التاريخ: <span className="text-slate-700">{new Date(sale.createdAt).toLocaleDateString('en-GB')}</span></div>
+                            <div className="text-xs text-slate-600 font-medium space-y-0.5">
+                                <div>التاريخ: <span className="text-slate-700 font-bold">{new Date(sale.createdAt).toLocaleDateString('en-GB')}</span></div>
                                 <div>العميل: <span className="text-slate-700 font-bold">{sale.customer}</span></div>
+                                {(sale as any).branch && <div>فرع الفاتورة: <span className="text-slate-800 font-bold">{(sale as any).branch.name}</span></div>}
+                                {(sale as any).dispatchBranch && (
+                                    <div className={`mt-0.5 font-bold ${((sale as any).dispatchBranchId && (sale as any).dispatchBranchId !== (sale as any).branchId) ? 'text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block' : 'text-slate-700'}`}>
+                                        📍 فرع التسليم (الصرف): <span>{(sale as any).dispatchBranch.name}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
+
+                    {/* Cross-Branch Dispatch Notice Banner */}
+                    {(sale as any).dispatchBranch && (sale as any).dispatchBranchId && (sale as any).dispatchBranchId !== (sale as any).branchId && (
+                        <div className="mb-3 p-3 bg-amber-50 border-2 border-amber-300 rounded-lg text-amber-950 font-bold text-xs flex items-center justify-between relative z-10">
+                            <div className="flex items-center gap-2">
+                                <span className="text-lg">📍</span>
+                                <div>
+                                    <span className="font-black text-amber-900 block text-sm">موقع وتسليم البضاعة (فرع الصرف): {(sale as any).dispatchBranch.name}</span>
+                                    <span className="text-[11px] font-medium text-amber-800">
+                                        ملاحظة هامة لأمين المخزن والعميل: تم توريد مبالغ هذه الفاتورة في (مكتب {(sale as any).branch?.name || 'الفرع الصادر'})، وتستلم البضاعة وتصرف من مخازن فرع ({(sale as any).dispatchBranch.name}).
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Items Table */}
                     <div className="relative z-10 mb-4 print:mb-2">

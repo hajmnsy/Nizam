@@ -60,14 +60,24 @@ export default function NewSale() {
     const [activeCategory, setActiveCategory] = useState<string>('')
     const [searchTerm, setSearchTerm] = useState('')
     const [exchangeRate, setExchangeRate] = useState<number>(0)
+    const [branches, setBranches] = useState<any[]>([])
+    const [dispatchBranchId, setDispatchBranchId] = useState<string>('')
+    const [activeBranchId, setActiveBranchId] = useState<number>(1)
 
     useEffect(() => {
         Promise.all([
-            fetch('/api/products', { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/products?crossBranch=true', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()),
-            fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json())
-        ]).then(([productsData, categoriesData, exchangeRateData]) => {
+            fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/branches', { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/auth/me', { cache: 'no-store' }).then(res => res.json())
+        ]).then(([productsData, categoriesData, exchangeRateData, branchesData, userData]) => {
             setProducts(Array.isArray(productsData) ? productsData : [])
+            if (Array.isArray(branchesData)) setBranches(branchesData)
+            if (userData && userData.branchId) {
+                setActiveBranchId(userData.branchId)
+                setDispatchBranchId(userData.branchId.toString())
+            }
             if (exchangeRateData) {
                 if (exchangeRateData.rate > 0) setExchangeRate(exchangeRateData.rate)
             }
@@ -201,7 +211,8 @@ export default function NewSale() {
                     status: finalStatus,
                     discount: parseFloat(discount) || 0,
                     paidAmount: finalPaid,
-                    createdAt: createdAt
+                    createdAt: createdAt,
+                    dispatchBranchId: dispatchBranchId || null
                 })
             })
 
@@ -390,13 +401,33 @@ export default function NewSale() {
                         <div className="lg:col-span-5 flex flex-col h-full bg-white border-2 border-blue-200 rounded-xl shadow-lg overflow-hidden min-h-0">
                             
                             {/* Cart Header */}
-                            <div className="bg-blue-50 p-2 border-b border-blue-100 shrink-0">
+                            <div className="bg-blue-50 p-3 border-b border-blue-100 shrink-0 space-y-2">
                                 <h2 className="font-bold text-blue-900 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         سلة المشتريات
                                     </div>
-                                    <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs">{cart.length} أصناف</span>
+                                    <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs font-mono">{cart.length} أصناف</span>
                                 </h2>
+
+                                {/* Dispatch / Delivery Branch Selector */}
+                                {branches.length > 0 && (
+                                    <div className="bg-white p-2 rounded-xl border border-blue-200/80 shadow-sm flex flex-col gap-1">
+                                        <label className="text-[11px] font-black text-slate-700 flex items-center gap-1">
+                                            <span>📍 فرع وموقع تسليم/صرف البضاعة للزبون:</span>
+                                        </label>
+                                        <select
+                                            value={dispatchBranchId}
+                                            onChange={(e) => setDispatchBranchId(e.target.value)}
+                                            className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg p-1.5 focus:ring-2 focus:ring-blue-500 outline-none text-slate-800"
+                                        >
+                                            {branches.map(b => (
+                                                <option key={b.id} value={b.id}>
+                                                    {b.id === activeBranchId ? `📍 ${b.name} (الفرع الحالي)` : `🏢 تسليم من مخازن ${b.name}`}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Cart Items & Checkout Container (Fully Scrollable) */}
