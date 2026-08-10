@@ -76,42 +76,32 @@ export default function Home() {
                     <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
                     <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none translate-y-1/3 -translate-x-1/4"></div>
 
-                    <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                         <div className="space-y-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                                    <Sparkles size={13} className="text-indigo-400" />
-                                    نظام إدارة مصنع الجودة للمنتجات الحديدية
+                            <div className="flex flex-wrap items-center gap-3">
+                                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                                    <span>🟢 {currentUser?.branch?.name || 'الفرع الرئيسي'}</span>
                                 </span>
-                                {currentUser?.branch && (
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                                        {currentUser.branch.name}
-                                    </span>
-                                )}
+                                <span className="text-slate-300 text-xs font-bold flex items-center gap-1.5 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
+                                    <Calendar size={14} className="text-slate-400" />
+                                    <span>{todayDateFormatted}</span>
+                                </span>
                             </div>
-
-                            <h1 className="text-2xl md:text-4xl font-black tracking-tight text-white">
-                                مرحباً بك، <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-300 to-blue-200">{currentUser?.username || 'المستخدم'}</span> 👋
-                            </h1>
-                            <p className="text-slate-400 text-sm font-medium flex items-center gap-2">
-                                <Clock size={16} className="text-slate-500" />
-                                {todayDateFormatted}
-                            </p>
                         </div>
 
-                        {/* Quick Header Actions */}
-                        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                            <Link href="/sales/new" className="flex-1 lg:flex-none">
-                                <Button variant="gradient" size="lg" className="w-full">
-                                    <Plus size={20} />
+                        {/* Quick Action Buttons */}
+                        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                            <Link href="/sales/new" className="flex-1 md:flex-none">
+                                <Button variant="gradient" size="lg" className="w-full font-black text-sm px-6 py-3 shadow-lg shadow-blue-500/25">
+                                    <Plus size={18} />
                                     <span>فاتورة بيع جديدة</span>
                                 </Button>
                             </Link>
-                            <Link href="/inventory" className="flex-1 lg:flex-none">
-                                <Button variant="glass" size="lg" className="w-full text-white border-white/20 hover:bg-white/10">
-                                    <Package size={18} />
-                                    <span>جرد المخزون</span>
+                            <Link href="/expenses" className="flex-1 md:flex-none">
+                                <Button variant="glass" size="lg" className="w-full text-white border-white/20 hover:bg-white/10 font-black text-sm px-6 py-3">
+                                    <Receipt size={18} />
+                                    <span>منصرف جديد</span>
                                 </Button>
                             </Link>
                         </div>
@@ -191,73 +181,7 @@ export default function Home() {
 
                 </div>
 
-                {/* Enterprise Quick Operations Matrix */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                            <Layers className="text-indigo-600" size={22} />
-                            <span>اختصارات وتطبيقات النظام</span>
-                        </h2>
-                    </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                        
-                        <Link href="/sales/new">
-                            <Card variant="enterprise" className="p-4 text-center hover:border-indigo-400 hover:shadow-lg transition-all group flex flex-col items-center h-full justify-center space-y-3">
-                                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
-                                    <ShoppingCart size={22} />
-                                </div>
-                                <span className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">نقطة البيع (POS)</span>
-                            </Card>
-                        </Link>
-
-                        <Link href="/inventory">
-                            <Card variant="enterprise" className="p-4 text-center hover:border-indigo-400 hover:shadow-lg transition-all group flex flex-col items-center h-full justify-center space-y-3">
-                                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors shadow-sm">
-                                    <Package size={22} />
-                                </div>
-                                <span className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">إدارة المخزون</span>
-                            </Card>
-                        </Link>
-
-                        <Link href="/expenses">
-                            <Card variant="enterprise" className="p-4 text-center hover:border-indigo-400 hover:shadow-lg transition-all group flex flex-col items-center h-full justify-center space-y-3">
-                                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center group-hover:bg-rose-600 group-hover:text-white transition-colors shadow-sm">
-                                    <Receipt size={22} />
-                                </div>
-                                <span className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">سجل المنصرفات</span>
-                            </Card>
-                        </Link>
-
-                        <Link href="/reports">
-                            <Card variant="enterprise" className="p-4 text-center hover:border-indigo-400 hover:shadow-lg transition-all group flex flex-col items-center h-full justify-center space-y-3">
-                                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors shadow-sm">
-                                    <BarChart3 size={22} />
-                                </div>
-                                <span className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">التقارير والأرباح</span>
-                            </Card>
-                        </Link>
-
-                        <Link href="/pricing">
-                            <Card variant="enterprise" className="p-4 text-center hover:border-indigo-400 hover:shadow-lg transition-all group flex flex-col items-center h-full justify-center space-y-3">
-                                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors shadow-sm">
-                                    <DollarSign size={22} />
-                                </div>
-                                <span className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">تسعير الأصناف</span>
-                            </Card>
-                        </Link>
-
-                        <Link href="/users">
-                            <Card variant="enterprise" className="p-4 text-center hover:border-indigo-400 hover:shadow-lg transition-all group flex flex-col items-center h-full justify-center space-y-3">
-                                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors shadow-sm">
-                                    <Users size={22} />
-                                </div>
-                                <span className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">إدارة الفروع</span>
-                            </Card>
-                        </Link>
-
-                    </div>
-                </div>
 
                 {/* Main Content Feed: Recent Operations & Stock Alerts */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
