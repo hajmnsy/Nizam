@@ -125,6 +125,19 @@ export async function PUT(
 
             if (!originalSale) return NextResponse.json({ error: 'Sale not found' }, { status: 404 })
 
+            // Enforce Same-Day Editing Rule (Allow editing ONLY on the creation date)
+            const saleDate = new Date(originalSale.createdAt);
+            const today = new Date();
+            const isSameDay = saleDate.getFullYear() === today.getFullYear() &&
+                              saleDate.getMonth() === today.getMonth() &&
+                              saleDate.getDate() === today.getDate();
+
+            if (!isSameDay) {
+                return NextResponse.json({
+                    error: 'عذراً، تم إغلاق يومية هذه الفاتورة المعتمدة في تاريخ سابق ولا يمكن تعديلها بعد انتهاء اليومية. لإرجاع بضاعة هذه الفاتورة يرجى استخدام صفحة "راجع البضاعة".'
+                }, { status: 400 })
+            }
+
             // Calculate new totals
             const newSubtotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
             const newTotal = newSubtotal - (discount || 0)

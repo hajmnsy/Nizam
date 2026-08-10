@@ -63,6 +63,7 @@ export default function EditSale() {
     const [createdAt, setCreatedAt] = useState(getTodayLocal())
     const [originalStatus, setOriginalStatus] = useState<string>('PAID')
     const [exchangeRate, setExchangeRate] = useState<number>(0)
+    const [isEditableSameDay, setIsEditableSameDay] = useState(true)
 
     useEffect(() => {
         // Fetch products, categories, sale, AND exchange rate
@@ -92,7 +93,13 @@ export default function EditSale() {
                 setDiscount(saleData.discount?.toString() || '0')
                 setOriginalStatus(saleData.status)
                 if (saleData.createdAt) {
-                    setCreatedAt(new Date(saleData.createdAt).toISOString().split('T')[0])
+                    const saleDate = new Date(saleData.createdAt)
+                    const today = new Date()
+                    const sameDay = saleDate.getFullYear() === today.getFullYear() &&
+                                    saleDate.getMonth() === today.getMonth() &&
+                                    saleDate.getDate() === today.getDate()
+                    setIsEditableSameDay(sameDay)
+                    setCreatedAt(saleDate.toISOString().split('T')[0])
                 }
 
                 // If the sale is CREDIT, populate the paidAmount; if PAID, we don't necessarily need to pre-fill it but it's safe to use the DB value.
@@ -198,6 +205,9 @@ export default function EditSale() {
     const finalTotal = subtotal - (parseFloat(discount) || 0)
 
     const handleUpdate = async (status: 'PAID' | 'CREDIT' = 'PAID') => {
+        if (!isEditableSameDay) {
+            return alert('عذراً، تم إغلاق يومية هذه الفاتورة في تاريخ سابق ولا يمكن تعديلها مباشرة. لإرجاع البضاعة استخدم صفحة راجع البضاعة.')
+        }
         if (cart.length === 0) return alert('الرجاء إضافة منتجات للفاتورة')
         setLoading(true)
 
@@ -266,6 +276,25 @@ export default function EditSale() {
                         </h1>
                     </div>
                 </div>
+
+                {!isEditableSameDay && (
+                    <div className="mb-4 bg-amber-50 border-2 border-amber-300 text-amber-950 p-4 rounded-2xl shadow-sm flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <span className="text-3xl">⛔</span>
+                            <div>
+                                <p className="font-black text-base text-amber-900">انقضت فترة التعديل المباشر (تم تقفيل اليومية)</p>
+                                <p className="text-xs text-amber-800 font-medium mt-0.5">
+                                    الفواتير الصادرة في أيام سابقة غير قابلة للتعديل المباشر لمنع الاختلال في الحسابات المالية السابقة. إذا رغب الزبون في إرجاع بضاعة هذه الفاتورة، يرجى استخدام صفحة <strong>راجــع البـضـاعـة</strong>.
+                                </p>
+                            </div>
+                        </div>
+                        <Link href={`/sales/returns/new?saleId=${saleId}`}>
+                            <Button className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs whitespace-nowrap px-4 py-2.5 rounded-xl shadow-md">
+                                الانتقال لصفحة راجع البضاعة 🔄
+                            </Button>
+                        </Link>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-170px)]">
                     {/* LEFT SIDE: Product Selection */}

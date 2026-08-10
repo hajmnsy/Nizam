@@ -219,6 +219,7 @@ export default function Navbar() {
         { name: 'المخزون', path: '/inventory' },
         { name: 'المشتريات', path: '/purchases' },
         { name: 'المبيعات', path: '/sales' },
+        { name: 'راجع البضاعة 🔄', path: '/sales/returns' },
         { name: 'المصروفات', path: '/expenses' },
         { name: 'حركة الأصناف', path: '/reports/items' },
         { name: 'التقارير', path: '/reports' },
