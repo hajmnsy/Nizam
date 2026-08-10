@@ -46,7 +46,10 @@ export async function POST(request: Request) {
     try {
         const branchId = getActiveBranchId()
         const body = await request.json()
-        const { companyName, phone, vatRate, address, logoUrl, initialBalance, initialBalanceDate, transportCostUSD } = body
+        const { 
+            companyName, phone, vatRate, address, logoUrl, initialBalance, initialBalanceDate, 
+            transportCostUSD, fixedMonthlyExpenses, expectedMonthlySupplyTons, targetNetProfitMargin 
+        } = body
 
         // Find existing setting for this branch
         let existingSetting = await prisma.setting.findFirst({
@@ -70,6 +73,21 @@ export async function POST(request: Request) {
         if (vatRate !== undefined) {
             updateData.vatRate = parseFloat(vatRate as string);
             createData.vatRate = parseFloat(vatRate as string);
+        }
+
+        if (fixedMonthlyExpenses !== undefined) {
+            updateData.fixedMonthlyExpenses = parseFloat(fixedMonthlyExpenses as string) || 0;
+            createData.fixedMonthlyExpenses = parseFloat(fixedMonthlyExpenses as string) || 0;
+        }
+
+        if (expectedMonthlySupplyTons !== undefined) {
+            updateData.expectedMonthlySupplyTons = parseFloat(expectedMonthlySupplyTons as string) || 0;
+            createData.expectedMonthlySupplyTons = parseFloat(expectedMonthlySupplyTons as string) || 0;
+        }
+
+        if (targetNetProfitMargin !== undefined) {
+            updateData.targetNetProfitMargin = parseFloat(targetNetProfitMargin as string) || 0;
+            createData.targetNetProfitMargin = parseFloat(targetNetProfitMargin as string) || 0;
         }
 
         if (transportCostUSD !== undefined) {

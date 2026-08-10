@@ -223,12 +223,11 @@ export default function Navbar() {
         { name: 'المصروفات', path: '/expenses' },
         { name: 'حركة الأصناف', path: '/reports/items' },
         { name: 'التقارير', path: '/reports' },
-        { name: 'حاسبة الأسعار', path: '/pricing' },
         { name: 'الموظفين', path: '/employees' },
-        { name: 'الإعدادات', path: '/settings' },
     ]
 
     if (currentUser?.role === 'ADMIN') {
+        navLinks.push({ name: 'الإعدادات المتقدمة', path: '/settings' })
         navLinks.push({ name: 'المستخدمين', path: '/users' })
     }
 
