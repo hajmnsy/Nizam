@@ -218,6 +218,7 @@ export default function Navbar() {
         { name: 'الرئيسية', path: '/' },
         { name: 'المخزون', path: '/inventory' },
         { name: 'المشتريات', path: '/purchases' },
+        { name: 'الموردين 🏢', path: '/suppliers' },
         { name: 'المبيعات', path: '/sales' },
         { name: 'راجع البضاعة 🔄', path: '/sales/returns' },
         { name: 'المصروفات', path: '/expenses' },

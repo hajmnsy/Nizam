@@ -17,6 +17,10 @@ interface Expense {
     employee?: {
         name: string
     }
+    supplierId?: number | null
+    supplier?: {
+        name: string
+    }
 }
 
 interface Employee {
@@ -25,7 +29,15 @@ interface Employee {
     monthlySalary: number
 }
 
+interface Supplier {
+    id: number
+    name: string
+    company?: string | null
+    remainingBalance?: number
+}
+
 const CATEGORIES = [
+    { id: 'سداد موردين', label: '💳 سداد موردين', color: 'bg-indigo-100 text-indigo-800 font-bold border border-indigo-200' },
     { id: 'توريدات', label: 'توريدات', color: 'bg-emerald-100 text-emerald-700' },
     { id: 'مشتريات', label: 'مشتريات', color: 'bg-teal-100 text-teal-700' },
     { id: 'عتالة وترحيل', label: 'عتالة وترحيل', color: 'bg-blue-100 text-blue-700' },
@@ -63,12 +75,14 @@ export default function ExpensesPage() {
         description: '',
         amount: '',
         date: getTodayLocal(),
-        category: 'توريدات',
-        employeeId: ''
+        category: 'سداد موردين',
+        employeeId: '',
+        supplierId: ''
     })
     const [submitting, setSubmitting] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
     const [employees, setEmployees] = useState<Employee[]>([])
+    const [suppliers, setSuppliers] = useState<Supplier[]>([])
 
     const startEdit = (expense: Expense) => {
         setEditingExpenseId(expense.id)
@@ -77,13 +91,15 @@ export default function ExpensesPage() {
             amount: expense.amount.toString(),
             date: new Date(expense.date).toISOString().split('T')[0],
             category: expense.category,
-            employeeId: expense.employeeId ? expense.employeeId.toString() : ''
+            employeeId: expense.employeeId ? expense.employeeId.toString() : '',
+            supplierId: expense.supplierId ? expense.supplierId.toString() : ''
         })
     }
 
     useEffect(() => {
         fetchExpenses(date)
         fetchEmployees()
+        fetchSuppliers()
     }, [date])
 
     const fetchEmployees = () => {
@@ -91,6 +107,15 @@ export default function ExpensesPage() {
             .then(res => res.json())
             .then(data => {
                 setEmployees(Array.isArray(data) ? data : [])
+            })
+            .catch(console.error)
+    }
+
+    const fetchSuppliers = () => {
+        fetch('/api/suppliers', { cache: 'no-store' })
+            .then(res => res.json())
+            .then(data => {
+                setSuppliers(Array.isArray(data) ? data : [])
             })
             .catch(console.error)
     }
@@ -120,19 +145,35 @@ export default function ExpensesPage() {
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newExpense)
+                body: JSON.stringify({
+                    description: newExpense.description,
+                    amount: newExpense.amount,
+                    date: newExpense.date,
+                    category: newExpense.category,
+                    employeeId: newExpense.employeeId || null,
+                    supplierId: newExpense.supplierId || null
+                })
             })
 
             if (res.ok) {
+                const savedExpense = await res.json()
+                if (editingExpenseId) {
+                    setExpenses(prev => prev.map(e => e.id === editingExpenseId ? savedExpense : e))
+                    setEditingExpenseId(null)
+                } else {
+                    if (newExpense.date === date) {
+                        setExpenses(prev => [...prev, savedExpense])
+                    }
+                }
                 setNewExpense({
                     description: '',
                     amount: '',
-                    date: date,
-                    category: 'توريدات',
-                    employeeId: ''
+                    date: getTodayLocal(),
+                    category: 'سداد موردين',
+                    employeeId: '',
+                    supplierId: ''
                 })
-                setEditingExpenseId(null)
-                fetchExpenses(date)
+                fetchSuppliers()
             }
         } catch (error) {
             console.error(error)
@@ -269,7 +310,7 @@ export default function ExpensesPage() {
                                 <div className="animate-fade-in-up">
                                     <label className="text-sm font-bold text-indigo-700 block mb-1">صرف للموظف (سلفة/راتب)</label>
                                     <select
-                                        className="w-full border-2 border-indigo-200 p-2 rounded-lg bg-indigo-50 focus:border-indigo-500 outline-none"
+                                        className="w-full border-2 border-indigo-200 p-2 rounded-lg bg-indigo-50 focus:border-indigo-500 outline-none font-bold text-xs"
                                         value={newExpense.employeeId}
                                         onChange={e => setNewExpense({ ...newExpense, employeeId: e.target.value })}
                                         required
@@ -277,6 +318,33 @@ export default function ExpensesPage() {
                                         <option value="">-- اختر الموظف --</option>
                                         {employees.map(emp => (
                                             <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {newExpense.category === 'سداد موردين' && (
+                                <div className="animate-fade-in-up">
+                                    <label className="text-sm font-bold text-indigo-700 block mb-1">اختر المورد (خصم وتصفية حساب)</label>
+                                    <select
+                                        className="w-full border-2 border-indigo-200 p-2 rounded-lg bg-indigo-50 focus:border-indigo-500 outline-none font-bold text-xs"
+                                        value={newExpense.supplierId}
+                                        onChange={e => {
+                                            const id = e.target.value;
+                                            const found = suppliers.find(s => s.id.toString() === id);
+                                            setNewExpense({
+                                                ...newExpense,
+                                                supplierId: id,
+                                                description: found ? `دفعة سداد حساب المورد: ${found.name}` : newExpense.description
+                                            });
+                                        }}
+                                        required
+                                    >
+                                        <option value="">-- اختر المورد --</option>
+                                        {suppliers.map(sup => (
+                                            <option key={sup.id} value={sup.id}>
+                                                🏢 {sup.name} {sup.company ? `(${sup.company})` : ''} - مستحق: {sup.remainingBalance?.toLocaleString()} ج.س
+                                            </option>
                                         ))}
                                     </select>
                                 </div>
@@ -304,8 +372,9 @@ export default function ExpensesPage() {
                                                 description: '',
                                                 amount: '',
                                                 date: date,
-                                                category: 'توريدات',
-                                                employeeId: ''
+                                                category: 'سداد موردين',
+                                                employeeId: '',
+                                                supplierId: ''
                                             })
                                         }} 
                                         className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4"

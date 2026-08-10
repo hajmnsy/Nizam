@@ -94,6 +94,8 @@ model Expense {
   date        DateTime  @default(now())
   employeeId  Int?
   employee    Employee? @relation(fields: [employeeId], references: [id])
+  supplierId  Int?
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
   branchId    Int        @default(1)
   branch      Branch     @relation(fields: [branchId], references: [id])
 }
@@ -160,10 +162,27 @@ model Session {
   user      User     @relation(fields: [userId], references: [id])
 }
 
+model Supplier {
+  id        Int        @id @default(autoincrement())
+  name      String
+  phone     String?
+  address   String?
+  company   String?
+  notes     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  branchId  Int        @default(1)
+  branch    Branch     @relation(fields: [branchId], references: [id])
+  purchases Purchase[]
+  expenses  Expense[]
+}
+
 model Purchase {
   id            Int            @id @default(autoincrement())
   invoiceNumber String?
   supplier      String?
+  supplierId    Int?
+  supplierRel   Supplier?      @relation(fields: [supplierId], references: [id])
   total         Float
   status        String         @default("COMPLETED")
   createdAt     DateTime       @default(now())
@@ -202,6 +221,7 @@ model Branch {
   notifications       Notification[]
   employees           Employee[]
   returns             SaleReturn[]
+  suppliers           Supplier[]
 }
 
 model SaleReturn {

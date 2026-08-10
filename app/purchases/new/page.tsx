@@ -40,6 +40,8 @@ export default function NewPurchase() {
 
     const [invoiceNumber, setInvoiceNumber] = useState('')
     const [supplier, setSupplier] = useState('')
+    const [supplierId, setSupplierId] = useState('')
+    const [suppliersList, setSuppliersList] = useState<any[]>([])
     const [date, setDate] = useState(getTodayLocal())
     
     const [items, setItems] = useState<PurchaseItem[]>([
@@ -47,12 +49,14 @@ export default function NewPurchase() {
     ])
 
     useEffect(() => {
-        fetch('/api/products')
-            .then(res => res.json())
-            .then(data => {
-                setProducts(data)
-                setLoading(false)
-            })
+        Promise.all([
+            fetch('/api/products').then(res => res.json()),
+            fetch('/api/suppliers').then(res => res.json())
+        ]).then(([productsData, suppliersData]) => {
+            if (Array.isArray(productsData)) setProducts(productsData)
+            if (Array.isArray(suppliersData)) setSuppliersList(suppliersData)
+            setLoading(false)
+        }).catch(console.error)
     }, [])
 
     const addItem = () => {
@@ -100,6 +104,7 @@ export default function NewPurchase() {
                 body: JSON.stringify({
                     invoiceNumber,
                     supplier: supplier || 'مورد عام',
+                    supplierId: supplierId || null,
                     createdAt: date,
                     items
                 })
@@ -150,11 +155,34 @@ export default function NewPurchase() {
                     <Card className="p-6 border border-slate-200 shadow-sm">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">اختر المورد المسجل</label>
+                                <select
+                                    value={supplierId}
+                                    onChange={(e) => {
+                                        const id = e.target.value;
+                                        setSupplierId(id);
+                                        const found = suppliersList.find(s => s.id.toString() === id);
+                                        if (found) setSupplier(found.name);
+                                    }}
+                                    className="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-purple-500 transition-all font-bold text-slate-800 bg-white"
+                                >
+                                    <option value="">-- مورد عام / جديد --</option>
+                                    {suppliersList.map(s => (
+                                        <option key={s.id} value={s.id}>
+                                            🏢 {s.name} {s.company ? `(${s.company})` : ''} - رصيد مستحق: {s.remainingBalance?.toLocaleString()} ج.س
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-2">اسم المورد</label>
                                 <input
                                     type="text"
                                     value={supplier}
-                                    onChange={e => setSupplier(e.target.value)}
+                                    onChange={e => {
+                                        setSupplier(e.target.value);
+                                        setSupplierId('');
+                                    }}
                                     className="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-purple-500 transition-all font-bold text-slate-800"
                                     placeholder="مورد عام"
                                 />

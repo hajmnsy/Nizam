@@ -10,12 +10,14 @@ export async function POST(request: Request) {
         
         const branchId = getActiveBranchId()
         const total = json.items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
+        const supplierId = json.supplierId ? parseInt(json.supplierId) : null
 
         const result = await prisma.$transaction(async (tx) => {
             const purchase = await tx.purchase.create({
                 data: {
                     invoiceNumber: json.invoiceNumber || null,
                     supplier: json.supplier || 'مورد عام',
+                    supplierId: supplierId,
                     total: total,
                     status: 'COMPLETED',
                     createdAt: json.createdAt ? new Date(`${json.createdAt}T00:00:00.000+02:00`) : new Date(),

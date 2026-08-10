@@ -41,7 +41,7 @@ export async function GET(request: Request) {
 
         const expenses = await prisma.expense.findMany({
             where: whereClause,
-            include: { employee: true },
+            include: { employee: true, supplier: true },
             orderBy: { date: 'asc' } // Sort asc for the report chronological view
         })
         return NextResponse.json(expenses)
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const json = await request.json()
-        const { description, amount, date, category, employeeId } = json
+        const { description, amount, date, category, employeeId, supplierId } = json
 
         if (!description || !amount) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -68,6 +68,7 @@ export async function POST(request: Request) {
                 date: new Date(date),
                 category: category || 'تشغيلية',
                 employeeId: employeeId ? parseInt(employeeId) : null,
+                supplierId: supplierId ? parseInt(supplierId) : null,
                 branchId
             }
         })
