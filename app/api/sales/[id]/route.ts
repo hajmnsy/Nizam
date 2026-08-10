@@ -15,8 +15,14 @@ export async function GET(
             return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
         }
 
-        const sale = await prisma.sale.findUnique({
-            where: { id },
+        const branchId = getActiveBranchId()
+
+        // 1. Try finding by invoiceNumber for current active branch first
+        let sale = await prisma.sale.findFirst({
+            where: {
+                branchId,
+                invoiceNumber: id
+            },
             include: {
                 branch: { select: { id: true, name: true, code: true } },
                 dispatchBranch: { select: { id: true, name: true, code: true } },
@@ -29,6 +35,24 @@ export async function GET(
                 payments: true
             }
         })
+
+        // 2. Fallback to internal DB primary key id
+        if (!sale) {
+            sale = await prisma.sale.findUnique({
+                where: { id },
+                include: {
+                    branch: { select: { id: true, name: true, code: true } },
+                    dispatchBranch: { select: { id: true, name: true, code: true } },
+                    items: {
+                        include: {
+                            product: true,
+                            dispatchBranch: { select: { id: true, name: true, code: true } }
+                        }
+                    },
+                    payments: true
+                }
+            })
+        }
 
         if (!sale) {
             return NextResponse.json({ error: 'Sale not found' }, { status: 404 })
