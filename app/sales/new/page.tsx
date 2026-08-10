@@ -66,7 +66,7 @@ export default function NewSale() {
 
     useEffect(() => {
         Promise.all([
-            fetch('/api/products?crossBranch=true', { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/products', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/branches', { cache: 'no-store' }).then(res => res.json()),

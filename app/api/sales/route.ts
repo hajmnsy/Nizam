@@ -102,8 +102,26 @@ export async function POST(request: Request) {
             // Update stock ONLY if not a quotation
             if (finalStatus !== 'QUOTATION') {
                 for (const item of json.items) {
+                    let targetProductId = parseInt(item.productId);
+                    const originalProduct = await tx.product.findUnique({
+                        where: { id: targetProductId }
+                    });
+
+                    // If dispatching from a different branch, find matching product by name in target branch
+                    if (dispatchBranchId && dispatchBranchId !== branchId && originalProduct) {
+                        const dispatchProduct = await tx.product.findFirst({
+                            where: {
+                                branchId: dispatchBranchId,
+                                name: originalProduct.name
+                            }
+                        });
+                        if (dispatchProduct) {
+                            targetProductId = dispatchProduct.id;
+                        }
+                    }
+
                     const updatedProduct = await tx.product.update({
-                        where: { id: parseInt(item.productId) },
+                        where: { id: targetProductId },
                         data: {
                             quantity: {
                                 decrement: parseInt(item.quantity)
@@ -111,14 +129,14 @@ export async function POST(request: Request) {
                         }
                     })
 
-                    // Auto-generate notification for low stock
+                    // Auto-generate notification for low stock in target branch
                     if (updatedProduct.quantity <= 5) {
                         await tx.notification.create({
                             data: {
                                 title: 'تنبيه مخزون منخفض',
                                 message: `انخفض مخزون ${updatedProduct.name} إلى ${updatedProduct.quantity} قطعة بقسم ${updatedProduct.type || 'عام'}. يرجى إعادة الطلب.`,
                                 type: 'WARNING',
-                                branchId
+                                branchId: dispatchBranchId || branchId
                             }
                         })
                     }
