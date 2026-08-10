@@ -179,6 +179,10 @@ export default function NewSale() {
 
     const [discount, setDiscount] = useState<string>('')
     const [paidAmountInput, setPaidAmountInput] = useState<string>('')
+    const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK' | 'CHEQUE' | 'MULTIPLE'>('CASH')
+    const [splitCash, setSplitCash] = useState<string>('')
+    const [splitBank, setSplitBank] = useState<string>('')
+    const [splitCheque, setSplitCheque] = useState<string>('')
 
     const totalWeight = cart.reduce((sum, item) => sum + (item.weight * item.quantity), 0)
     // Round subtotal explicitly at the item level summation to prevent carrying floating points
@@ -199,6 +203,25 @@ export default function NewSale() {
             }
         } else if (status === 'QUOTATION') {
             finalPaid = 0;
+        } else if (paymentMethod === 'MULTIPLE') {
+            const sumSplit = (parseFloat(splitCash) || 0) + (parseFloat(splitBank) || 0) + (parseFloat(splitCheque) || 0);
+            finalPaid = sumSplit;
+            if (finalPaid < finalTotal) {
+                finalStatus = 'CREDIT';
+            }
+        }
+
+        let calcCash = 0;
+        let calcBank = 0;
+        let calcCheque = 0;
+
+        if (paymentMethod === 'CASH') calcCash = finalPaid;
+        else if (paymentMethod === 'BANK') calcBank = finalPaid;
+        else if (paymentMethod === 'CHEQUE') calcCheque = finalPaid;
+        else if (paymentMethod === 'MULTIPLE') {
+            calcCash = parseFloat(splitCash) || 0;
+            calcBank = parseFloat(splitBank) || 0;
+            calcCheque = parseFloat(splitCheque) || 0;
         }
 
         try {
@@ -211,6 +234,10 @@ export default function NewSale() {
                     status: finalStatus,
                     discount: parseFloat(discount) || 0,
                     paidAmount: finalPaid,
+                    paymentMethod: paymentMethod,
+                    cashAmount: calcCash,
+                    bankAmount: calcBank,
+                    chequeAmount: calcCheque,
                     createdAt: createdAt,
                     dispatchBranchId: dispatchBranchId || null
                 })
@@ -551,23 +578,127 @@ export default function NewSale() {
                                                 className="h-10 w-full text-base font-bold bg-white"
                                             />
                                         </div>
+                                        {paymentMethod !== 'MULTIPLE' && (
+                                            <div className="flex-1">
+                                                <div className="text-xs font-bold text-gray-500 mb-1">المدفوع (للقسط):</div>
+                                                <Input
+                                                    type="number"
+                                                    placeholder={finalTotal.toString()}
+                                                    value={paidAmountInput}
+                                                    onChange={e => setPaidAmountInput(e.target.value)}
+                                                    className="h-10 w-full bg-amber-50 text-base font-bold text-blue-900 border-amber-200"
+                                                />
+                                            </div>
+                                        )}
                                         <div className="flex-1">
-                                            <div className="text-xs font-bold text-gray-500 mb-1">المدفوع (للقسط):</div>
-                                            <Input
-                                                type="number"
-                                                placeholder={finalTotal.toString()}
-                                                value={paidAmountInput}
-                                                onChange={e => setPaidAmountInput(e.target.value)}
-                                                className="h-10 w-full bg-amber-50 text-base font-bold text-blue-900 border-amber-200"
-                                            />
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="text-xs font-bold text-gray-500 mb-1">المتبقي الدائم:</div>
+                                            <div className="text-xs font-bold text-gray-500 mb-1">المتبقي:</div>
                                             <div className="h-10 flex items-center px-3 border border-red-200 rounded-lg bg-red-50 text-red-600 font-bold text-base overflow-hidden whitespace-nowrap">
-                                                {paidAmountInput === '' ? 0 : Math.max(0, finalTotal - parseFloat(paidAmountInput || '0')).toLocaleString()}
+                                                {paymentMethod === 'MULTIPLE' 
+                                                    ? Math.max(0, finalTotal - ((parseFloat(splitCash) || 0) + (parseFloat(splitBank) || 0) + (parseFloat(splitCheque) || 0))).toLocaleString()
+                                                    : (paidAmountInput === '' ? 0 : Math.max(0, finalTotal - parseFloat(paidAmountInput || '0')).toLocaleString())
+                                                }
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Payment Methods Selector Pills */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-black text-slate-700 block">وسيلة وطريقة الدفع:</label>
+                                        <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
+                                            <button
+                                                type="button"
+                                                onClick={() => setPaymentMethod('CASH')}
+                                                className={`py-2 px-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 ${
+                                                    paymentMethod === 'CASH'
+                                                        ? 'bg-emerald-600 text-white shadow-md'
+                                                        : 'text-slate-700 hover:bg-slate-200'
+                                                }`}
+                                            >
+                                                <span>💵 كاش</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setPaymentMethod('BANK')}
+                                                className={`py-2 px-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 ${
+                                                    paymentMethod === 'BANK'
+                                                        ? 'bg-blue-600 text-white shadow-md'
+                                                        : 'text-slate-700 hover:bg-slate-200'
+                                                }`}
+                                            >
+                                                <span>🏦 بنك</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setPaymentMethod('CHEQUE')}
+                                                className={`py-2 px-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 ${
+                                                    paymentMethod === 'CHEQUE'
+                                                        ? 'bg-purple-600 text-white shadow-md'
+                                                        : 'text-slate-700 hover:bg-slate-200'
+                                                }`}
+                                            >
+                                                <span>📑 شيك</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setPaymentMethod('MULTIPLE')}
+                                                className={`py-2 px-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 ${
+                                                    paymentMethod === 'MULTIPLE'
+                                                        ? 'bg-amber-600 text-white shadow-md'
+                                                        : 'text-slate-700 hover:bg-slate-200'
+                                                }`}
+                                            >
+                                                <span>🔀 مجزأ</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Split Payment Controls */}
+                                    {paymentMethod === 'MULTIPLE' && (
+                                        <div className="bg-amber-50/80 border border-amber-200/80 p-3 rounded-xl space-y-2.5 animate-fade-in">
+                                            <span className="text-xs font-black text-amber-900 block">توزيع مبالغ الدفع المجزأ:</span>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">💵 مبلغ الكاش</label>
+                                                    <input
+                                                        type="number"
+                                                        value={splitCash}
+                                                        onChange={(e) => setSplitCash(e.target.value)}
+                                                        placeholder="0"
+                                                        className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">🏦 تحويل بنكي</label>
+                                                    <input
+                                                        type="number"
+                                                        value={splitBank}
+                                                        onChange={(e) => setSplitBank(e.target.value)}
+                                                        placeholder="0"
+                                                        className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">📑 مبلغ الشيك</label>
+                                                    <input
+                                                        type="number"
+                                                        value={splitCheque}
+                                                        onChange={(e) => setSplitCheque(e.target.value)}
+                                                        placeholder="0"
+                                                        className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 font-mono"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs font-bold text-slate-800 bg-white p-2 rounded-lg border border-amber-200">
+                                                <span>مجموع المدفوع:</span>
+                                                <span className="font-mono text-indigo-700 font-black">
+                                                    {((parseFloat(splitCash) || 0) + (parseFloat(splitBank) || 0) + (parseFloat(splitCheque) || 0)).toLocaleString()} / {finalTotal.toLocaleString()} ج.س
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Big Total Box */}
                                     <div className="flex justify-between items-center bg-slate-900 text-white p-4 rounded-xl shadow-lg border-b-4 border-blue-500">

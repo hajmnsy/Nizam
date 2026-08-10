@@ -26,6 +26,10 @@ interface Sale {
     discount?: number
     paidAmount?: number
     remainingAmount?: number
+    paymentMethod?: string
+    cashAmount?: number
+    bankAmount?: number
+    chequeAmount?: number
     status: string
     createdAt: string
     items: SaleItem[]
@@ -78,13 +82,32 @@ export default function DailyReport() {
     // Calculations
     const totalSales = sales.reduce((sum, s) => sum + s.total, 0)
     const totalPaid = sales.reduce((sum, s) => {
-        // Fallback for legacy invoices created before the Partial Payment feature
         if (s.status === 'PAID' && (s.paidAmount === null || s.paidAmount === undefined)) {
             return sum + s.total;
         }
         return sum + (s.paidAmount || 0);
     }, 0)
     const totalRemaining = sales.reduce((sum, s) => sum + (s.remainingAmount || 0), 0)
+
+    // Detailed Treasury breakdown calculations
+    const totalCashInSafe = sales.reduce((sum, s) => {
+        if (s.cashAmount !== undefined && s.cashAmount !== null && s.cashAmount > 0) return sum + s.cashAmount;
+        if (s.paymentMethod === 'BANK' || s.paymentMethod === 'CHEQUE') return sum;
+        if (s.status === 'PAID' && (s.paidAmount === null || s.paidAmount === undefined)) return sum + s.total;
+        return sum + (s.paidAmount || 0);
+    }, 0)
+
+    const totalBankTransfer = sales.reduce((sum, s) => {
+        if (s.bankAmount !== undefined && s.bankAmount !== null && s.bankAmount > 0) return sum + s.bankAmount;
+        if (s.paymentMethod === 'BANK') return sum + (s.paidAmount || (s.status === 'PAID' ? s.total : 0));
+        return sum;
+    }, 0)
+
+    const totalCheques = sales.reduce((sum, s) => {
+        if (s.chequeAmount !== undefined && s.chequeAmount !== null && s.chequeAmount > 0) return sum + s.chequeAmount;
+        if (s.paymentMethod === 'CHEQUE') return sum + (s.paidAmount || (s.status === 'PAID' ? s.total : 0));
+        return sum;
+    }, 0)
 
     // Items aggregate
     const itemMap = new Map<string, { name: string, type: string | null, thickness: number | null, qty: number, totalVal: number }>()
@@ -224,31 +247,46 @@ export default function DailyReport() {
                         </div>
                     ) : (
                         <>
-                            {/* Key Metrics */}
-                            <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-2 ${!printSummaryBoxes ? 'print:hidden' : ''}`}>
-                                <div className="bg-blue-50 border border-blue-100 p-6 rounded-xl print:border-slate-300 print:bg-transparent">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <TrendingUp className="text-blue-500" size={24} />
-                                        <h3 className="font-bold text-slate-700 print:text-black">إجمالي مبيعات اليوم</h3>
+                            {/* Key Metrics & Treasury Breakdown */}
+                            <div className={`grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8 mt-2 ${!printSummaryBoxes ? 'print:hidden' : ''}`}>
+                                <div className="bg-emerald-50 border border-emerald-200/80 p-5 rounded-2xl print:border-slate-300 print:bg-transparent shadow-sm">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <HandCoins className="text-emerald-600" size={20} />
+                                        <h3 className="font-bold text-xs text-slate-700 print:text-black">💵 الخزنة النقدية (كاش)</h3>
                                     </div>
-                                    <p className="text-3xl font-black text-blue-700 print:text-black">{totalSales.toLocaleString()} <span className="text-sm font-bold text-slate-500">ج.س</span></p>
-                                    <p className="text-sm text-blue-600/80 mt-2 font-medium">{sales.length} فاتورة</p>
+                                    <p className="text-2xl font-black text-emerald-700 print:text-black font-mono">{totalCashInSafe.toLocaleString()} <span className="text-xs font-bold text-slate-500 font-sans">ج.س</span></p>
                                 </div>
 
-                                <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-xl print:border-slate-300 print:bg-transparent">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <HandCoins className="text-emerald-500" size={24} />
-                                        <h3 className="font-bold text-slate-700 print:text-black">التحصيل النقدي</h3>
+                                <div className="bg-blue-50 border border-blue-200/80 p-5 rounded-2xl print:border-slate-300 print:bg-transparent shadow-sm">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <TrendingUp className="text-blue-600" size={20} />
+                                        <h3 className="font-bold text-xs text-slate-700 print:text-black">🏦 الرصيد البنكي (تحاويل)</h3>
                                     </div>
-                                    <p className="text-3xl font-black text-emerald-700 print:text-black">{totalPaid.toLocaleString()} <span className="text-sm font-bold text-slate-500">ج.س</span></p>
+                                    <p className="text-2xl font-black text-blue-700 print:text-black font-mono">{totalBankTransfer.toLocaleString()} <span className="text-xs font-bold text-slate-500 font-sans">ج.س</span></p>
                                 </div>
 
-                                <div className="bg-amber-50 border border-amber-100 p-6 rounded-xl print:border-slate-300 print:bg-transparent">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <AlertCircle className="text-amber-500" size={24} />
-                                        <h3 className="font-bold text-slate-700 print:text-black">مبيعات آجلة (متبقي)</h3>
+                                <div className="bg-purple-50 border border-purple-200/80 p-5 rounded-2xl print:border-slate-300 print:bg-transparent shadow-sm">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <FileText className="text-purple-600" size={20} />
+                                        <h3 className="font-bold text-xs text-slate-700 print:text-black">📑 رصيد الشيكات</h3>
                                     </div>
-                                    <p className="text-3xl font-black text-amber-700 print:text-black">{totalRemaining.toLocaleString()} <span className="text-sm font-bold text-slate-500">ج.س</span></p>
+                                    <p className="text-2xl font-black text-purple-700 print:text-black font-mono">{totalCheques.toLocaleString()} <span className="text-xs font-bold text-slate-500 font-sans">ج.س</span></p>
+                                </div>
+
+                                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl print:border-slate-300 print:bg-transparent shadow-sm">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <TrendingUp className="text-slate-600" size={20} />
+                                        <h3 className="font-bold text-xs text-slate-700 print:text-black">📈 إجمالي المبيعات</h3>
+                                    </div>
+                                    <p className="text-2xl font-black text-slate-800 print:text-black font-mono">{totalSales.toLocaleString()} <span className="text-xs font-bold text-slate-500 font-sans">ج.س</span></p>
+                                </div>
+
+                                <div className="bg-amber-50 border border-amber-200/80 p-5 rounded-2xl print:border-slate-300 print:bg-transparent shadow-sm">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <AlertCircle className="text-amber-600" size={20} />
+                                        <h3 className="font-bold text-xs text-slate-700 print:text-black">⏳ مبيعات آجلة (متبقي)</h3>
+                                    </div>
+                                    <p className="text-2xl font-black text-amber-700 print:text-black font-mono">{totalRemaining.toLocaleString()} <span className="text-xs font-bold text-slate-500 font-sans">ج.س</span></p>
                                 </div>
                             </div>
 
@@ -317,6 +355,7 @@ export default function DailyReport() {
                                         <thead className="bg-slate-100 print:bg-slate-50">
                                             <tr>
                                                 <th className="p-3 border-b-2 border-slate-200">رقم</th>
+                                                <th className="p-3 border-b-2 border-slate-200">وسيلة الدفع</th>
                                                 <th className="p-3 border-b-2 border-slate-200">الحالة</th>
                                                 <th className="p-3 border-b-2 border-slate-200 text-left">تاريخ / وقت</th>
                                                 <th className="p-3 border-b-2 border-slate-200 text-left">قيمة الفاتورة</th>
@@ -326,6 +365,19 @@ export default function DailyReport() {
                                             {sales.map(s => (
                                                 <tr key={s.id} className="border-b border-slate-100">
                                                     <td className="p-3 font-mono font-bold text-slate-700">#{s.invoiceNumber || s.id}</td>
+                                                    <td className="p-3">
+                                                        {s.paymentMethod === 'BANK' ? (
+                                                            <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-xs font-bold border border-blue-200">🏦 بنك</span>
+                                                        ) : s.paymentMethod === 'CHEQUE' ? (
+                                                            <span className="text-purple-700 bg-purple-50 px-2 py-0.5 rounded text-xs font-bold border border-purple-200">📑 شيك</span>
+                                                        ) : s.paymentMethod === 'MULTIPLE' ? (
+                                                            <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded text-xs font-bold border border-amber-200" title={`كاش: ${s.cashAmount || 0} | بنك: ${s.bankAmount || 0} | شيك: ${s.chequeAmount || 0}`}>
+                                                                🔀 مجزأ (كاش:{s.cashAmount || 0} / بنك:{s.bankAmount || 0} / شيك:{s.chequeAmount || 0})
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-xs font-bold border border-emerald-200">💵 كاش</span>
+                                                        )}
+                                                    </td>
                                                     <td className="p-3">
                                                         {s.status === 'PAID' ? (
                                                             <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-xs font-bold border border-emerald-100">مسددة</span>

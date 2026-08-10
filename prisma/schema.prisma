@@ -49,6 +49,10 @@ model Sale {
   remainingAmount Float      @default(0)
   discount        Float      @default(0)
   status          String     @default("PAID")
+  paymentMethod   String     @default("CASH")
+  cashAmount      Float      @default(0)
+  bankAmount      Float      @default(0)
+  chequeAmount    Float      @default(0)
   createdAt       DateTime   @default(now())
   items           SaleItem[]
   payments        Payment[]

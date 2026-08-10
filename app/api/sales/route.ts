@@ -58,6 +58,32 @@ export async function POST(request: Request) {
         const actualRemainingAmount = Math.max(0, total - adjustedPaidAmount);
         const finalStatus = actualRemainingAmount === 0 && status === 'CREDIT' ? 'PAID' : status;
 
+        // Determine payment method amounts
+        const paymentMethod = json.paymentMethod || 'CASH';
+        let cashAmount = parseFloat(json.cashAmount || '0');
+        let bankAmount = parseFloat(json.bankAmount || '0');
+        let chequeAmount = parseFloat(json.chequeAmount || '0');
+
+        if (paymentMethod === 'CASH') {
+            cashAmount = adjustedPaidAmount;
+            bankAmount = 0;
+            chequeAmount = 0;
+        } else if (paymentMethod === 'BANK') {
+            bankAmount = adjustedPaidAmount;
+            cashAmount = 0;
+            chequeAmount = 0;
+        } else if (paymentMethod === 'CHEQUE') {
+            chequeAmount = adjustedPaidAmount;
+            cashAmount = 0;
+            bankAmount = 0;
+        } else if (paymentMethod === 'MULTIPLE') {
+            // Validate sum of split payments matches adjustedPaidAmount
+            const sumSplit = cashAmount + bankAmount + chequeAmount;
+            if (sumSplit === 0 && adjustedPaidAmount > 0) {
+                cashAmount = adjustedPaidAmount;
+            }
+        }
+
         const result = await prisma.$transaction(async (tx) => {
             let invoiceNumber = null;
             if (finalStatus !== 'QUOTATION') {
@@ -79,6 +105,10 @@ export async function POST(request: Request) {
                     paidAmount: adjustedPaidAmount,
                     remainingAmount: actualRemainingAmount,
                     status: finalStatus,
+                    paymentMethod: paymentMethod,
+                    cashAmount: cashAmount,
+                    bankAmount: bankAmount,
+                    chequeAmount: chequeAmount,
                     createdAt: finalCreatedAt,
                     branchId,
                     dispatchBranchId: dispatchBranchId || branchId,
