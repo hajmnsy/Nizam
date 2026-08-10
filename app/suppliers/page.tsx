@@ -110,6 +110,64 @@ export default function SuppliersPage() {
         }
     }
 
+    const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null)
+
+    const openEditModal = (supplier: Supplier) => {
+        setEditingSupplier(supplier)
+        setFormData({
+            name: supplier.name,
+            phone: supplier.phone || '',
+            company: supplier.company || '',
+            address: supplier.address || '',
+            notes: supplier.notes || ''
+        })
+    }
+
+    const handleUpdateSupplier = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!editingSupplier || !formData.name.trim()) return
+        setSaving(true)
+
+        try {
+            const res = await fetch(`/api/suppliers/${editingSupplier.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            })
+
+            if (res.ok) {
+                setEditingSupplier(null)
+                setFormData({ name: '', phone: '', company: '', address: '', notes: '' })
+                fetchSuppliers()
+            } else {
+                const err = await res.json()
+                alert(err.error || 'فشل تعديل بيانات المورد')
+            }
+        } catch (error) {
+            console.error(error)
+            alert('حدث خطأ في الاتصال')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const handleDeleteSupplier = async (supplier: Supplier) => {
+        if (!confirm(`هل أنت متأكد من حذف المورد "${supplier.name}"؟`)) return
+
+        try {
+            const res = await fetch(`/api/suppliers/${supplier.id}`, { method: 'DELETE' })
+            if (res.ok) {
+                fetchSuppliers()
+            } else {
+                const err = await res.json()
+                alert(err.error || 'تعذر حذف المورد (قد يكون مرتبكاً بفواتير مشتريات أو منصرفات)')
+            }
+        } catch (error) {
+            console.error(error)
+            alert('حدث خطأ في الاتصال')
+        }
+    }
+
     const openStatementModal = (supplier: Supplier) => {
         setSelectedSupplier(supplier)
         setLoadingDetails(true)
@@ -287,14 +345,30 @@ export default function SuppliersPage() {
                                                 </span>
                                             </td>
                                             <td className="p-4 text-center">
-                                                <Button
-                                                    onClick={() => openStatementModal(supplier)}
-                                                    size="sm"
-                                                    className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs px-3 py-1.5 rounded-xl border border-indigo-200/60 shadow-sm flex items-center gap-1 mx-auto"
-                                                >
-                                                    <FileText size={14} />
-                                                    <span>كشف الحساب</span>
-                                                </Button>
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    <Button
+                                                        onClick={() => openStatementModal(supplier)}
+                                                        size="sm"
+                                                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs px-2.5 py-1.5 rounded-xl border border-indigo-200/60 shadow-sm flex items-center gap-1"
+                                                    >
+                                                        <FileText size={14} />
+                                                        <span>كشف الحساب</span>
+                                                    </Button>
+                                                    <button
+                                                        onClick={() => openEditModal(supplier)}
+                                                        title="تعديل المورد"
+                                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors border border-transparent hover:border-blue-200"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteSupplier(supplier)}
+                                                        title="حذف المورد"
+                                                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors border border-transparent hover:border-rose-200"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -385,6 +459,94 @@ export default function SuppliersPage() {
                                         className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-6 py-2.5 rounded-xl shadow-md"
                                     >
                                         {saving ? 'جاري الحفظ...' : 'حفظ المورد'}
+                                    </Button>
+                                </div>
+                            </form>
+                        </Card>
+                    </div>
+                )}
+
+                {/* Edit Supplier Modal */}
+                {editingSupplier && (
+                    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                        <Card className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl space-y-5 relative">
+                            <div className="flex justify-between items-center border-b pb-3">
+                                <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                    <Edit2 className="text-blue-600" size={24} />
+                                    تعديل بيانات المورد: {editingSupplier.name}
+                                </h3>
+                                <button onClick={() => setEditingSupplier(null)} className="p-1 text-slate-400 hover:text-slate-800 rounded-full hover:bg-slate-100">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleUpdateSupplier} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">اسم المورد (مطلوب)</label>
+                                    <Input
+                                        value={formData.name}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                        required
+                                        placeholder="اسم المورد"
+                                        className="h-11 font-bold"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">اسم الشركة / المصنع</label>
+                                        <Input
+                                            value={formData.company}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                                            placeholder="اسم الشركة"
+                                            className="h-11 font-bold text-xs"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف</label>
+                                        <Input
+                                            value={formData.phone}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                                            placeholder="0123456789"
+                                            className="h-11 font-bold text-xs text-left" dir="ltr"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">العنوان / الموقع</label>
+                                    <Input
+                                        value={formData.address}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                                        placeholder="العنوان"
+                                        className="h-11 font-bold text-xs"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">ملاحظات</label>
+                                    <Input
+                                        value={formData.notes}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                                        placeholder="ملاحظات..."
+                                        className="h-11 font-bold text-xs"
+                                    />
+                                </div>
+
+                                <div className="flex justify-end gap-3 pt-3">
+                                    <Button
+                                        type="button"
+                                        onClick={() => setEditingSupplier(null)}
+                                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-5 py-2.5 rounded-xl"
+                                    >
+                                        إلغاء
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={saving}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white font-black text-xs px-6 py-2.5 rounded-xl shadow-md"
+                                    >
+                                        {saving ? 'جاري التعديل...' : 'تحديث البيانات'}
                                     </Button>
                                 </div>
                             </form>

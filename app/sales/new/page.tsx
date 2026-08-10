@@ -614,7 +614,7 @@ export default function NewSale() {
                                                         : 'text-slate-700 hover:bg-slate-200'
                                                 }`}
                                             >
-                                                <span>💵 كاش</span>
+                                                <span>كاش</span>
                                             </button>
 
                                             <button
@@ -626,7 +626,7 @@ export default function NewSale() {
                                                         : 'text-slate-700 hover:bg-slate-200'
                                                 }`}
                                             >
-                                                <span>🏦 بنك</span>
+                                                <span>تحويل بنكي</span>
                                             </button>
 
                                             <button
@@ -638,7 +638,7 @@ export default function NewSale() {
                                                         : 'text-slate-700 hover:bg-slate-200'
                                                 }`}
                                             >
-                                                <span>📑 شيك</span>
+                                                <span>شيك</span>
                                             </button>
 
                                             <button
@@ -650,7 +650,7 @@ export default function NewSale() {
                                                         : 'text-slate-700 hover:bg-slate-200'
                                                 }`}
                                             >
-                                                <span>🔀 مجزأ</span>
+                                                <span>مجزأ</span>
                                             </button>
                                         </div>
                                     </div>
@@ -661,7 +661,7 @@ export default function NewSale() {
                                             <span className="text-xs font-black text-amber-900 block">توزيع مبالغ الدفع المجزأ:</span>
                                             <div className="grid grid-cols-3 gap-2">
                                                 <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">💵 مبلغ الكاش</label>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">مبلغ الكاش</label>
                                                     <input
                                                         type="number"
                                                         value={splitCash}
@@ -671,7 +671,7 @@ export default function NewSale() {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">🏦 تحويل بنكي</label>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">تحويل بنكي</label>
                                                     <input
                                                         type="number"
                                                         value={splitBank}
@@ -681,7 +681,7 @@ export default function NewSale() {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">📑 مبلغ الشيك</label>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">مبلغ الشيك</label>
                                                     <input
                                                         type="number"
                                                         value={splitCheque}
