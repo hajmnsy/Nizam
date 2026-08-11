@@ -63,20 +63,67 @@ export async function POST(request: Request) {
             }
         })
 
-        // Seed default categories for this branch
-        const defaultCategories = [
-            { name: 'حديد تسليح' },
-            { name: 'مسطحات' },
-            { name: 'قطاعات' },
-            { name: 'مواسير' },
-            { name: 'زوايا' },
-        ]
-        
-        for (const cat of defaultCategories) {
-            await prisma.category.create({
+        // Seed categories for this branch from Main Branch (branchId: 1) or defaults
+        const mainCategories = await prisma.category.findMany({ where: { branchId: 1 } })
+        const categoryMap: Record<string, number> = {}
+
+        if (mainCategories.length > 0) {
+            for (const cat of mainCategories) {
+                const createdCat = await prisma.category.create({
+                    data: {
+                        name: cat.name,
+                        sellingPricePerTonUSD: cat.sellingPricePerTonUSD || 0,
+                        branchId: branch.id
+                    }
+                })
+                categoryMap[cat.name] = createdCat.id
+            }
+        } else {
+            const defaultCategories = [
+                { name: 'حديد تسليح' },
+                { name: 'مسطحات' },
+                { name: 'قطاعات' },
+                { name: 'مواسير' },
+                { name: 'زوايا' },
+            ]
+            for (const cat of defaultCategories) {
+                const createdCat = await prisma.category.create({
+                    data: {
+                        name: cat.name,
+                        sellingPricePerTonUSD: 0,
+                        branchId: branch.id
+                    }
+                })
+                categoryMap[cat.name] = createdCat.id
+            }
+        }
+
+        // Clone products catalog from Main Branch (branchId: 1) with quantity 0
+        const mainProducts = await prisma.product.findMany({
+            where: { branchId: 1 },
+            include: { category: true }
+        })
+
+        const fallbackCat = await prisma.category.findFirst({ where: { branchId: branch.id } })
+
+        for (const prod of mainProducts) {
+            const targetCatId = (prod.category && categoryMap[prod.category.name]) 
+                ? categoryMap[prod.category.name] 
+                : (fallbackCat?.id || 1)
+
+            await prisma.product.create({
                 data: {
-                    name: cat.name,
-                    sellingPricePerTonUSD: 0,
+                    name: prod.name,
+                    type: prod.type,
+                    price: prod.price,
+                    purchasePriceUSD: prod.purchasePriceUSD || 0,
+                    transportCostUSD: prod.transportCostUSD || 15,
+                    quantity: 0, // Fresh standalone stock starts at 0!
+                    weightPerUnit: prod.weightPerUnit,
+                    length: prod.length,
+                    thickness: prod.thickness,
+                    width: prod.width,
+                    categoryId: targetCatId,
                     branchId: branch.id
                 }
             })
