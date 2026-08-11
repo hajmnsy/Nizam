@@ -98,37 +98,6 @@ export async function POST(request: Request) {
             }
         }
 
-        // Clone products catalog from Main Branch (branchId: 1) with quantity 0
-        const mainProducts = await prisma.product.findMany({
-            where: { branchId: 1 },
-            include: { category: true }
-        })
-
-        const fallbackCat = await prisma.category.findFirst({ where: { branchId: branch.id } })
-
-        for (const prod of mainProducts) {
-            const targetCatId = (prod.category && categoryMap[prod.category.name]) 
-                ? categoryMap[prod.category.name] 
-                : (fallbackCat?.id || 1)
-
-            await prisma.product.create({
-                data: {
-                    name: prod.name,
-                    type: prod.type,
-                    price: prod.price,
-                    purchasePriceUSD: prod.purchasePriceUSD || 0,
-                    transportCostUSD: prod.transportCostUSD || 15,
-                    quantity: 0, // Fresh standalone stock starts at 0!
-                    weightPerUnit: prod.weightPerUnit,
-                    length: prod.length,
-                    thickness: prod.thickness,
-                    width: prod.width,
-                    categoryId: targetCatId,
-                    branchId: branch.id
-                }
-            })
-        }
-
         // Automatically create default user credentials for this branch (username: branchCode, password: 123456)
         const defaultUsername = cleanCode
         const existingBranchUser = await prisma.user.findUnique({ where: { username: defaultUsername } })
