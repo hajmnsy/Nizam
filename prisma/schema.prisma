@@ -44,6 +44,8 @@ model Sale {
   id              Int        @id @default(autoincrement())
   invoiceNumber   Int?
   customer        String?
+  customerId      Int?
+  customerRel     Customer?  @relation(fields: [customerId], references: [id])
   total           Float
   paidAmount      Float      @default(0)
   remainingAmount Float      @default(0)
@@ -162,6 +164,34 @@ model Session {
   user      User     @relation(fields: [userId], references: [id])
 }
 
+model Customer {
+  id        Int               @id @default(autoincrement())
+  name      String
+  phone     String?
+  address   String?
+  company   String?
+  notes     String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  branchId  Int               @default(1)
+  branch    Branch            @relation(fields: [branchId], references: [id])
+  sales     Sale[]
+  deposits  CustomerDeposit[]
+}
+
+model CustomerDeposit {
+  id            Int       @id @default(autoincrement())
+  customerId    Int
+  customer      Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  amount        Float
+  paymentMethod String    @default("CASH")
+  description   String?
+  date          DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  branchId      Int       @default(1)
+  branch        Branch    @relation(fields: [branchId], references: [id])
+}
+
 model Supplier {
   id        Int        @id @default(autoincrement())
   name      String
@@ -222,6 +252,8 @@ model Branch {
   employees           Employee[]
   returns             SaleReturn[]
   suppliers           Supplier[]
+  customers           Customer[]
+  customerDeposits    CustomerDeposit[]
 }
 
 model SaleReturn {

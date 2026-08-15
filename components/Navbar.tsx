@@ -220,6 +220,7 @@ export default function Navbar() {
         { name: 'المشتريات', path: '/purchases' },
         { name: 'الموردين', path: '/suppliers' },
         { name: 'المبيعات', path: '/sales' },
+        { name: 'العملاء', path: '/customers' },
         { name: 'راجع البضاعة', path: '/sales/returns' },
         { name: 'المصروفات', path: '/expenses' },
         { name: 'حركة الأصناف', path: '/reports/items' },

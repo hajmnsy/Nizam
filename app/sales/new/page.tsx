@@ -63,6 +63,8 @@ export default function NewSale() {
     const [branches, setBranches] = useState<any[]>([])
     const [dispatchBranchId, setDispatchBranchId] = useState<string>('')
     const [activeBranchId, setActiveBranchId] = useState<number>(1)
+    const [registeredCustomers, setRegisteredCustomers] = useState<any[]>([])
+    const [selectedCustomerId, setSelectedCustomerId] = useState<string>('')
 
     useEffect(() => {
         Promise.all([
@@ -70,10 +72,12 @@ export default function NewSale() {
             fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/branches', { cache: 'no-store' }).then(res => res.json()),
+            fetch('/api/customers', { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/auth/me', { cache: 'no-store' }).then(res => res.json())
-        ]).then(([productsData, categoriesData, exchangeRateData, branchesData, userData]) => {
+        ]).then(([productsData, categoriesData, exchangeRateData, branchesData, customersData, userData]) => {
             setProducts(Array.isArray(productsData) ? productsData : [])
             if (Array.isArray(branchesData)) setBranches(branchesData)
+            if (Array.isArray(customersData)) setRegisteredCustomers(customersData)
             if (userData && userData.branchId) {
                 setActiveBranchId(userData.branchId)
                 setDispatchBranchId(userData.branchId.toString())
@@ -230,6 +234,7 @@ export default function NewSale() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     customer: customer || (status === 'QUOTATION' ? 'عرض سعر' : 'عميل نقدي'),
+                    customerId: selectedCustomerId ? parseInt(selectedCustomerId) : null,
                     items: cart,
                     status: finalStatus,
                     discount: parseFloat(discount) || 0,
@@ -281,11 +286,41 @@ export default function NewSale() {
                         </div>
                         
                         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                            {registeredCustomers.length > 0 && (
+                                <select
+                                    value={selectedCustomerId}
+                                    onChange={(e) => {
+                                        const custId = e.target.value;
+                                        setSelectedCustomerId(custId);
+                                        if (custId) {
+                                            const found = registeredCustomers.find(c => c.id === parseInt(custId));
+                                            if (found) setCustomer(found.name);
+                                        }
+                                    }}
+                                    className="h-10 bg-emerald-50 border border-emerald-300 rounded-lg px-2 text-xs font-bold text-emerald-900 outline-none focus:ring-2 focus:ring-emerald-500 max-w-[220px]"
+                                >
+                                    <option value="">👤 اختيار عميل مسجل...</option>
+                                    {registeredCustomers.map(c => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.name} {c.company ? `(${c.company})` : ''} {c.remainingBalance > 0 ? `[له مودع: ${c.remainingBalance.toLocaleString()}]` : c.remainingBalance < 0 ? `[عليه: ${Math.abs(c.remainingBalance).toLocaleString()}]` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+
                             <Input
                                 placeholder="اسم العميل (اختياري)"
                                 value={customer}
-                                onChange={(e) => setCustomer(e.target.value)}
-                                className="h-10 bg-gray-50 min-w-[200px]"
+                                onChange={(e) => {
+                                    setCustomer(e.target.value);
+                                    if (selectedCustomerId) {
+                                        const found = registeredCustomers.find(c => c.id === parseInt(selectedCustomerId));
+                                        if (found && found.name !== e.target.value) {
+                                            setSelectedCustomerId('');
+                                        }
+                                    }
+                                }}
+                                className="h-10 bg-gray-50 min-w-[170px]"
                             />
                             <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 h-10 min-w-[170px]">
                                 <Calendar size={16} className="text-gray-500" />

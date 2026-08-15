@@ -84,6 +84,8 @@ export async function POST(request: Request) {
             }
         }
 
+        const customerId = json.customerId ? parseInt(json.customerId) : null;
+
         const result = await prisma.$transaction(async (tx) => {
             let invoiceNumber = null;
             if (finalStatus !== 'QUOTATION') {
@@ -100,6 +102,7 @@ export async function POST(request: Request) {
                 data: {
                     invoiceNumber: invoiceNumber,
                     customer: json.customer || 'Customer',
+                    customerId: customerId,
                     total: total,
                     discount: discount,
                     paidAmount: adjustedPaidAmount,
