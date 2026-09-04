@@ -76,6 +76,8 @@ export default function EditSale() {
     const [searchTerm, setSearchTerm] = useState('')
     const [discount, setDiscount] = useState<string>('')
     const [paidAmountInput, setPaidAmountInput] = useState<string>('')
+    const [currency, setCurrency] = useState<'SDG' | 'USD' | 'AED'>('SDG')
+    const [currencyRate, setCurrencyRate] = useState<string>('1')
     const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK' | 'CHEQUE' | 'MULTIPLE'>('CASH')
     const [splitCash, setSplitCash] = useState<string>('')
     const [splitBank, setSplitBank] = useState<string>('')
@@ -160,6 +162,12 @@ export default function EditSale() {
                     setPaidAmountInput((saleData.total - (saleData.discount || 0)).toString())
                 }
 
+                if (saleData.currency) {
+                    setCurrency(saleData.currency)
+                }
+                if (saleData.currencyRate) {
+                    setCurrencyRate(saleData.currencyRate.toString())
+                }
                 if (saleData.paymentMethod) {
                     setPaymentMethod(saleData.paymentMethod)
                 }
@@ -368,6 +376,8 @@ export default function EditSale() {
                     discount: parseFloat(discount) || 0,
                     paidAmount: finalPaid,
                     createdAt: createdAt,
+                    currency: currency,
+                    currencyRate: parseFloat(currencyRate) || 1,
                     paymentMethod: paymentMethod,
                     cashAmount: calcCash,
                     bankAmount: calcBank,
@@ -712,6 +722,52 @@ export default function EditSale() {
                                             }
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Currency Selector */}
+                                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2">
+                                    <div className="flex flex-wrap justify-between items-center gap-2">
+                                        <label className="text-xs font-black text-slate-700">عملة الفاتورة:</label>
+                                        <div className="flex gap-1 bg-white p-1 rounded-lg border border-slate-200">
+                                            {(['SDG', 'USD', 'AED'] as const).map(curr => (
+                                                <button
+                                                    key={curr}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setCurrency(curr)
+                                                        if (curr === 'USD' && exchangeRate > 0) {
+                                                            setCurrencyRate(exchangeRate.toString())
+                                                        } else if (curr === 'SDG') {
+                                                            setCurrencyRate('1')
+                                                        }
+                                                    }}
+                                                    className={`px-2.5 py-1 rounded text-xs font-black transition-all ${
+                                                        currency === curr
+                                                            ? 'bg-indigo-600 text-white shadow-sm'
+                                                            : 'text-slate-600 hover:bg-slate-100'
+                                                    }`}
+                                                >
+                                                    {curr === 'SDG' ? 'جنيه' : curr === 'USD' ? 'دولار' : 'درهم'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {currency !== 'SDG' && (
+                                        <div className="flex flex-wrap items-center gap-2 pt-1.5 border-t border-slate-200">
+                                            <span className="text-[10px] font-bold text-slate-600">سعر الصرف (ج.س):</span>
+                                            <input
+                                                type="number"
+                                                step="any"
+                                                value={currencyRate}
+                                                onChange={(e) => setCurrencyRate(e.target.value)}
+                                                className="w-20 text-xs font-bold p-1 bg-white border border-slate-300 rounded-lg outline-none font-mono text-center"
+                                            />
+                                            <span className="text-[11px] font-mono font-black text-indigo-700">
+                                                المطلوب: {((finalTotal / (parseFloat(currencyRate) || 1))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency === 'USD' ? '$' : 'د.إ'}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Payment Method Selector */}

@@ -75,10 +75,23 @@ function numberToArabicWords(number: number): string {
 
 function tafqeetCurrency(amount: number, currency: string = 'SDG'): string {
     if (!amount || amount === 0) return 'صفر';
-    const words = numberToArabicWords(Math.floor(amount));
+    const integerPart = Math.floor(amount);
+    const decimalPart = Math.round((amount - integerPart) * 100);
+    const words = numberToArabicWords(integerPart);
     let currText = 'جنيه سوداني';
-    if (currency === 'USD') currText = 'دولار أمريكي';
-    else if (currency === 'AED') currText = 'درهم إماراتي';
+    let subText = 'قرش';
+    if (currency === 'USD') {
+        currText = 'دولار أمريكي';
+        subText = 'سنت';
+    } else if (currency === 'AED') {
+        currText = 'درهم إماراتي';
+        subText = 'فلس';
+    }
+
+    if (decimalPart > 0) {
+        const decWords = numberToArabicWords(decimalPart);
+        return `فقط وقدره ${words} ${currText} و${decWords} ${subText} لا غير`;
+    }
     return `فقط وقدره ${words} ${currText} لا غير`;
 }
 
@@ -319,6 +332,22 @@ export default function InvoiceDetails() {
     const finalTotalWithVat = sale.total + vatAmount
     const isMainBranch = sale.branchId === 1 || sale.branch?.code === 'main' || sale.branch?.name === 'الفرع الرئيسي' || !sale.branchId
     const isForeignCurrency = Boolean(sale.currency && sale.currency !== 'SDG')
+    const currencyRate = sale.currencyRate && sale.currencyRate > 0 ? sale.currencyRate : 1
+    const currencyCode = sale.currency || 'SDG'
+    const currencySymbol = currencyCode === 'USD' ? '$ USD' : currencyCode === 'AED' ? 'د.إ (AED)' : 'ج.س'
+    const shortCurrencySymbol = currencyCode === 'USD' ? '$' : currencyCode === 'AED' ? 'د.إ' : 'ج.س'
+
+    // Amounts in invoice currency vs SDG
+    const subtotalSDG = sale.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    const discountSDG = sale.discount || 0
+    const vatAmountSDG = vatAmount
+    const finalTotalSDG = finalTotalWithVat
+
+    const subtotalCurrency = isForeignCurrency ? subtotalSDG / currencyRate : subtotalSDG
+    const discountCurrency = isForeignCurrency ? discountSDG / currencyRate : discountSDG
+    const vatAmountCurrency = isForeignCurrency ? vatAmountSDG / currencyRate : vatAmountSDG
+    const finalTotalCurrency = isForeignCurrency ? finalTotalSDG / currencyRate : finalTotalSDG
+
     const bankTransfersList = getBankTransfersList(sale)
 
     return (
@@ -691,36 +720,63 @@ export default function InvoiceDetails() {
                                         <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">السماكة</th>
                                         <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">النوع</th>
                                         <th className="py-2.5 px-2 w-[10%] text-center font-black border border-slate-700">الكمية</th>
-                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">السعر الإفرادي</th>
-                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">سعر الكمية</th>
+                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">
+                                            السعر الإفرادي {isForeignCurrency ? `(${shortCurrencySymbol})` : ''}
+                                        </th>
+                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">
+                                            سعر الكمية {isForeignCurrency ? `(${shortCurrencySymbol})` : ''}
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="text-xs divide-y divide-slate-300">
-                                    {sale.items.map((item, index) => (
-                                        <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                                            <td className="py-1.5 px-2 text-center font-bold text-slate-600 border border-slate-300">
-                                                {index + 1}
-                                            </td>
-                                            <td className="py-1.5 px-3 font-black text-slate-900 border border-slate-300 text-sm leading-tight">
-                                                {item.product.name}
-                                            </td>
-                                            <td className="py-1.5 px-2 text-center font-bold font-mono text-slate-800 border border-slate-300">
-                                                {item.product.thickness ? `${item.product.thickness} مم` : '-'}
-                                            </td>
-                                            <td className="py-1.5 px-2 text-center font-bold text-slate-700 border border-slate-300">
-                                                {item.product.type || '-'}
-                                            </td>
-                                            <td className="py-1.5 px-2 text-center font-black font-mono text-slate-950 text-sm border border-slate-300">
-                                                {item.quantity}
-                                            </td>
-                                            <td className="py-1.5 px-2 text-center font-mono font-bold text-slate-800 border border-slate-300">
-                                                {item.price.toLocaleString()}
-                                            </td>
-                                            <td className="py-1.5 px-2 text-center font-mono font-black text-slate-950 border border-slate-300">
-                                                {(item.price * item.quantity).toLocaleString()}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {sale.items.map((item, index) => {
+                                        const itemUnitPriceCurrency = isForeignCurrency ? item.price / currencyRate : item.price
+                                        const itemTotalPriceCurrency = isForeignCurrency ? (item.price * item.quantity) / currencyRate : item.price * item.quantity
+
+                                        return (
+                                            <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
+                                                <td className="py-1.5 px-2 text-center font-bold text-slate-600 border border-slate-300">
+                                                    {index + 1}
+                                                </td>
+                                                <td className="py-1.5 px-3 font-black text-slate-900 border border-slate-300 text-sm leading-tight">
+                                                    {item.product.name}
+                                                </td>
+                                                <td className="py-1.5 px-2 text-center font-bold font-mono text-slate-800 border border-slate-300">
+                                                    {item.product.thickness ? `${item.product.thickness} مم` : '-'}
+                                                </td>
+                                                <td className="py-1.5 px-2 text-center font-bold text-slate-700 border border-slate-300">
+                                                    {item.product.type || '-'}
+                                                </td>
+                                                <td className="py-1.5 px-2 text-center font-black font-mono text-slate-950 text-sm border border-slate-300">
+                                                    {item.quantity}
+                                                </td>
+                                                <td className="py-1.5 px-2 text-center border border-slate-300">
+                                                    <span className="font-mono font-bold text-slate-900 text-xs">
+                                                        {isForeignCurrency
+                                                            ? itemUnitPriceCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                                            : item.price.toLocaleString()}
+                                                    </span>
+                                                    {isForeignCurrency && (
+                                                        <span className="text-[9px] text-slate-400 block font-mono">
+                                                            ({item.price.toLocaleString()} ج.س)
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="py-1.5 px-2 text-center border border-slate-300">
+                                                    <span className="font-mono font-black text-slate-950 text-xs">
+                                                        {isForeignCurrency
+                                                            ? itemTotalPriceCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                                            : (item.price * item.quantity).toLocaleString()}
+                                                    </span>
+                                                    {isForeignCurrency && (
+                                                        <span className="text-[9px] text-slate-400 block font-mono">
+                                                            ({(item.price * item.quantity).toLocaleString()} ج.س)
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
                                 </tbody>
                             </table>
                         )}
@@ -956,9 +1012,20 @@ export default function InvoiceDetails() {
                             {/* Right: Tafqeet & Payment Details */}
                             <div className="bg-slate-50 border border-slate-300 rounded-xl p-3.5 flex flex-col justify-between">
                                 <div>
-                                    <span className="text-[11px] font-black text-slate-500 block mb-1">المبلغ كتابة:</span>
+                                    <span className="text-[11px] font-black text-slate-500 block mb-1">المبلغ كتابة (المطلوب سداده):</span>
                                     <div className="text-sm font-black text-slate-900 leading-relaxed bg-white border border-slate-200 p-2.5 rounded-lg shadow-inner">
-                                        {tafqeetCurrency(Math.round(finalTotalWithVat), sale.currency || 'SDG')}
+                                        {isForeignCurrency ? (
+                                            <div className="space-y-1">
+                                                <div className="text-indigo-950">
+                                                    {tafqeetCurrency(finalTotalCurrency, sale.currency || 'SDG')}
+                                                </div>
+                                                <div className="text-[11px] text-slate-500 font-bold pt-1 border-t border-slate-100">
+                                                    يعادل بالجنيه: {tafqeetCurrency(Math.round(finalTotalSDG), 'SDG')}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            tafqeetCurrency(Math.round(finalTotalSDG), 'SDG')
+                                        )}
                                     </div>
                                 </div>
 
@@ -966,7 +1033,7 @@ export default function InvoiceDetails() {
                                     <div className="mt-2 text-xs font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 p-2 rounded-lg flex justify-between items-center">
                                         <span>القيمة بعملة الفاتورة ({sale.currency}):</span>
                                         <span className="font-mono text-sm font-black">
-                                            {(finalTotalWithVat / (sale.currencyRate || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {sale.currency === 'USD' ? '$ USD' : 'AED د.إ'}
+                                            {finalTotalCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
                                         </span>
                                     </div>
                                 )}
@@ -974,10 +1041,30 @@ export default function InvoiceDetails() {
                                 {sale.status === 'CREDIT' && (
                                     <div className="mt-2 text-xs grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
                                         <div className="text-slate-700">
-                                            <span>المدفوع:</span> <strong className="text-emerald-700 font-mono">{(sale.paidAmount || 0).toLocaleString()} ج.س</strong>
+                                            <span>المدفوع:</span>{' '}
+                                            <strong className="text-emerald-700 font-mono">
+                                                {isForeignCurrency
+                                                    ? `${((sale.paidAmount || 0) / currencyRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${shortCurrencySymbol}`
+                                                    : `${(sale.paidAmount || 0).toLocaleString()} ج.س`}
+                                            </strong>
+                                            {isForeignCurrency && (
+                                                <span className="text-[10px] text-slate-500 block font-mono">
+                                                    ({(sale.paidAmount || 0).toLocaleString()} ج.س)
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="text-slate-700 text-left">
-                                            <span>المتبقي:</span> <strong className="text-red-700 font-mono">{(sale.remainingAmount || 0).toLocaleString()} ج.س</strong>
+                                            <span>المتبقي:</span>{' '}
+                                            <strong className="text-red-700 font-mono">
+                                                {isForeignCurrency
+                                                    ? `${((sale.remainingAmount || 0) / currencyRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${shortCurrencySymbol}`
+                                                    : `${(sale.remainingAmount || 0).toLocaleString()} ج.س`}
+                                            </strong>
+                                            {isForeignCurrency && (
+                                                <span className="text-[10px] text-red-500 block font-mono">
+                                                    ({(sale.remainingAmount || 0).toLocaleString()} ج.س)
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -990,7 +1077,18 @@ export default function InvoiceDetails() {
                                         <tr>
                                             <td className="py-1.5 text-slate-600 font-bold">إجمالي الأصناف (المجموع الفرعي):</td>
                                             <td className="py-1.5 text-left font-mono font-bold text-slate-800 text-sm">
-                                                {sale.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString()} <span className="text-[10px] font-sans">ج.س</span>
+                                                {isForeignCurrency ? (
+                                                    <div>
+                                                        <span className="text-indigo-950 font-black">{subtotalCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> <span className="text-xs font-sans font-bold text-indigo-700">{shortCurrencySymbol}</span>
+                                                        <span className="text-[10px] text-slate-500 font-sans block">
+                                                            (يعادل: {subtotalSDG.toLocaleString()} ج.س)
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        {subtotalSDG.toLocaleString()} <span className="text-[10px] font-sans">ج.س</span>
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
 
@@ -998,7 +1096,18 @@ export default function InvoiceDetails() {
                                             <tr>
                                                 <td className="py-1.5 text-red-600 font-bold">الخصم الممنوح:</td>
                                                 <td className="py-1.5 text-left font-mono font-bold text-red-600 text-sm">
-                                                    -{(sale.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) - sale.total).toLocaleString()} <span className="text-[10px] font-sans">ج.س</span>
+                                                    {isForeignCurrency ? (
+                                                        <div>
+                                                            <span>- {discountCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> <span className="text-xs font-sans font-bold">{shortCurrencySymbol}</span>
+                                                            <span className="text-[10px] text-red-400 font-sans block">
+                                                                (-{discountSDG.toLocaleString()} ج.س)
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <div>
+                                                            -{discountSDG.toLocaleString()} <span className="text-[10px] font-sans">ج.س</span>
+                                                        </div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         )}
@@ -1007,15 +1116,41 @@ export default function InvoiceDetails() {
                                             <tr>
                                                 <td className="py-1.5 text-slate-600 font-bold">ضريبة القيمة المضافة ({settings.vatRate}%):</td>
                                                 <td className="py-1.5 text-left font-mono font-bold text-slate-800">
-                                                    +{vatAmount.toLocaleString()} <span className="text-[10px] font-sans">ج.س</span>
+                                                    {isForeignCurrency ? (
+                                                        <div>
+                                                            <span>+ {vatAmountCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> <span className="text-xs font-sans">{shortCurrencySymbol}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div>
+                                                            +{vatAmountSDG.toLocaleString()} <span className="text-[10px] font-sans">ج.س</span>
+                                                        </div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         )}
 
                                         <tr className="border-t-2 border-slate-800">
-                                            <td className="py-2.5 text-slate-950 font-black text-sm sm:text-base">الصافي النهائي المطلوب:</td>
-                                            <td className="py-2.5 text-left font-mono font-black text-slate-950 text-lg sm:text-xl">
-                                                {finalTotalWithVat.toLocaleString()} <span className="text-xs font-sans text-slate-600">ج.س</span>
+                                            <td className="py-2.5 text-slate-950 font-black text-sm sm:text-base">
+                                                الصافي النهائي المطلوب {isForeignCurrency ? `(${currencyCode})` : ''}:
+                                            </td>
+                                            <td className="py-2.5 text-left font-mono font-black text-slate-950 text-lg sm:text-2xl">
+                                                {isForeignCurrency ? (
+                                                    <div className="space-y-0.5">
+                                                        <div className="text-indigo-950">
+                                                            <span>{finalTotalCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> <span className="text-sm font-sans font-black text-indigo-700">{currencySymbol}</span>
+                                                        </div>
+                                                        <div className="text-[11px] font-sans font-bold text-slate-600">
+                                                            ما يعادل: <strong className="font-mono text-slate-900">{finalTotalSDG.toLocaleString()} ج.س</strong>
+                                                        </div>
+                                                        <div className="text-[10px] font-sans font-medium text-slate-500">
+                                                            سعر الصرف المعتمد: 1 {currencyCode} = {currencyRate.toLocaleString()} ج.س
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        {finalTotalSDG.toLocaleString()} <span className="text-xs font-sans text-slate-600">ج.س</span>
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     </tbody>

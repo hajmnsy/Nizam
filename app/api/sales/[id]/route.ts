@@ -248,6 +248,8 @@ export async function PUT(
                         ...(json.chequeAmount !== undefined && { chequeAmount: parseFloat(json.chequeAmount || '0') }),
                         ...(json.chequeNumber !== undefined && { chequeNumber: json.chequeNumber?.trim() || null }),
                         ...(json.chequeBank !== undefined && { chequeBank: json.chequeBank?.trim() || null }),
+                        ...(json.currency && { currency: json.currency }),
+                        ...(json.currencyRate !== undefined && { currencyRate: parseFloat(json.currencyRate) || 1 }),
                         items: {
                             create: newItemsData
                         },
