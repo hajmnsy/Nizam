@@ -460,7 +460,7 @@ export default function InvoiceDetails() {
     const totalPrintRows = (sale?.items?.length || 0) + (paymentRows?.length || 1);
 
     return (
-        <main className="min-h-screen bg-slate-100 print:bg-white print:min-h-0 print:m-0 print:p-0 pb-16 font-sans">
+        <main className="min-h-screen bg-slate-100 print:bg-white print:min-h-0 print:m-0 print:p-0 pb-16 print:pb-0 font-sans">
             {/* Top Navigation Bar */}
             <div className="print:hidden">
                 <Navbar />
@@ -605,12 +605,12 @@ export default function InvoiceDetails() {
                     </div>
                 </div>
 
-                {/* Print Layout Styles - Exact A4 Single-Sheet Fit without Zoom */}
+                {/* Print Layout Styles - Strictly Single A4 Sheet Guarantee */}
                 <style type="text/css" media="print">
                     {`
                         @page {
                             size: A4 portrait;
-                            margin: 7mm 8mm 6mm 8mm;
+                            margin: 5mm 6mm 4mm 6mm;
                         }
                         @media print {
                             *, *::before, *::after {
@@ -621,11 +621,12 @@ export default function InvoiceDetails() {
                             }
                             html, body {
                                 width: 100% !important;
-                                height: auto !important;
+                                height: 100% !important;
+                                max-height: 100% !important;
                                 margin: 0 !important;
                                 padding: 0 !important;
                                 background-color: #ffffff !important;
-                                overflow: visible !important;
+                                overflow: hidden !important;
                             }
                             .no-print {
                                 display: none !important;
@@ -633,12 +634,14 @@ export default function InvoiceDetails() {
                             .invoice-a4-sheet {
                                 width: 100% !important;
                                 max-width: 100% !important;
-                                min-height: auto !important;
+                                min-height: 0 !important;
+                                height: auto !important;
+                                max-height: 100% !important;
                                 margin: 0 !important;
                                 padding: 0 !important;
                                 border: none !important;
                                 box-shadow: none !important;
-                                overflow: visible !important;
+                                overflow: hidden !important;
                                 page-break-inside: avoid !important;
                                 break-inside: avoid !important;
                                 page-break-after: avoid !important;
@@ -688,20 +691,15 @@ export default function InvoiceDetails() {
                     </div>
 
                     {/* 2. Official Header */}
-                    <div className="relative z-10 grid grid-cols-12 items-center pb-3 mb-3 border-b-2 border-slate-900 gap-2 print:pb-1.5 print:mb-1.5 print:gap-1.5">
-                        {/* Right: Company and Branch Info (col-span-5) */}
-                        <div className="col-span-5 text-right space-y-1 print:space-y-0.5">
-                            <div className="flex items-center gap-1.5">
-                                <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight print:text-base">
-                                    المصنع السوداني الماليزي
-                                </h1>
-                            </div>
+                    <div className="relative z-10 grid grid-cols-3 items-center pb-3 mb-3 border-b-2 border-slate-900 gap-2 print:pb-1.5 print:mb-1.5 print:gap-1.5">
+                        {/* Right: Company and Branch Info */}
+                        <div className="text-right space-y-1 print:space-y-0.5">
+                            <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight print:text-base">
+                                المصنع السوداني الماليزي
+                            </h1>
                             <div className="flex items-center gap-1.5 pt-0.5 print:gap-1 print:pt-0">
                                 <span className="inline-block bg-slate-900 text-white text-[11px] font-black px-2.5 py-0.5 rounded shadow-sm print:text-[9px] print:px-1.5 print:py-0 print:bg-slate-900">
                                     {isMainBranch ? 'الفرع الرئيسي' : ((sale as any)?.branch?.name || 'فرع الشركة')}
-                                </span>
-                                <span className="text-[11px] font-bold text-slate-700 print:text-[9px]">
-                                    صناعة وتجارة كافة أنواع وتخانات الحديد
                                 </span>
                             </div>
                             <div className="text-[11px] text-slate-700 font-bold space-y-0.5 pt-1 print:text-[9px] print:space-y-0 print:pt-0.5">
@@ -723,9 +721,9 @@ export default function InvoiceDetails() {
                             </div>
                         </div>
 
-                        {/* Center: High-End Industrial Textual Logo for 'المصنع السوداني الماليزي' (col-span-4) */}
-                        <div className="col-span-4 flex flex-col justify-center items-center">
-                            <div className="relative w-full py-2 px-3 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white border-2 border-slate-900 rounded-xl flex flex-col items-center justify-center select-none shadow-md print:shadow-none print:py-1.5 print:px-2 print:bg-slate-950 print:border-slate-900">
+                        {/* Center: Exactly Centered High-End Industrial Textual Logo */}
+                        <div className="flex flex-col justify-center items-center text-center">
+                            <div className="relative w-full max-w-[260px] py-2 px-3 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white border-2 border-slate-900 rounded-xl flex flex-col items-center justify-center select-none shadow-md print:shadow-none print:py-1.5 print:px-2 print:bg-slate-950 print:border-slate-900 mx-auto">
                                 {/* Corner steel rivets */}
                                 <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
                                 <div className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
@@ -734,7 +732,7 @@ export default function InvoiceDetails() {
 
                                 <div className="flex items-center gap-1 mb-0.5">
                                     <svg className="w-4 h-4 print:w-3.5 print:h-3.5 text-amber-400 print:text-amber-300" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.8L19.5 8 12 11.2 4.5 8 12 4.8zM4 9.6l7 3.7v7.1l-7-3.5V9.6zm9 10.8v-7.1l7-3.7v7.3l-7 3.5z"/>
+                                        <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.8L19.5 8 12 11.2 4.5 8 12 4.8zM4 9.6l7 3.7v7.1-7-3.5V9.6zm9 10.8v-7.1l7-3.7v7.3l-7 3.5z"/>
                                     </svg>
                                     <span className="text-[11px] sm:text-xs font-black tracking-wider text-amber-400 print:text-amber-300 font-sans">
                                         SMS STEEL
@@ -747,15 +745,15 @@ export default function InvoiceDetails() {
                                 <span className="text-[8.5px] font-bold text-slate-200 tracking-wider mt-0.5 text-center">
                                     للـحـديـد والـصـلـب ومـواد الـبـنـاء
                                 </span>
-                                <span className="text-[7px] font-mono tracking-wider text-slate-400 uppercase mt-0.5">
+                                <span className="text-[7px] font-mono tracking-wider text-slate-400 uppercase mt-0.5 text-center">
                                     Sudanese Malaysian Steel Factory
                                 </span>
                             </div>
                         </div>
 
-                        {/* Left: Document Badge Card (col-span-3) */}
-                        <div className="col-span-3 text-left">
-                            <div className="bg-slate-50 border-2 border-slate-300 rounded-xl p-2.5 text-right shadow-sm space-y-1 print:p-1.5 print:space-y-0.5 print:rounded-lg print:border-slate-400">
+                        {/* Left: Document Badge Card */}
+                        <div className="flex justify-end text-left">
+                            <div className="w-full max-w-[220px] bg-slate-50 border-2 border-slate-300 rounded-xl p-2.5 text-right shadow-sm space-y-1 print:p-1.5 print:space-y-0.5 print:rounded-lg print:border-slate-400">
                                 <div className="flex items-center justify-between border-b border-slate-200 pb-1 print:pb-0.5">
                                     <span className="text-xs font-bold text-slate-500 print:text-[9px]">المستند:</span>
                                     <span className={`text-[11px] font-black px-2 py-0.5 rounded print:text-[9px] print:px-1.5 print:py-0 ${
