@@ -122,8 +122,12 @@ interface Sale {
     bankName?: string | null
     bankRef?: string | null
     bankTransfers?: string | null
+    bankSender?: string | null
+    bankRecipient?: string | null
     chequeNumber?: string | null
     chequeBank?: string | null
+    chequeSender?: string | null
+    chequeRecipient?: string | null
     cashAmount?: number
     bankAmount?: number
     chequeAmount?: number
@@ -148,26 +152,42 @@ interface BankTransferEntry {
     bank: string
     ref: string
     amount?: number | string
+    sender?: string | null
+    recipient?: string | null
 }
 
 function getBankTransfersList(sale: Sale): BankTransferEntry[] {
     if (sale.bankTransfers) {
         try {
             const parsed = JSON.parse(sale.bankTransfers)
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed.map((t: any, idx: number) => ({
+                    ...t,
+                    sender: t.sender || (idx === 0 ? sale.bankSender : null),
+                    recipient: t.recipient || (idx === 0 ? sale.bankRecipient : null)
+                }))
+            }
         } catch (e) {}
     }
     if (sale.bankRef && sale.bankRef.trim().startsWith('[')) {
         try {
             const parsed = JSON.parse(sale.bankRef)
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed.map((t: any, idx: number) => ({
+                    ...t,
+                    sender: t.sender || (idx === 0 ? sale.bankSender : null),
+                    recipient: t.recipient || (idx === 0 ? sale.bankRecipient : null)
+                }))
+            }
         } catch (e) {}
     }
-    if (sale.bankRef || sale.bankName) {
+    if (sale.bankRef || sale.bankName || sale.bankSender || sale.bankRecipient) {
         return [{
             bank: sale.bankName || 'تحويل بنكي',
             ref: sale.bankRef || '',
-            amount: sale.bankAmount || 0
+            amount: sale.bankAmount || 0,
+            sender: sale.bankSender || null,
+            recipient: sale.bankRecipient || null
         }]
     }
     return []
@@ -879,6 +899,22 @@ export default function InvoiceDetails() {
                                                                 </span>
                                                             </div>
                                                         ) : null}
+                                                        {(t.sender || t.recipient) && (
+                                                            <div className="text-[11px] pt-1 mt-1 border-t border-slate-100 space-y-0.5">
+                                                                {t.sender && (
+                                                                    <div className="flex justify-between items-center text-slate-700">
+                                                                        <span className="text-slate-500 font-bold">المحول منه:</span>
+                                                                        <span className="font-black text-slate-900">{t.sender}</span>
+                                                                    </div>
+                                                                )}
+                                                                {t.recipient && (
+                                                                    <div className="flex justify-between items-center text-blue-950 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-100">
+                                                                        <span className="text-blue-700 font-bold">المحول لحسابه:</span>
+                                                                        <span className="font-black text-blue-950">{t.recipient}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -893,7 +929,15 @@ export default function InvoiceDetails() {
                                         </div>
                                     ) : (
                                         <div className="text-xs font-bold text-slate-700 bg-white p-2.5 rounded-lg border border-blue-200">
-                                            تحويل عبر: {sale.bankName || 'بنك الخرطوم (بنكك)'} | إشعار: <strong className="font-mono">{sale.bankRef || '-'}</strong>
+                                            <div>
+                                                تحويل عبر: {sale.bankName || 'بنك الخرطوم (بنكك)'} | إشعار: <strong className="font-mono">{sale.bankRef || '-'}</strong>
+                                            </div>
+                                            {(sale.bankSender || sale.bankRecipient) && (
+                                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-blue-900 mt-2 pt-1.5 border-t border-blue-100">
+                                                    {sale.bankSender && <span>المحول منه: <strong className="font-black text-slate-900">{sale.bankSender}</strong></span>}
+                                                    {sale.bankRecipient && <span>المحول لحسابه: <strong className="font-black text-blue-950 bg-blue-100/70 px-1.5 py-0.5 rounded">{sale.bankRecipient}</strong></span>}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -919,6 +963,12 @@ export default function InvoiceDetails() {
                                                 <span className="text-[10px] text-slate-600 block mt-1">
                                                     {sale.chequeBank || 'البنك'} - رقم: <strong className="font-mono text-slate-900">{sale.chequeNumber || '-'}</strong>
                                                 </span>
+                                                {(sale.chequeSender || sale.chequeRecipient) && (
+                                                    <div className="text-[10px] text-purple-900 mt-1.5 pt-1.5 border-t border-purple-100 space-y-0.5">
+                                                        {sale.chequeSender && <div>الساحب: <strong className="font-black text-slate-900">{sale.chequeSender}</strong></div>}
+                                                        {sale.chequeRecipient && <div>المستفيد / لأمره: <strong className="font-black text-purple-950 bg-purple-100/70 px-1 py-0.5 rounded">{sale.chequeRecipient}</strong></div>}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                         {(sale.bankAmount || 0) > 0 && bankTransfersList.length === 0 && (
@@ -959,6 +1009,22 @@ export default function InvoiceDetails() {
                                                                 </span>
                                                             </div>
                                                         ) : null}
+                                                        {(t.sender || t.recipient) && (
+                                                            <div className="text-[11px] pt-1 mt-1 border-t border-slate-100 space-y-0.5">
+                                                                {t.sender && (
+                                                                    <div className="flex justify-between items-center text-slate-700">
+                                                                        <span className="text-slate-500 font-bold">المحول منه:</span>
+                                                                        <span className="font-black text-slate-900">{t.sender}</span>
+                                                                    </div>
+                                                                )}
+                                                                {t.recipient && (
+                                                                    <div className="flex justify-between items-center text-blue-950 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-100">
+                                                                        <span className="text-blue-700 font-bold">المحول لحسابه:</span>
+                                                                        <span className="font-black text-blue-950">{t.recipient}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -972,6 +1038,12 @@ export default function InvoiceDetails() {
                                     <div>
                                         <span className="font-black text-purple-950 text-sm block">شيك مصرفي مسحوب على: {sale.chequeBank || 'البنك'}</span>
                                         <span className="text-slate-600 text-xs mt-1 block">رقم الشيك: <strong className="font-mono text-slate-900 text-sm bg-purple-50 px-2 py-0.5 rounded border border-purple-200">{sale.chequeNumber || '-'}</strong></span>
+                                        {(sale.chequeSender || sale.chequeRecipient) && (
+                                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-purple-900 mt-2 pt-1 border-t border-purple-200">
+                                                {sale.chequeSender && <span>الساحب (كاتب الشيك): <strong className="font-black text-slate-900">{sale.chequeSender}</strong></span>}
+                                                {sale.chequeRecipient && <span>المستفيد (المحرر لأمره): <strong className="font-black text-purple-950 bg-purple-100/70 px-1.5 py-0.5 rounded">{sale.chequeRecipient}</strong></span>}
+                                            </div>
+                                        )}
                                     </div>
                                     {(sale.chequeAmount || sale.paidAmount) ? (
                                         <div className="text-left font-mono">
@@ -1000,7 +1072,7 @@ export default function InvoiceDetails() {
                             <span className="font-bold text-slate-700">حالة السداد المخزني: <strong className={sale.status === 'PAID' ? 'text-emerald-700 font-black' : 'text-amber-700 font-black'}>{sale.status === 'PAID' ? 'خالص السداد (معتمد للصرف والتسليم)' : 'آجل / غير خالص'}</strong></span>
                             {bankTransfersList.length > 0 && (
                                 <span className="text-[11px] font-mono font-bold text-slate-600">
-                                    إشعارات البنك: {bankTransfersList.map(t => `${t.bank} (${t.ref || '-'})`).join(' | ')}
+                                    إشعارات البنك: {bankTransfersList.map(t => `${t.bank} (${t.ref || '-'})${t.recipient ? ` [لحساب: ${t.recipient}]` : ''}`).join(' | ')}
                                 </span>
                             )}
                         </div>

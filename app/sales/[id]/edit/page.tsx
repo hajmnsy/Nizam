@@ -59,6 +59,8 @@ interface BankTransferRow {
     customBankName: string
     bankRef: string
     amount: string
+    sender?: string
+    recipient?: string
 }
 
 export default function EditSale() {
@@ -84,15 +86,17 @@ export default function EditSale() {
     const [splitCheque, setSplitCheque] = useState<string>('')
     const [chequeNumber, setChequeNumber] = useState<string>('')
     const [chequeBank, setChequeBank] = useState<string>('')
+    const [chequeSender, setChequeSender] = useState<string>('')
+    const [chequeRecipient, setChequeRecipient] = useState<string>('')
 
     const [bankTransfers, setBankTransfers] = useState<BankTransferRow[]>([
-        { id: 1, bankName: 'بنك الخرطوم (بنكك)', customBankName: '', bankRef: '', amount: '' }
+        { id: 1, bankName: 'بنك الخرطوم (بنكك)', customBankName: '', bankRef: '', amount: '', sender: '', recipient: '' }
     ])
 
     const addBankTransfer = () => {
         setBankTransfers(prev => [
             ...prev,
-            { id: Date.now(), bankName: 'بنك الخرطوم (بنكك)', customBankName: '', bankRef: '', amount: '' }
+            { id: Date.now(), bankName: 'بنك الخرطوم (بنكك)', customBankName: '', bankRef: '', amount: '', sender: '', recipient: '' }
         ])
     }
 
@@ -176,6 +180,8 @@ export default function EditSale() {
                 if (saleData.chequeAmount !== undefined && saleData.chequeAmount !== null) setSplitCheque(saleData.chequeAmount.toString())
                 if (saleData.chequeNumber) setChequeNumber(saleData.chequeNumber)
                 if (saleData.chequeBank) setChequeBank(saleData.chequeBank)
+                if (saleData.chequeSender) setChequeSender(saleData.chequeSender)
+                if (saleData.chequeRecipient) setChequeRecipient(saleData.chequeRecipient)
 
                 if (saleData.bankTransfers) {
                     try {
@@ -186,19 +192,23 @@ export default function EditSale() {
                                 bankName: POPULAR_BANKS.includes(t.bank) ? t.bank : 'أخرى (تحديد يدوي)',
                                 customBankName: POPULAR_BANKS.includes(t.bank) ? '' : t.bank,
                                 bankRef: t.ref || '',
-                                amount: t.amount ? t.amount.toString() : ''
+                                amount: t.amount ? t.amount.toString() : '',
+                                sender: t.sender || (idx === 0 ? saleData.bankSender || '' : ''),
+                                recipient: t.recipient || (idx === 0 ? saleData.bankRecipient || '' : '')
                             })))
                         }
                     } catch (e) {
                         console.error('Error parsing bankTransfers in edit', e)
                     }
-                } else if (saleData.bankRef || saleData.bankName) {
+                } else if (saleData.bankRef || saleData.bankName || saleData.bankSender || saleData.bankRecipient) {
                     setBankTransfers([{
                         id: 1,
                         bankName: POPULAR_BANKS.includes(saleData.bankName) ? saleData.bankName : (saleData.bankName ? 'أخرى (تحديد يدوي)' : 'بنك الخرطوم (بنكك)'),
                         customBankName: POPULAR_BANKS.includes(saleData.bankName) ? '' : (saleData.bankName || ''),
                         bankRef: saleData.bankRef || '',
-                        amount: saleData.bankAmount ? saleData.bankAmount.toString() : ''
+                        amount: saleData.bankAmount ? saleData.bankAmount.toString() : '',
+                        sender: saleData.bankSender || '',
+                        recipient: saleData.bankRecipient || ''
                     }])
                 }
 
@@ -348,11 +358,16 @@ export default function EditSale() {
         const activeTransfers = bankTransfers.map(t => ({
             bank: t.bankName === 'أخرى (تحديد يدوي)' ? (t.customBankName || 'أخرى') : t.bankName,
             ref: t.bankRef?.trim() || '',
-            amount: (parseFloat(t.amount) || 0) > 0 ? parseFloat(t.amount) : (bankTransfers.length === 1 ? calcBank : 0)
+            amount: (parseFloat(t.amount) || 0) > 0 ? parseFloat(t.amount) : (bankTransfers.length === 1 ? calcBank : 0),
+            sender: t.sender?.trim() || '',
+            recipient: t.recipient?.trim() || ''
         })).filter(t => t.ref || t.amount > 0 || bankTransfers.length === 1);
 
         let finalBankName = null;
         let finalBankRef = null;
+        let finalBankSender = activeTransfers.find(t => t.sender)?.sender || null;
+        let finalBankRecipient = activeTransfers.find(t => t.recipient)?.recipient || null;
+
         if (paymentMethod === 'BANK' || (paymentMethod === 'MULTIPLE' && calcBank > 0)) {
             if (activeTransfers.length === 1) {
                 finalBankName = activeTransfers[0].bank;
@@ -385,8 +400,12 @@ export default function EditSale() {
                     bankName: finalBankName,
                     bankRef: finalBankRef,
                     bankTransfers: JSON.stringify(activeTransfers),
+                    bankSender: finalBankSender,
+                    bankRecipient: finalBankRecipient,
                     chequeNumber: chequeNumber?.trim() || null,
                     chequeBank: chequeBank?.trim() || null,
+                    chequeSender: chequeSender?.trim() || null,
+                    chequeRecipient: chequeRecipient?.trim() || null,
                 })
             })
 
@@ -914,6 +933,29 @@ export default function EditSale() {
                                                             />
                                                         </div>
                                                     )}
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 border-t border-slate-100">
+                                                        <div>
+                                                            <label className="text-[9px] font-bold text-slate-600 block mb-0.5">اسم الشخص المرسل (المحول منه)</label>
+                                                            <input
+                                                                type="text"
+                                                                value={transfer.sender || ''}
+                                                                onChange={(e) => updateBankTransfer(transfer.id, 'sender', e.target.value)}
+                                                                placeholder="اختياري: المحول منه..."
+                                                                className="w-full text-xs font-bold p-1 bg-white border border-slate-300 rounded outline-none focus:border-blue-500"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[9px] font-bold text-slate-600 block mb-0.5">اسم المستلم للمبلغ (المحول لحسابه)</label>
+                                                            <input
+                                                                type="text"
+                                                                value={transfer.recipient || ''}
+                                                                onChange={(e) => updateBankTransfer(transfer.id, 'recipient', e.target.value)}
+                                                                placeholder="اختياري: المستلم أو المورد..."
+                                                                className="w-full text-xs font-bold p-1 bg-white border border-slate-300 rounded outline-none focus:border-blue-500"
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -942,6 +984,26 @@ export default function EditSale() {
                                                     value={chequeBank}
                                                     onChange={(e) => setChequeBank(e.target.value)}
                                                     placeholder="اسم البنك..."
+                                                    className="w-full text-xs font-bold p-1.5 bg-white border border-purple-300 rounded-lg outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">اسم الساحب / كاتب الشيك</label>
+                                                <input
+                                                    type="text"
+                                                    value={chequeSender}
+                                                    onChange={(e) => setChequeSender(e.target.value)}
+                                                    placeholder="اختياري: كاتب الشيك..."
+                                                    className="w-full text-xs font-bold p-1.5 bg-white border border-purple-300 rounded-lg outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">اسم المستفيد / المحرر لأمره (المستلم)</label>
+                                                <input
+                                                    type="text"
+                                                    value={chequeRecipient}
+                                                    onChange={(e) => setChequeRecipient(e.target.value)}
+                                                    placeholder="اختياري: لأمر من (نحن أو مورد)..."
                                                     className="w-full text-xs font-bold p-1.5 bg-white border border-purple-300 rounded-lg outline-none"
                                                 />
                                             </div>

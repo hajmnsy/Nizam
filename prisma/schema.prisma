@@ -60,8 +60,12 @@ model Sale {
   bankName        String?
   bankRef         String?
   bankTransfers   String?    @db.Text
+  bankSender      String?
+  bankRecipient   String?
   chequeNumber    String?
   chequeBank      String?
+  chequeSender    String?
+  chequeRecipient String?
   createdAt       DateTime   @default(now())
   items           SaleItem[]
   payments        Payment[]
