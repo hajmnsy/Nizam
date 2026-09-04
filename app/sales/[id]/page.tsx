@@ -456,6 +456,9 @@ export default function InvoiceDetails() {
         }
     }
 
+    // Calculate total rows to dynamically optimize print density for a single A4 sheet
+    const totalPrintRows = (sale?.items?.length || 0) + (paymentRows?.length || 1);
+
     return (
         <main className="min-h-screen bg-slate-100 print:bg-white print:min-h-0 print:m-0 print:p-0 pb-16 font-sans">
             {/* Top Navigation Bar */}
@@ -591,21 +594,42 @@ export default function InvoiceDetails() {
                     </div>
                 )}
 
-                {/* Print Layout Styles */}
+                {/* Print Layout Styles - Dynamic A4 Single-Sheet Containment */}
                 <style type="text/css" media="print">
                     {`
                         @page {
                             size: A4 portrait;
-                            margin: 6mm 8mm;
+                            margin: 4mm 5mm;
                         }
                         @media print {
-                            body {
+                            html, body {
+                                width: 210mm !important;
+                                height: 297mm !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                background-color: #ffffff !important;
                                 -webkit-print-color-adjust: exact !important;
                                 print-color-adjust: exact !important;
-                                background-color: #ffffff !important;
                             }
                             .no-print {
                                 display: none !important;
+                            }
+                            .invoice-a4-sheet {
+                                width: 100% !important;
+                                max-width: 100% !important;
+                                min-height: 0 !important;
+                                margin: 0 auto !important;
+                                padding: 0 !important;
+                                page-break-inside: avoid !important;
+                                break-inside: avoid !important;
+                                page-break-after: avoid !important;
+                                break-after: avoid !important;
+                                overflow: visible !important;
+                                ${totalPrintRows > 22 ? 'zoom: 0.67;' : totalPrintRows > 16 ? 'zoom: 0.74;' : totalPrintRows > 12 ? 'zoom: 0.82;' : totalPrintRows > 8 ? 'zoom: 0.88;' : totalPrintRows > 5 ? 'zoom: 0.94;' : 'zoom: 0.98;'}
+                            }
+                            table, tr, td, th {
+                                page-break-inside: avoid !important;
+                                break-inside: avoid !important;
                             }
                         }
                     `}
@@ -614,7 +638,7 @@ export default function InvoiceDetails() {
                 {/* INVOICE PAPER (A4 Dimension Optimized) */}
                 <div
                     ref={componentRef}
-                    className="bg-white p-8 sm:p-10 rounded-2xl shadow-xl print:shadow-none print:p-0 relative overflow-hidden mx-auto max-w-[210mm] min-h-[297mm] print:min-h-0 print:m-0 ring-1 ring-slate-200 print:ring-0 text-slate-900"
+                    className="invoice-a4-sheet bg-white p-8 sm:p-10 rounded-2xl shadow-xl print:shadow-none print:p-0 relative overflow-hidden mx-auto max-w-[210mm] min-h-[297mm] print:min-h-0 print:m-0 ring-1 ring-slate-200 print:ring-0 text-slate-900"
                     dir="rtl"
                 >
                     {/* Watermark for Quotation */}
@@ -636,40 +660,40 @@ export default function InvoiceDetails() {
                     )}
 
                     {/* 1. Basmala Header */}
-                    <div className="relative z-10 text-center text-xs font-serif font-bold text-slate-500 mb-2 print:mb-1 tracking-widest border-b border-slate-100 pb-1">
+                    <div className="relative z-10 text-center text-xs font-serif font-bold text-slate-500 mb-2 print:mb-0.5 tracking-widest border-b border-slate-100 pb-1 print:pb-0.5 print:text-[10px]">
                         بِسْمِ اللَّـهِ الرَّحْمَـٰنِ الرَّحِيمِ
                     </div>
 
                     {/* 2. Official Header */}
-                    <div className="relative z-10 flex justify-between items-center pb-4 mb-4 border-b-2 border-slate-800 gap-4">
+                    <div className="relative z-10 flex justify-between items-center pb-4 mb-4 border-b-2 border-slate-800 gap-4 print:pb-1.5 print:mb-1.5 print:gap-2">
                         {/* Right: Company and Branch Info */}
-                        <div className="w-[36%] text-right space-y-1">
+                        <div className="w-[36%] text-right space-y-1 print:space-y-0.5">
                             <div className="flex items-center gap-2">
-                                <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight">
+                                <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight print:text-base">
                                     {settings?.companyName || 'المصنع السوداني الماليزي'}
                                 </h1>
                             </div>
-                            <div className="flex items-center gap-1.5 pt-0.5">
-                                <span className="inline-block bg-slate-900 text-white text-[11px] font-black px-2.5 py-0.5 rounded shadow-sm">
+                            <div className="flex items-center gap-1.5 pt-0.5 print:gap-1 print:pt-0">
+                                <span className="inline-block bg-slate-900 text-white text-[11px] font-black px-2.5 py-0.5 rounded shadow-sm print:text-[9px] print:px-1.5 print:py-0">
                                     {isMainBranch ? 'الفرع الرئيسي' : ((sale as any)?.branch?.name || 'فرع الشركة')}
                                 </span>
-                                <span className="text-[11px] font-bold text-slate-600">
+                                <span className="text-[11px] font-bold text-slate-600 print:text-[9px]">
                                     صناعة وتجارة كافة أنواع وتخانات الحديد
                                 </span>
                             </div>
-                            <div className="text-[11px] text-slate-700 font-bold space-y-0.5 pt-1">
-                                <div className="flex items-center gap-1 text-slate-800">
-                                    <Phone size={12} className="text-slate-600" />
+                            <div className="text-[11px] text-slate-700 font-bold space-y-0.5 pt-1 print:text-[9px] print:space-y-0 print:pt-0.5">
+                                <div className="flex items-center gap-1 text-slate-800 print:gap-0.5">
+                                    <Phone size={12} className="text-slate-600 print:w-2.5 print:h-2.5" />
                                     <span>م. محمد إسماعيل:</span>
                                     <span dir="ltr" className="font-mono">{settings?.phone || '0123456789'}</span>
                                 </div>
-                                <div className="flex items-center gap-1 text-slate-600 text-[10px]">
-                                    <MapPin size={12} className="text-slate-500" />
+                                <div className="flex items-center gap-1 text-slate-600 text-[10px] print:text-[8.5px] print:gap-0.5">
+                                    <MapPin size={12} className="text-slate-500 print:w-2.5 print:h-2.5" />
                                     <span>{settings?.address || 'الدامر - المنطقة الصناعية - شمال سوق السبت'}</span>
                                 </div>
                                 {settings?.vatRate > 0 && (
-                                    <div className="text-[10px] text-emerald-800 font-extrabold flex items-center gap-1">
-                                        <ShieldCheck size={12} />
+                                    <div className="text-[10px] text-emerald-800 font-extrabold flex items-center gap-1 print:text-[8.5px] print:gap-0.5">
+                                        <ShieldCheck size={12} className="print:w-2.5 print:h-2.5" />
                                         <span>الرقم الضريبي معتمد ({settings.vatRate}%)</span>
                                     </div>
                                 )}
@@ -682,21 +706,21 @@ export default function InvoiceDetails() {
                                 <img
                                     src={settings.logoUrl}
                                     alt="Logo"
-                                    className="h-24 print:h-20 max-w-full w-auto object-contain mix-blend-multiply"
+                                    className="h-24 print:h-12 max-w-full w-auto object-contain mix-blend-multiply"
                                     onError={(e) => (e.currentTarget.style.display = 'none')}
                                 />
                             ) : (
-                                <div className="relative w-full py-2.5 px-3 bg-gradient-to-b from-slate-50 to-slate-100 border-2 border-double border-slate-900 rounded-lg flex flex-col items-center justify-center select-none shadow-sm">
+                                <div className="relative w-full py-2.5 px-3 bg-gradient-to-b from-slate-50 to-slate-100 border-2 border-double border-slate-900 rounded-lg flex flex-col items-center justify-center select-none shadow-sm print:py-1 print:px-2">
                                     {/* Corner industrial rivets */}
                                     <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-400"></div>
                                     <div className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-400"></div>
                                     <div className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-400"></div>
                                     <div className="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-400"></div>
 
-                                    <span className="text-sm sm:text-base font-black text-slate-950 tracking-[0.15em] font-sans leading-tight text-center">
+                                    <span className="text-sm sm:text-base font-black text-slate-950 tracking-[0.15em] font-sans leading-tight text-center print:text-xs">
                                         الـمـصـنـع الـسـودانـي الـمـالـيـزي
                                     </span>
-                                    <span className="text-[9px] font-black text-slate-600 tracking-wider mt-0.5">
+                                    <span className="text-[9px] font-black text-slate-600 tracking-wider mt-0.5 print:text-[8px] print:mt-0">
                                         للـمـنـتـجـات الـحـديـديـة ومـواد الـبـنـاء
                                     </span>
                                 </div>
@@ -705,10 +729,10 @@ export default function InvoiceDetails() {
 
                         {/* Left: Document Badge Card */}
                         <div className="w-[30%] text-left">
-                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3 text-right shadow-sm space-y-1">
-                                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                                    <span className="text-xs font-bold text-slate-500">نوع المستند:</span>
-                                    <span className={`text-xs font-black px-2 py-0.5 rounded ${
+                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3 text-right shadow-sm space-y-1 print:p-1.5 print:space-y-0.5 print:rounded-lg">
+                                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 print:pb-0.5">
+                                    <span className="text-xs font-bold text-slate-500 print:text-[9.5px]">نوع المستند:</span>
+                                    <span className={`text-xs font-black px-2 py-0.5 rounded print:text-[9.5px] print:px-1.5 print:py-0 ${
                                         viewMode === 'INVOICE'
                                             ? 'bg-blue-100 text-blue-900'
                                             : viewMode === 'DELIVERY'
@@ -719,32 +743,32 @@ export default function InvoiceDetails() {
                                     </span>
                                 </div>
 
-                                <div className="flex items-center justify-between text-xs pt-0.5">
-                                    <span className="font-bold text-slate-600">
+                                <div className="flex items-center justify-between text-xs pt-0.5 print:text-[9.5px] print:pt-0">
+                                    <span className="font-bold text-slate-600 print:text-[9.5px]">
                                         {viewMode === 'DELIVERY' ? 'رقم الإذن:' : 'رقم الفاتورة:'}
                                     </span>
-                                    <span className="font-mono text-base font-black text-slate-950">
+                                    <span className="font-mono text-base font-black text-slate-950 print:text-xs">
                                         #{sale.invoiceNumber || sale.id}
                                     </span>
                                 </div>
 
-                                <div className="flex items-center justify-between text-[11px] pt-0.5">
+                                <div className="flex items-center justify-between text-[11px] pt-0.5 print:text-[9px] print:pt-0">
                                     <span className="font-bold text-slate-600">التاريخ:</span>
                                     <span className="font-bold text-slate-800 font-mono">
                                         {new Date(sale.createdAt).toLocaleDateString('en-GB')}
                                     </span>
                                 </div>
 
-                                <div className="flex items-center justify-between text-[11px]">
+                                <div className="flex items-center justify-between text-[11px] print:text-[9px]">
                                     <span className="font-bold text-slate-600">الوقت:</span>
                                     <span className="font-bold text-slate-700 font-mono" dir="ltr">
                                         {new Date(sale.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                 </div>
 
-                                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200">
+                                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200 print:text-[8.5px] print:pt-0.5">
                                     <span className="font-bold text-slate-600">الحالة:</span>
-                                    <span className={`font-black text-[10px] px-1.5 py-0.2 rounded ${
+                                    <span className={`font-black text-[10px] px-1.5 py-0.2 rounded print:text-[8.5px] print:px-1 print:py-0 ${
                                         sale.status === 'PAID'
                                             ? 'text-emerald-700 bg-emerald-50'
                                             : sale.status === 'CREDIT'
@@ -759,19 +783,19 @@ export default function InvoiceDetails() {
                     </div>
 
                     {/* 3. Client & Metadata Grid */}
-                    <div className={`relative z-10 grid grid-cols-1 ${isForeignCurrency ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3 mb-4 text-xs`}>
+                    <div className={`relative z-10 grid grid-cols-1 ${isForeignCurrency ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3 mb-4 text-xs print:gap-1.5 print:mb-1.5 print:text-[10px]`}>
                         {/* Box 1: Customer */}
-                        <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
-                            <span className="text-[10px] text-slate-500 font-bold block mb-0.5">العميل المكرم:</span>
-                            <span className="font-black text-slate-950 text-sm block truncate">
+                        <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg print:p-1.5 print:rounded-md">
+                            <span className="text-[10px] text-slate-500 font-bold block mb-0.5 print:text-[9px] print:mb-0">العميل المكرم:</span>
+                            <span className="font-black text-slate-950 text-sm block truncate print:text-xs">
                                 {sale.customer || 'عميل نقدي'}
                             </span>
                         </div>
 
                         {/* Box 2: Dispatch Location */}
-                        <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
-                            <span className="text-[10px] text-slate-500 font-bold block mb-0.5">موقع الاستلام والصرف:</span>
-                            <span className={`font-black block truncate ${
+                        <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg print:p-1.5 print:rounded-md">
+                            <span className="text-[10px] text-slate-500 font-bold block mb-0.5 print:text-[9px] print:mb-0">موقع الاستلام والصرف:</span>
+                            <span className={`font-black block truncate print:text-xs ${
                                 (sale.dispatchBranchId && sale.dispatchBranchId !== sale.branchId)
                                     ? 'text-amber-800'
                                     : 'text-slate-800'
@@ -779,7 +803,7 @@ export default function InvoiceDetails() {
                                 {sale.dispatchBranch?.name ? sale.dispatchBranch.name : 'مخازن الفرع الرئيسي'}
                             </span>
                             {(sale.dispatchBranchId && sale.dispatchBranchId !== sale.branchId) && (
-                                <span className="text-[9px] font-black text-amber-700 block">
+                                <span className="text-[9px] font-black text-amber-700 block print:text-[8px]">
                                     ⚠️ توجيه استلام من فرع آخر
                                 </span>
                             )}
@@ -787,12 +811,12 @@ export default function InvoiceDetails() {
 
                         {/* Box 3: Currency & Rate - ONLY SHOWN IF NOT SDG */}
                         {isForeignCurrency && (
-                            <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
-                                <span className="text-[10px] text-slate-500 font-bold block mb-0.5">العملة وسعر الصرف:</span>
-                                <span className="font-black text-slate-800 block">
+                            <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg print:p-1.5 print:rounded-md">
+                                <span className="text-[10px] text-slate-500 font-bold block mb-0.5 print:text-[9px] print:mb-0">العملة وسعر الصرف:</span>
+                                <span className="font-black text-slate-800 block print:text-xs">
                                     {sale.currency === 'USD' ? 'دولار ($ USD)' : 'درهم (AED د.إ)'}
                                 </span>
-                                <span className="text-[10px] text-indigo-700 font-bold block mt-0.5">
+                                <span className="text-[10px] text-indigo-700 font-bold block mt-0.5 print:text-[8.5px] print:mt-0">
                                     الصرف: {sale.currencyRate?.toLocaleString()} ج.س
                                 </span>
                             </div>
@@ -801,7 +825,7 @@ export default function InvoiceDetails() {
 
                     {/* Cross-Branch Alert Banner (If Dispatched from another branch) */}
                     {sale.dispatchBranch && sale.dispatchBranchId && sale.dispatchBranchId !== sale.branchId && (
-                        <div className="relative z-10 mb-3 p-2.5 bg-amber-50 border-2 border-amber-300 rounded-xl text-amber-950 font-bold text-xs flex items-center gap-2">
+                        <div className="relative z-10 mb-3 p-2.5 bg-amber-50 border-2 border-amber-300 rounded-xl text-amber-950 font-bold text-xs flex items-center gap-2 print:mb-1 print:p-1.5 print:text-[9px] print:rounded-lg">
                             <span className="text-xl">📍</span>
                             <div>
                                 <span className="font-black text-amber-900 block text-xs">
@@ -815,63 +839,63 @@ export default function InvoiceDetails() {
                     )}
 
                     {/* 4. Products Table */}
-                    <div className="relative z-10 mb-4">
+                    <div className="relative z-10 mb-4 print:mb-1.5">
                         {/* Mode A: FINANCIAL INVOICE & QUOTATION (No Quantity in Words column) */}
                         {(viewMode === 'INVOICE' || viewMode === 'QUOTATION') && (
                             <table className="w-full text-right border-collapse border border-slate-800">
                                 <thead>
-                                    <tr className="bg-slate-900 text-white text-xs">
-                                        <th className="py-2.5 px-2 w-[5%] text-center font-black border border-slate-700">#</th>
-                                        <th className="py-2.5 px-3 w-[41%] text-right font-black border border-slate-700">بيان الصنف والمنتج</th>
-                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">السماكة</th>
-                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">النوع</th>
-                                        <th className="py-2.5 px-2 w-[10%] text-center font-black border border-slate-700">الكمية</th>
-                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">
+                                    <tr className="bg-slate-900 text-white text-xs print:text-[10px]">
+                                        <th className="py-2.5 px-2 w-[5%] text-center font-black border border-slate-700 print:py-1 print:px-1">#</th>
+                                        <th className="py-2.5 px-3 w-[41%] text-right font-black border border-slate-700 print:py-1 print:px-1.5">بيان الصنف والمنتج</th>
+                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700 print:py-1 print:px-1">السماكة</th>
+                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700 print:py-1 print:px-1">النوع</th>
+                                        <th className="py-2.5 px-2 w-[10%] text-center font-black border border-slate-700 print:py-1 print:px-1">الكمية</th>
+                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700 print:py-1 print:px-1">
                                             السعر الإفرادي (ج.س)
                                         </th>
-                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">
+                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700 print:py-1 print:px-1">
                                             سعر الكمية (ج.س)
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className="text-xs divide-y divide-slate-300">
+                                <tbody className="text-xs divide-y divide-slate-300 print:text-[10px]">
                                     {sale.items.map((item, index) => {
                                         const itemUnitPriceCurrency = isForeignCurrency ? item.price / currencyRate : item.price
                                         const itemTotalPriceCurrency = isForeignCurrency ? (item.price * item.quantity) / currencyRate : item.price * item.quantity
 
                                         return (
                                             <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                                                <td className="py-1.5 px-2 text-center font-bold text-slate-600 border border-slate-300">
+                                                <td className="py-1.5 px-2 text-center font-bold text-slate-600 border border-slate-300 print:py-0.5 print:px-1">
                                                     {index + 1}
                                                 </td>
-                                                <td className="py-1.5 px-3 font-black text-slate-900 border border-slate-300 text-sm leading-tight">
+                                                <td className="py-1.5 px-3 font-black text-slate-900 border border-slate-300 text-sm leading-tight print:py-0.5 print:px-1.5 print:text-xs">
                                                     {item.product.name}
                                                 </td>
-                                                <td className="py-1.5 px-2 text-center font-bold font-mono text-slate-800 border border-slate-300">
+                                                <td className="py-1.5 px-2 text-center font-bold font-mono text-slate-800 border border-slate-300 print:py-0.5 print:px-1">
                                                     {item.product.thickness ? `${item.product.thickness} مم` : '-'}
                                                 </td>
-                                                <td className="py-1.5 px-2 text-center font-bold text-slate-700 border border-slate-300">
+                                                <td className="py-1.5 px-2 text-center font-bold text-slate-700 border border-slate-300 print:py-0.5 print:px-1">
                                                     {item.product.type || '-'}
                                                 </td>
-                                                <td className="py-1.5 px-2 text-center font-black font-mono text-slate-950 text-sm border border-slate-300">
+                                                <td className="py-1.5 px-2 text-center font-black font-mono text-slate-950 text-sm border border-slate-300 print:py-0.5 print:px-1 print:text-xs">
                                                     {item.quantity}
                                                 </td>
-                                                <td className="py-1.5 px-2 text-center border border-slate-300">
-                                                    <span className="font-mono font-bold text-slate-900 text-xs">
+                                                <td className="py-1.5 px-2 text-center border border-slate-300 print:py-0.5 print:px-1">
+                                                    <span className="font-mono font-bold text-slate-900 text-xs print:text-[10px]">
                                                         {item.price.toLocaleString()}
                                                     </span>
                                                     {isForeignCurrency && (
-                                                        <span className="text-[10px] text-slate-500 block font-mono">
+                                                        <span className="text-[10px] text-slate-500 block font-mono print:text-[8px]">
                                                             ({itemUnitPriceCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {shortCurrencySymbol})
                                                         </span>
                                                     )}
                                                 </td>
-                                                <td className="py-1.5 px-2 text-center border border-slate-300">
-                                                    <span className="font-mono font-black text-slate-950 text-xs">
+                                                <td className="py-1.5 px-2 text-center border border-slate-300 print:py-0.5 print:px-1">
+                                                    <span className="font-mono font-black text-slate-950 text-xs print:text-[10px]">
                                                         {(item.price * item.quantity).toLocaleString()}
                                                     </span>
                                                     {isForeignCurrency && (
-                                                        <span className="text-[10px] text-slate-500 block font-mono">
+                                                        <span className="text-[10px] text-slate-500 block font-mono print:text-[8px]">
                                                             ({itemTotalPriceCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {shortCurrencySymbol})
                                                         </span>
                                                     )}
@@ -887,34 +911,34 @@ export default function InvoiceDetails() {
                         {viewMode === 'DELIVERY' && (
                             <table className="w-full text-right border-collapse border border-slate-800">
                                 <thead>
-                                    <tr className="bg-slate-900 text-white text-xs">
-                                        <th className="py-2.5 px-2 w-[6%] text-center font-black border border-slate-700">م</th>
-                                        <th className="py-2.5 px-3 w-[36%] text-right font-black border border-slate-700">بيان الصنف والمواصفات</th>
-                                        <th className="py-2.5 px-2 w-[12%] text-center font-black border border-slate-700">السماكة</th>
-                                        <th className="py-2.5 px-2 w-[12%] text-center font-black border border-slate-700">النوع</th>
-                                        <th className="py-2.5 px-2 w-[12%] text-center font-black border border-slate-700">الكمية رقماً</th>
-                                        <th className="py-2.5 px-2 w-[22%] text-center font-black border border-slate-700">الكمية كتابة بالأحرف</th>
+                                    <tr className="bg-slate-900 text-white text-xs print:text-[10px]">
+                                        <th className="py-2.5 px-2 w-[6%] text-center font-black border border-slate-700 print:py-1 print:px-1">م</th>
+                                        <th className="py-2.5 px-3 w-[36%] text-right font-black border border-slate-700 print:py-1 print:px-1.5">بيان الصنف والمواصفات</th>
+                                        <th className="py-2.5 px-2 w-[12%] text-center font-black border border-slate-700 print:py-1 print:px-1">السماكة</th>
+                                        <th className="py-2.5 px-2 w-[12%] text-center font-black border border-slate-700 print:py-1 print:px-1">النوع</th>
+                                        <th className="py-2.5 px-2 w-[12%] text-center font-black border border-slate-700 print:py-1 print:px-1">الكمية رقماً</th>
+                                        <th className="py-2.5 px-2 w-[22%] text-center font-black border border-slate-700 print:py-1 print:px-1">الكمية كتابة بالأحرف</th>
                                     </tr>
                                 </thead>
-                                <tbody className="text-xs divide-y divide-slate-300">
+                                <tbody className="text-xs divide-y divide-slate-300 print:text-[10px]">
                                     {sale.items.map((item, index) => (
                                         <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                                            <td className="py-2 px-2 text-center font-bold text-slate-600 border border-slate-300">
+                                            <td className="py-2 px-2 text-center font-bold text-slate-600 border border-slate-300 print:py-0.5 print:px-1">
                                                 {index + 1}
                                             </td>
-                                            <td className="py-2 px-3 font-black text-slate-900 border border-slate-300 text-sm leading-tight">
+                                            <td className="py-2 px-3 font-black text-slate-900 border border-slate-300 text-sm leading-tight print:py-0.5 print:px-1.5 print:text-xs">
                                                 {item.product.name}
                                             </td>
-                                            <td className="py-2 px-2 text-center font-bold font-mono text-slate-800 border border-slate-300 text-sm">
+                                            <td className="py-2 px-2 text-center font-bold font-mono text-slate-800 border border-slate-300 text-sm print:py-0.5 print:px-1 print:text-xs">
                                                 {item.product.thickness ? `${item.product.thickness} مم` : '-'}
                                             </td>
-                                            <td className="py-2 px-2 text-center font-bold text-slate-700 border border-slate-300">
+                                            <td className="py-2 px-2 text-center font-bold text-slate-700 border border-slate-300 print:py-0.5 print:px-1">
                                                 {item.product.type || '-'}
                                             </td>
-                                            <td className="py-2 px-2 text-center font-black font-mono text-slate-950 text-base border border-slate-300">
+                                            <td className="py-2 px-2 text-center font-black font-mono text-slate-950 text-base border border-slate-300 print:py-0.5 print:px-1 print:text-xs">
                                                 {item.quantity}
                                             </td>
-                                            <td className="py-2 px-2 text-center font-black text-slate-900 border border-slate-300 text-xs leading-snug">
+                                            <td className="py-2 px-2 text-center font-black text-slate-900 border border-slate-300 text-xs leading-snug print:py-0.5 print:px-1 print:text-[9.5px]">
                                                 {numberToArabicWords(item.quantity)}
                                             </td>
                                         </tr>
@@ -926,8 +950,8 @@ export default function InvoiceDetails() {
 
                     {/* 4.5. Payment Details & Bank Transfer Notifications (أسفل جدول بيانات الأصناف مباشرة) */}
                     {(viewMode === 'INVOICE' || viewMode === 'QUOTATION') && (
-                        <div className="relative z-10 mb-4 bg-slate-50 border-2 border-slate-300 rounded-xl p-3 shadow-xs">
-                            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2.5 border-b border-slate-200">
+                        <div className="relative z-10 mb-4 bg-slate-50 border-2 border-slate-300 rounded-xl p-3 shadow-xs print:mb-1.5 print:p-1.5 print:border print:rounded-lg">
+                            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2.5 border-b border-slate-200 print:pb-1 print:mb-1 print:gap-1">
                                 <div className="flex items-center gap-2">
                                     <span className="text-base">💳</span>
                                     <span className="text-xs font-black text-slate-800">بيانات وطريقة السداد:</span>
@@ -957,48 +981,48 @@ export default function InvoiceDetails() {
                             <div className="overflow-x-auto">
                                 <table className="w-full text-right border-collapse border border-slate-300 bg-white">
                                     <thead>
-                                        <tr className="bg-slate-200/80 text-slate-800 text-[11px]">
-                                            <th className="py-2 px-2 text-center font-black border border-slate-300 w-[5%]">#</th>
-                                            <th className="py-2 px-2.5 text-right font-black border border-slate-300 w-[24%]">طريقة السداد / البنك</th>
-                                            <th className="py-2 px-2 text-center font-black border border-slate-300 w-[18%]">رقم الإشعار / الشيك</th>
-                                            <th className="py-2 px-2 text-center font-black border border-slate-300 w-[20%]">المحول منه (المرسل / الساحب)</th>
-                                            <th className="py-2 px-2 text-center font-black border border-slate-300 w-[20%]">المحول لحسابه (المستلم / المستفيد)</th>
-                                            <th className="py-2 px-2.5 text-center font-black border border-slate-300 w-[13%]">المبلغ المدفوع</th>
+                                        <tr className="bg-slate-200/80 text-slate-800 text-[11px] print:text-[9.5px]">
+                                            <th className="py-2 px-2 text-center font-black border border-slate-300 w-[5%] print:py-0.5 print:px-1">#</th>
+                                            <th className="py-2 px-2.5 text-right font-black border border-slate-300 w-[24%] print:py-0.5 print:px-1.5">طريقة السداد / البنك</th>
+                                            <th className="py-2 px-2 text-center font-black border border-slate-300 w-[18%] print:py-0.5 print:px-1">رقم الإشعار / الشيك</th>
+                                            <th className="py-2 px-2 text-center font-black border border-slate-300 w-[20%] print:py-0.5 print:px-1">المحول منه (المرسل / الساحب)</th>
+                                            <th className="py-2 px-2 text-center font-black border border-slate-300 w-[20%] print:py-0.5 print:px-1">المحول لحسابه (المستلم / المستفيد)</th>
+                                            <th className="py-2 px-2.5 text-center font-black border border-slate-300 w-[13%] print:py-0.5 print:px-1.5">المبلغ المدفوع</th>
                                         </tr>
                                     </thead>
                                     <tbody className="text-xs divide-y divide-slate-200">
                                         {paymentRows.length > 0 ? (
                                             paymentRows.map((row, rIdx) => (
                                                 <tr key={rIdx} className={rIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                                                    <td className="py-1.5 px-2 text-center font-bold text-slate-600 border border-slate-300">
+                                                    <td className="py-1.5 px-2 text-center font-bold text-slate-600 border border-slate-300 print:py-0.5 print:px-1">
                                                         {rIdx + 1}
                                                     </td>
-                                                    <td className="py-1.5 px-2.5 font-black text-slate-900 border border-slate-300">
+                                                    <td className="py-1.5 px-2.5 font-black text-slate-900 border border-slate-300 print:py-0.5 print:px-1.5 print:text-[9.5px]">
                                                         {row.type}
                                                     </td>
-                                                    <td className="py-1.5 px-2 text-center font-mono font-bold text-slate-800 border border-slate-300 text-xs">
+                                                    <td className="py-1.5 px-2 text-center font-mono font-bold text-slate-800 border border-slate-300 text-xs print:py-0.5 print:px-1 print:text-[9px]">
                                                         {row.refNumber !== '-' ? (
-                                                            <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 tracking-wider">
+                                                            <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 tracking-wider print:px-1 print:py-0">
                                                                 {row.refNumber}
                                                             </span>
                                                         ) : <span className="text-slate-400">-</span>}
                                                     </td>
-                                                    <td className="py-1.5 px-2 text-center font-bold text-slate-700 border border-slate-300">
+                                                    <td className="py-1.5 px-2 text-center font-bold text-slate-700 border border-slate-300 print:py-0.5 print:px-1 print:text-[9px]">
                                                         {row.sender !== '-' ? (
                                                             <span className="text-slate-900 font-bold">{row.sender}</span>
                                                         ) : <span className="text-slate-400">-</span>}
                                                     </td>
-                                                    <td className="py-1.5 px-2 text-center font-bold border border-slate-300">
+                                                    <td className="py-1.5 px-2 text-center font-bold border border-slate-300 print:py-0.5 print:px-1">
                                                         {row.recipient !== '-' ? (
-                                                            <span className="text-blue-950 font-black bg-blue-50 px-2 py-0.5 rounded border border-blue-200 inline-block">
+                                                            <span className="text-blue-950 font-black bg-blue-50 px-2 py-0.5 rounded border border-blue-200 inline-block print:px-1 print:py-0 print:text-[9px]">
                                                                 {row.recipient}
                                                             </span>
                                                         ) : <span className="text-slate-400">-</span>}
                                                     </td>
-                                                    <td className="py-1.5 px-2.5 text-center font-mono font-black text-slate-950 border border-slate-300">
+                                                    <td className="py-1.5 px-2.5 text-center font-mono font-black text-slate-950 border border-slate-300 print:py-0.5 print:px-1.5 print:text-[9.5px]">
                                                         <div>{row.amount.toLocaleString()} ج.س</div>
                                                         {isForeignCurrency && (
-                                                            <div className="text-[9px] text-slate-500 font-normal">
+                                                            <div className="text-[9px] text-slate-500 font-normal print:text-[8px]">
                                                                 ({(row.amount / currencyRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {shortCurrencySymbol})
                                                             </div>
                                                         )}
@@ -1051,7 +1075,7 @@ export default function InvoiceDetails() {
                     )}
 
                     {viewMode === 'DELIVERY' && (
-                        <div className="relative z-10 mb-4 bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs flex flex-wrap items-center justify-between gap-2">
+                        <div className="relative z-10 mb-4 bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs flex flex-wrap items-center justify-between gap-2 print:mb-1.5 print:p-1.5 print:text-[9.5px] print:rounded-lg">
                             <span className="font-bold text-slate-700">حالة السداد المخزني: <strong className={sale.status === 'PAID' ? 'text-emerald-700 font-black' : 'text-amber-700 font-black'}>{sale.status === 'PAID' ? 'خالص السداد (معتمد للصرف والتسليم)' : 'آجل / غير خالص'}</strong></span>
                             {bankTransfersList.length > 0 && (
                                 <span className="text-[11px] font-mono font-bold text-slate-600">
@@ -1063,12 +1087,12 @@ export default function InvoiceDetails() {
 
                     {/* 5. Financial Totals & Tafqeet Section (Shown for INVOICE & QUOTATION) */}
                     {(viewMode === 'INVOICE' || viewMode === 'QUOTATION') && (
-                        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:gap-2 print:mb-1.5">
                             {/* Right: Tafqeet & Payment Details */}
-                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3.5 flex flex-col justify-between">
+                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3.5 flex flex-col justify-between print:p-1.5 print:rounded-lg">
                                 <div>
-                                    <span className="text-[11px] font-black text-slate-500 block mb-1">المبلغ كتابة (المطلوب سداده):</span>
-                                    <div className="text-sm font-black text-slate-900 leading-relaxed bg-white border border-slate-200 p-2.5 rounded-lg shadow-inner">
+                                    <span className="text-[11px] font-black text-slate-500 block mb-1 print:text-[9px] print:mb-0.5">المبلغ كتابة (المطلوب سداده):</span>
+                                    <div className="text-sm font-black text-slate-900 leading-relaxed bg-white border border-slate-200 p-2.5 rounded-lg shadow-inner print:p-1.5 print:text-[10px] print:leading-tight print:rounded-md">
                                         {isForeignCurrency ? (
                                             <div className="space-y-1">
                                                 <div className="text-indigo-950">
@@ -1085,7 +1109,7 @@ export default function InvoiceDetails() {
                                 </div>
 
                                 {isForeignCurrency && (
-                                    <div className="mt-2 text-xs font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 p-2 rounded-lg flex justify-between items-center">
+                                    <div className="mt-2 text-xs font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 p-2 rounded-lg flex justify-between items-center print:mt-1 print:p-1 print:text-[9px] print:rounded-md">
                                         <span>القيمة بعملة الفاتورة ({sale.currency}):</span>
                                         <span className="font-mono text-sm font-black">
                                             {finalTotalCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
@@ -1094,7 +1118,7 @@ export default function InvoiceDetails() {
                                 )}
 
                                 {sale.status === 'CREDIT' && (
-                                    <div className="mt-2 text-xs grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
+                                    <div className="mt-2 text-xs grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 print:mt-1 print:pt-1 print:text-[9px]">
                                         <div className="text-slate-700">
                                             <span>المدفوع:</span>{' '}
                                             <strong className="text-emerald-700 font-mono">
@@ -1126,8 +1150,8 @@ export default function InvoiceDetails() {
                             </div>
 
                             {/* Left: Summary Table */}
-                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3.5">
-                                <table className="w-full text-xs">
+                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3.5 print:p-1.5 print:rounded-lg">
+                                <table className="w-full text-xs print:text-[10px]">
                                     <tbody className="divide-y divide-slate-200">
                                         <tr>
                                             <td className="py-1.5 text-slate-600 font-bold">إجمالي الأصناف (المجموع الفرعي):</td>
@@ -1184,11 +1208,11 @@ export default function InvoiceDetails() {
                                             </tr>
                                         )}
 
-                                        <tr className="border-t-2 border-slate-800">
-                                            <td className="py-2.5 text-slate-950 font-black text-sm sm:text-base">
+                                        <tr className="border-t-2 border-slate-800 print:border-t">
+                                            <td className="py-2.5 text-slate-950 font-black text-sm sm:text-base print:py-1 print:text-xs">
                                                 الصافي النهائي المطلوب {isForeignCurrency ? `(${currencyCode})` : ''}:
                                             </td>
-                                            <td className="py-2.5 text-left font-mono font-black text-slate-950 text-lg sm:text-2xl">
+                                            <td className="py-2.5 text-left font-mono font-black text-slate-950 text-lg sm:text-2xl print:py-1 print:text-sm">
                                                 {isForeignCurrency ? (
                                                     <div className="space-y-0.5">
                                                         <div className="text-indigo-950">
@@ -1217,25 +1241,25 @@ export default function InvoiceDetails() {
                     {/* 6. Signatures and Approval Section */}
                     {/* Variant A: For Invoice & Quotation */}
                     {(viewMode === 'INVOICE' || viewMode === 'QUOTATION') && (
-                        <div className="relative z-10 pt-4 border-t-2 border-slate-800">
-                            <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                                <div className="border border-slate-300 rounded-xl p-2.5 bg-slate-50/50 flex flex-col justify-between h-24">
-                                    <span className="font-bold text-slate-700">توقيع المستلم / العميل</span>
-                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1"></div>
+                        <div className="relative z-10 pt-4 border-t-2 border-slate-800 print:pt-1 print:border-t">
+                            <div className="grid grid-cols-4 gap-2 text-center text-xs print:gap-1.5 print:text-[9px]">
+                                <div className="border border-slate-300 rounded-xl p-2.5 bg-slate-50/50 flex flex-col justify-between h-24 print:h-11 print:p-1 print:rounded-md">
+                                    <span className="font-bold text-slate-700 print:text-[9px]">توقيع المستلم / العميل</span>
+                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1 print:mb-0"></div>
                                 </div>
 
-                                <div className="border border-slate-300 rounded-xl p-2.5 bg-slate-50/50 flex flex-col justify-between h-24">
-                                    <span className="font-bold text-slate-700">أمين المستودع / الصرف</span>
-                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1"></div>
+                                <div className="border border-slate-300 rounded-xl p-2.5 bg-slate-50/50 flex flex-col justify-between h-24 print:h-11 print:p-1 print:rounded-md">
+                                    <span className="font-bold text-slate-700 print:text-[9px]">أمين المستودع / الصرف</span>
+                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1 print:mb-0"></div>
                                 </div>
 
-                                <div className="border border-slate-300 rounded-xl p-2.5 bg-slate-50/50 flex flex-col justify-between h-24">
-                                    <span className="font-bold text-slate-700">المحاسب / المبيعات</span>
-                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1"></div>
+                                <div className="border border-slate-300 rounded-xl p-2.5 bg-slate-50/50 flex flex-col justify-between h-24 print:h-11 print:p-1 print:rounded-md">
+                                    <span className="font-bold text-slate-700 print:text-[9px]">المحاسب / المبيعات</span>
+                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1 print:mb-0"></div>
                                 </div>
 
-                                <div className="border-2 border-dashed border-slate-400 rounded-xl p-2.5 flex flex-col items-center justify-center h-24 bg-slate-50/30">
-                                    <span className="text-[10px] font-bold text-slate-400">مكان الختم الرسمي</span>
+                                <div className="border-2 border-dashed border-slate-400 rounded-xl p-2.5 flex flex-col items-center justify-center h-24 bg-slate-50/30 print:h-11 print:p-1 print:rounded-md">
+                                    <span className="text-[10px] font-bold text-slate-400 print:text-[8px]">مكان الختم الرسمي</span>
                                 </div>
                             </div>
                         </div>
@@ -1243,38 +1267,38 @@ export default function InvoiceDetails() {
 
                     {/* Variant B: For Warehouse Delivery Note */}
                     {viewMode === 'DELIVERY' && (
-                        <div className="relative z-10 pt-4 border-t-2 border-slate-800 space-y-4">
-                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs">
-                                <p className="font-bold text-slate-800 mb-2">
+                        <div className="relative z-10 pt-4 border-t-2 border-slate-800 space-y-4 print:pt-1 print:space-y-1.5 print:border-t">
+                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs print:p-1.5 print:text-[9.5px] print:rounded-md">
+                                <p className="font-bold text-slate-800 mb-2 print:mb-1">
                                     إقرار استلام: أقر أنا الموقع أدناه باستلام كامل الأصناف والكميات المذكورة بعاليه من مستودعات المصنع بحالة جيدة وسليمة ومطابقة للمواصفات المطلوبة.
                                 </p>
-                                <div className="grid grid-cols-3 gap-3 text-slate-700 pt-1">
+                                <div className="grid grid-cols-3 gap-3 text-slate-700 pt-1 print:pt-0.5 print:gap-1.5 print:text-[9px]">
                                     <div>اسم المستلم / السائق: .......................................</div>
                                     <div>رقم الهاتف / الإثبات: .......................................</div>
                                     <div>رقم مركبة الشحن (العربة): .......................................</div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4 text-center text-xs">
-                                <div className="border border-slate-300 rounded-xl p-3 bg-slate-50/50 flex flex-col justify-between h-24">
-                                    <span className="font-bold text-slate-700">توقيع المستلم / السائق</span>
-                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1"></div>
+                            <div className="grid grid-cols-3 gap-4 text-center text-xs print:gap-1.5 print:text-[9px]">
+                                <div className="border border-slate-300 rounded-xl p-3 bg-slate-50/50 flex flex-col justify-between h-24 print:h-11 print:p-1 print:rounded-md">
+                                    <span className="font-bold text-slate-700 print:text-[9px]">توقيع المستلم / السائق</span>
+                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1 print:mb-0"></div>
                                 </div>
 
-                                <div className="border border-slate-300 rounded-xl p-3 bg-slate-50/50 flex flex-col justify-between h-24">
-                                    <span className="font-bold text-slate-700">أمين المستودع ومسؤول الصرف</span>
-                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1"></div>
+                                <div className="border border-slate-300 rounded-xl p-3 bg-slate-50/50 flex flex-col justify-between h-24 print:h-11 print:p-1 print:rounded-md">
+                                    <span className="font-bold text-slate-700 print:text-[9px]">أمين المستودع ومسؤول الصرف</span>
+                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1 print:mb-0"></div>
                                 </div>
 
-                                <div className="border-2 border-dashed border-slate-400 rounded-xl p-3 flex flex-col items-center justify-center h-24 bg-slate-50/30">
-                                    <span className="text-[10px] font-bold text-slate-400">ختم أمن البوابة وتصريح الخروج</span>
+                                <div className="border-2 border-dashed border-slate-400 rounded-xl p-3 flex flex-col items-center justify-center h-24 bg-slate-50/30 print:h-11 print:p-1 print:rounded-md">
+                                    <span className="text-[10px] font-bold text-slate-400 print:text-[8px]">ختم أمن البوابة وتصريح الخروج</span>
                                 </div>
                             </div>
                         </div>
                     )}
 
                     {/* 7. Footer Note */}
-                    <div className="relative z-10 mt-6 pt-3 border-t border-slate-200 text-center text-[10px] text-slate-500 font-bold space-y-0.5">
+                    <div className="relative z-10 mt-6 pt-3 border-t border-slate-200 text-center text-[10px] text-slate-500 font-bold space-y-0.5 print:mt-1 print:pt-0.5 print:text-[8px] print:space-y-0">
                         <p>
                             {viewMode === 'DELIVERY'
                                 ? 'يجب إبراز هذا الإذن المعتمد لأمن البوابة عند الخروج من حرم المصنع.'
