@@ -237,6 +237,17 @@ export async function PUT(
                         status: finalStatus,
                         invoiceNumber: newInvoiceNumber,
                         ...(parsedCreatedAt && { createdAt: parsedCreatedAt }),
+                        ...(json.bankName !== undefined && { bankName: json.bankName?.trim() || null }),
+                        ...(json.bankRef !== undefined && { bankRef: json.bankRef?.trim() || null }),
+                        ...(json.bankTransfers !== undefined && { 
+                            bankTransfers: json.bankTransfers ? (typeof json.bankTransfers === 'string' ? json.bankTransfers : JSON.stringify(json.bankTransfers)) : null 
+                        }),
+                        ...(json.paymentMethod && { paymentMethod: json.paymentMethod }),
+                        ...(json.cashAmount !== undefined && { cashAmount: parseFloat(json.cashAmount || '0') }),
+                        ...(json.bankAmount !== undefined && { bankAmount: parseFloat(json.bankAmount || '0') }),
+                        ...(json.chequeAmount !== undefined && { chequeAmount: parseFloat(json.chequeAmount || '0') }),
+                        ...(json.chequeNumber !== undefined && { chequeNumber: json.chequeNumber?.trim() || null }),
+                        ...(json.chequeBank !== undefined && { chequeBank: json.chequeBank?.trim() || null }),
                         items: {
                             create: newItemsData
                         },

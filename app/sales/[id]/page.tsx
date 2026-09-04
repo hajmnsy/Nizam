@@ -108,6 +108,7 @@ interface Sale {
     paymentMethod?: string
     bankName?: string | null
     bankRef?: string | null
+    bankTransfers?: string | null
     chequeNumber?: string | null
     chequeBank?: string | null
     cashAmount?: number
@@ -128,6 +129,35 @@ interface Sale {
         code: string
     } | null
     items: SaleItem[]
+}
+
+interface BankTransferEntry {
+    bank: string
+    ref: string
+    amount?: number | string
+}
+
+function getBankTransfersList(sale: Sale): BankTransferEntry[] {
+    if (sale.bankTransfers) {
+        try {
+            const parsed = JSON.parse(sale.bankTransfers)
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        } catch (e) {}
+    }
+    if (sale.bankRef && sale.bankRef.trim().startsWith('[')) {
+        try {
+            const parsed = JSON.parse(sale.bankRef)
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        } catch (e) {}
+    }
+    if (sale.bankRef || sale.bankName) {
+        return [{
+            bank: sale.bankName || 'تحويل بنكي',
+            ref: sale.bankRef || '',
+            amount: sale.bankAmount || 0
+        }]
+    }
+    return []
 }
 
 type InvoiceViewMode = 'INVOICE' | 'DELIVERY' | 'QUOTATION'
@@ -288,6 +318,8 @@ export default function InvoiceDetails() {
     const vatAmount = settings?.vatRate ? (sale.total * settings.vatRate) / 100 : 0
     const finalTotalWithVat = sale.total + vatAmount
     const isMainBranch = sale.branchId === 1 || sale.branch?.code === 'main' || sale.branch?.name === 'الفرع الرئيسي' || !sale.branchId
+    const isForeignCurrency = Boolean(sale.currency && sale.currency !== 'SDG')
+    const bankTransfersList = getBankTransfersList(sale)
 
     return (
         <main className="min-h-screen bg-slate-100 print:bg-white print:min-h-0 print:m-0 print:p-0 pb-16 font-sans">
@@ -592,7 +624,8 @@ export default function InvoiceDetails() {
                     </div>
 
                     {/* 3. Client & Metadata Grid */}
-                    <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-xs">
+                    <div className={`relative z-10 grid grid-cols-1 ${isForeignCurrency ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 mb-4 text-xs`}>
+                        {/* Box 1: Customer */}
                         <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
                             <span className="text-[10px] text-slate-500 font-bold block mb-0.5">العميل المكرم:</span>
                             <span className="font-black text-slate-950 text-sm block truncate">
@@ -600,43 +633,107 @@ export default function InvoiceDetails() {
                             </span>
                         </div>
 
+                        {/* Box 2: Payment Details (Handles Single/Multiple Bankak/Fawry/Cash/Cheque) */}
                         <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
                             <span className="text-[10px] text-slate-500 font-bold block mb-0.5">طريقة الدفع:</span>
-                            <span className="font-black text-slate-800 block truncate">
-                                {sale.paymentMethod === 'BANK'
-                                    ? `تحويل بنكي (${sale.bankName || 'البنك'})`
-                                    : sale.paymentMethod === 'CHEQUE'
-                                    ? `شيك مصرفي (${sale.chequeBank || 'البنك'})`
-                                    : sale.paymentMethod === 'MULTIPLE'
-                                    ? 'سداد مجزأ'
-                                    : 'نقداً (كاش)'}
-                            </span>
-                            {sale.paymentMethod === 'BANK' && sale.bankRef && (
-                                <span className="text-[10px] text-slate-600 block mt-0.5 font-mono">
-                                    إشعار: {sale.bankRef}
-                                </span>
+                            {sale.paymentMethod === 'BANK' && (
+                                <div>
+                                    {bankTransfersList.length > 1 ? (
+                                        <div className="space-y-1">
+                                            <span className="font-black text-blue-900 block text-xs">
+                                                تحويلات بنكية ({bankTransfersList.length} إشعارات):
+                                            </span>
+                                            <div className="space-y-1 mt-0.5 max-h-24 overflow-y-auto">
+                                                {bankTransfersList.map((t, idx) => (
+                                                    <div key={idx} className="bg-white/80 border border-blue-200 rounded px-1.5 py-0.5 text-[10px] flex justify-between items-center">
+                                                        <span className="font-bold text-slate-800">
+                                                            {t.bank} <span className="font-mono text-slate-600">(إشعار: {t.ref || '-'})</span>
+                                                        </span>
+                                                        {t.amount ? (
+                                                            <span className="font-mono font-black text-blue-950 mr-1">
+                                                                {Number(t.amount).toLocaleString()} ج.س
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <span className="font-black text-slate-800 block">
+                                                تحويل بنكي ({bankTransfersList[0]?.bank || sale.bankName || 'بنك الخرطوم (بنكك)'})
+                                            </span>
+                                            <span className="text-[10px] text-slate-600 block mt-0.5 font-mono">
+                                                إشعار: {bankTransfersList[0]?.ref || sale.bankRef || '-'}
+                                            </span>
+                                            {bankTransfersList[0]?.amount ? (
+                                                <span className="text-[10px] text-blue-900 font-bold block mt-0.5">
+                                                    المبلغ: {Number(bankTransfersList[0].amount).toLocaleString()} ج.س
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                    )}
+                                </div>
                             )}
-                            {sale.paymentMethod === 'CHEQUE' && sale.chequeNumber && (
-                                <span className="text-[10px] text-slate-600 block mt-0.5 font-mono">
-                                    شيك #: {sale.chequeNumber}
-                                </span>
+
+                            {sale.paymentMethod === 'CHEQUE' && (
+                                <div>
+                                    <span className="font-black text-slate-800 block">
+                                        شيك مصرفي ({sale.chequeBank || 'البنك'})
+                                    </span>
+                                    <span className="text-[10px] text-slate-600 block mt-0.5 font-mono">
+                                        شيك #: {sale.chequeNumber || '-'}
+                                    </span>
+                                </div>
+                            )}
+
+                            {sale.paymentMethod === 'MULTIPLE' && (
+                                <div className="space-y-1">
+                                    <span className="font-black text-amber-900 block text-xs">سداد مجزأ:</span>
+                                    <div className="text-[10px] space-y-0.5">
+                                        {(sale.cashAmount || 0) > 0 && (
+                                            <div>كاش: <strong className="font-mono">{sale.cashAmount?.toLocaleString()} ج.س</strong></div>
+                                        )}
+                                        {bankTransfersList.length > 0 ? (
+                                            <div className="space-y-0.5">
+                                                {bankTransfersList.map((t, idx) => (
+                                                    <div key={idx} className="bg-blue-50/50 border border-blue-200/60 rounded px-1.5 py-0.5">
+                                                        بنك: <strong className="font-bold">{t.bank}</strong> (إشعار: <span className="font-mono">{t.ref || '-'}</span>) - <span className="font-mono font-bold text-blue-900">{Number(t.amount || sale.bankAmount || 0).toLocaleString()} ج.س</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (sale.bankAmount || 0) > 0 ? (
+                                            <div>بنك: <strong className="font-mono">{sale.bankAmount?.toLocaleString()} ج.س</strong></div>
+                                        ) : null}
+                                        {(sale.chequeAmount || 0) > 0 && (
+                                            <div>شيك: <strong className="font-mono">{sale.chequeAmount?.toLocaleString()} ج.س</strong> ({sale.chequeBank || 'بنك الشيك'} - #{sale.chequeNumber || '-'})</div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {sale.paymentMethod === 'CASH' && (
+                                <div>
+                                    <span className="font-black text-slate-800 block">نقداً (كاش)</span>
+                                    <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">تم استلام المبلغ نقداً بالخزينة</span>
+                                </div>
                             )}
                         </div>
 
-                        <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
-                            <span className="text-[10px] text-slate-500 font-bold block mb-0.5">العملة وسعر الصرف:</span>
-                            <span className="font-black text-slate-800 block">
-                                {sale.currency && sale.currency !== 'SDG'
-                                    ? `${sale.currency === 'USD' ? 'دولار ($ USD)' : 'درهم (AED د.إ)'}`
-                                    : 'الجنيه السوداني (ج.س)'}
-                            </span>
-                            {sale.currency && sale.currency !== 'SDG' && (
+                        {/* Box 3: Currency & Rate - ONLY SHOWN IF NOT SDG */}
+                        {isForeignCurrency && (
+                            <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
+                                <span className="text-[10px] text-slate-500 font-bold block mb-0.5">العملة وسعر الصرف:</span>
+                                <span className="font-black text-slate-800 block">
+                                    {sale.currency === 'USD' ? 'دولار ($ USD)' : 'درهم (AED د.إ)'}
+                                </span>
                                 <span className="text-[10px] text-indigo-700 font-bold block mt-0.5">
                                     الصرف: {sale.currencyRate?.toLocaleString()} ج.س
                                 </span>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
+                        {/* Box 4 (or 3 if SDG): Dispatch Location */}
                         <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
                             <span className="text-[10px] text-slate-500 font-bold block mb-0.5">موقع الاستلام والصرف:</span>
                             <span className={`font-black block truncate ${
@@ -671,19 +768,18 @@ export default function InvoiceDetails() {
 
                     {/* 4. Products Table */}
                     <div className="relative z-10 mb-4">
-                        {/* Mode A: FINANCIAL INVOICE & QUOTATION */}
+                        {/* Mode A: FINANCIAL INVOICE & QUOTATION (No Quantity in Words column) */}
                         {(viewMode === 'INVOICE' || viewMode === 'QUOTATION') && (
                             <table className="w-full text-right border-collapse border border-slate-800">
                                 <thead>
                                     <tr className="bg-slate-900 text-white text-xs">
-                                        <th className="py-2 px-2 w-[5%] text-center font-black border border-slate-700">#</th>
-                                        <th className="py-2 px-3 w-[33%] text-right font-black border border-slate-700">بيان الصنف والمنتج</th>
-                                        <th className="py-2 px-2 w-[10%] text-center font-black border border-slate-700">السماكة</th>
-                                        <th className="py-2 px-2 w-[10%] text-center font-black border border-slate-700">النوع</th>
-                                        <th className="py-2 px-2 w-[8%] text-center font-black border border-slate-700">العدد</th>
-                                        <th className="py-2 px-2 w-[14%] text-center font-black border border-slate-700">الكمية كتابة</th>
-                                        <th className="py-2 px-2 w-[10%] text-center font-black border border-slate-700">السعر الإفرادي</th>
-                                        <th className="py-2 px-2 w-[10%] text-center font-black border border-slate-700">سعر الكمية</th>
+                                        <th className="py-2.5 px-2 w-[5%] text-center font-black border border-slate-700">#</th>
+                                        <th className="py-2.5 px-3 w-[41%] text-right font-black border border-slate-700">بيان الصنف والمنتج</th>
+                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">السماكة</th>
+                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">النوع</th>
+                                        <th className="py-2.5 px-2 w-[10%] text-center font-black border border-slate-700">الكمية</th>
+                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">السعر الإفرادي</th>
+                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700">سعر الكمية</th>
                                     </tr>
                                 </thead>
                                 <tbody className="text-xs divide-y divide-slate-300">
@@ -704,9 +800,6 @@ export default function InvoiceDetails() {
                                             <td className="py-1.5 px-2 text-center font-black font-mono text-slate-950 text-sm border border-slate-300">
                                                 {item.quantity}
                                             </td>
-                                            <td className="py-1.5 px-2 text-center font-bold text-slate-700 border border-slate-300 text-[11px] leading-tight">
-                                                {numberToArabicWords(item.quantity)}
-                                            </td>
                                             <td className="py-1.5 px-2 text-center font-mono font-bold text-slate-800 border border-slate-300">
                                                 {item.price.toLocaleString()}
                                             </td>
@@ -719,7 +812,7 @@ export default function InvoiceDetails() {
                             </table>
                         )}
 
-                        {/* Mode B: WAREHOUSE DELIVERY NOTE (إذن استلام وصرف مخزني بدون أسعار) */}
+                        {/* Mode B: WAREHOUSE DELIVERY NOTE (Keeps Quantity in Words for storekeeper security) */}
                         {viewMode === 'DELIVERY' && (
                             <table className="w-full text-right border-collapse border border-slate-800">
                                 <thead>
@@ -772,7 +865,7 @@ export default function InvoiceDetails() {
                                     </div>
                                 </div>
 
-                                {sale.currency && sale.currency !== 'SDG' && (
+                                {isForeignCurrency && (
                                     <div className="mt-2 text-xs font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 p-2 rounded-lg flex justify-between items-center">
                                         <span>القيمة بعملة الفاتورة ({sale.currency}):</span>
                                         <span className="font-mono text-sm font-black">

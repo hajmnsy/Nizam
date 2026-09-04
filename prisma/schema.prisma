@@ -59,6 +59,7 @@ model Sale {
   chequeAmount    Float      @default(0)
   bankName        String?
   bankRef         String?
+  bankTransfers   String?    @db.Text
   chequeNumber    String?
   chequeBank      String?
   createdAt       DateTime   @default(now())

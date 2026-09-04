@@ -205,6 +205,35 @@ export default function NewSale() {
 
     const [currency, setCurrency] = useState<'SDG' | 'USD' | 'AED'>('SDG')
     const [currencyRate, setCurrencyRate] = useState<string>('1')
+    interface BankTransferRow {
+        id: number
+        bankName: string
+        customBankName: string
+        bankRef: string
+        amount: string
+    }
+
+    const [bankTransfers, setBankTransfers] = useState<BankTransferRow[]>([
+        { id: 1, bankName: 'بنك الخرطوم (بنكك)', customBankName: '', bankRef: '', amount: '' }
+    ])
+
+    const addBankTransfer = () => {
+        setBankTransfers(prev => [
+            ...prev,
+            { id: Date.now(), bankName: 'بنك الخرطوم (بنكك)', customBankName: '', bankRef: '', amount: '' }
+        ])
+    }
+
+    const removeBankTransfer = (id: number) => {
+        if (bankTransfers.length <= 1) return
+        setBankTransfers(prev => prev.filter(t => t.id !== id))
+    }
+
+    const updateBankTransfer = (id: number, field: keyof BankTransferRow, value: string) => {
+        setBankTransfers(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t))
+    }
+
+    const totalBankTransfers = bankTransfers.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
     const [bankName, setBankName] = useState<string>('بنك الخرطوم (بنكك)')
     const [customBankName, setCustomBankName] = useState<string>('')
     const [bankRef, setBankRef] = useState<string>('')
@@ -243,17 +272,44 @@ export default function NewSale() {
         let calcCheque = 0;
 
         if (paymentMethod === 'CASH') calcCash = finalPaid;
-        else if (paymentMethod === 'BANK') calcBank = finalPaid;
+        else if (paymentMethod === 'BANK') {
+            const sumTransfers = bankTransfers.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+            if (sumTransfers > 0) {
+                calcBank = sumTransfers;
+                if (calcBank < finalTotal && status !== 'QUOTATION') {
+                    finalPaid = calcBank;
+                    finalStatus = 'CREDIT';
+                }
+            } else {
+                calcBank = finalPaid;
+            }
+        }
         else if (paymentMethod === 'CHEQUE') calcCheque = finalPaid;
         else if (paymentMethod === 'MULTIPLE') {
             calcCash = parseFloat(splitCash) || 0;
-            calcBank = parseFloat(splitBank) || 0;
+            const sumTransfers = bankTransfers.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+            calcBank = (parseFloat(splitBank) || 0) > 0 ? (parseFloat(splitBank) || 0) : sumTransfers;
             calcCheque = parseFloat(splitCheque) || 0;
         }
 
-        const finalBankName = (paymentMethod === 'BANK' || (paymentMethod === 'MULTIPLE' && (parseFloat(splitBank) || 0) > 0))
-            ? (bankName === 'أخرى (تحديد يدوي)' ? customBankName : bankName)
-            : null;
+        const activeTransfers = bankTransfers.map(t => ({
+            bank: t.bankName === 'أخرى (تحديد يدوي)' ? (t.customBankName || 'أخرى') : t.bankName,
+            ref: t.bankRef?.trim() || '',
+            amount: (parseFloat(t.amount) || 0) > 0 ? parseFloat(t.amount) : (bankTransfers.length === 1 ? calcBank : 0)
+        })).filter(t => t.ref || t.amount > 0 || bankTransfers.length === 1);
+
+        let finalBankName = null;
+        let finalBankRef = null;
+        if (paymentMethod === 'BANK' || (paymentMethod === 'MULTIPLE' && calcBank > 0)) {
+            if (activeTransfers.length === 1) {
+                finalBankName = activeTransfers[0].bank;
+                finalBankRef = activeTransfers[0].ref || null;
+            } else if (activeTransfers.length > 1) {
+                const names = Array.from(new Set(activeTransfers.map(t => t.bank.replace(/\s*\(.*?\)/g, ''))));
+                finalBankName = names.join(' + ') + ` (${activeTransfers.length} إشعارات)`;
+                finalBankRef = activeTransfers.map(t => `${t.bank}: ${t.ref || 'بدون إشعار'} [${t.amount.toLocaleString()} ج.س]`).join(' | ');
+            }
+        }
 
         try {
             const res = await fetch('/api/sales', {
@@ -273,7 +329,8 @@ export default function NewSale() {
                     currency: currency,
                     currencyRate: parseFloat(currencyRate) || 1,
                     bankName: finalBankName,
-                    bankRef: bankRef?.trim() || null,
+                    bankRef: finalBankRef,
+                    bankTransfers: JSON.stringify(activeTransfers),
                     chequeNumber: chequeNumber?.trim() || null,
                     chequeBank: chequeBank?.trim() || null,
                     createdAt: createdAt,
@@ -771,44 +828,97 @@ export default function NewSale() {
 
                                     {/* Bank Transfer Details */}
                                     {(paymentMethod === 'BANK' || (paymentMethod === 'MULTIPLE' && (parseFloat(splitBank) || 0) > 0)) && (
-                                        <div className="bg-blue-50/70 border border-blue-200 p-3 rounded-xl space-y-2.5 animate-fade-in">
-                                            <span className="text-xs font-black text-blue-900 block">تفاصيل التحويل البنكي:</span>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">اسم البنك المحول إليه</label>
-                                                    <select
-                                                        value={bankName}
-                                                        onChange={(e) => setBankName(e.target.value)}
-                                                        className="w-full text-xs font-bold p-2 bg-white border border-blue-300 rounded-lg outline-none"
-                                                    >
-                                                        {POPULAR_BANKS.map(b => (
-                                                            <option key={b} value={b}>{b}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">رقم الإشعار / المرجع</label>
-                                                    <input
-                                                        type="text"
-                                                        value={bankRef}
-                                                        onChange={(e) => setBankRef(e.target.value)}
-                                                        placeholder="رقم إشعار التحويل..."
-                                                        className="w-full text-xs font-bold p-2 bg-white border border-blue-300 rounded-lg outline-none font-mono"
-                                                    />
-                                                </div>
+                                        <div className="bg-blue-50/80 border-2 border-blue-200 p-3.5 rounded-xl space-y-3 animate-fade-in">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-black text-blue-950 flex items-center gap-1.5">
+                                                    💳 تفاصيل التحويلات البنكية (بنكك، فوري، أوكاش، إلخ):
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={addBankTransfer}
+                                                    className="text-[11px] font-black text-blue-700 hover:text-blue-900 bg-white border border-blue-300 hover:bg-blue-100/50 px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm transition-all"
+                                                >
+                                                    <Plus size={13} />
+                                                    + إضافة إشعار آخر
+                                                </button>
                                             </div>
-                                            {bankName === 'أخرى (تحديد يدوي)' && (
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">اكتب اسم البنك</label>
-                                                    <input
-                                                        type="text"
-                                                        value={customBankName}
-                                                        onChange={(e) => setCustomBankName(e.target.value)}
-                                                        placeholder="اسم البنك..."
-                                                        className="w-full text-xs font-bold p-2 bg-white border border-blue-300 rounded-lg outline-none"
-                                                    />
+
+                                            {bankTransfers.length > 1 && (
+                                                <div className="text-[11px] font-bold text-blue-900 bg-blue-100/80 p-2 rounded-lg flex justify-between items-center border border-blue-200">
+                                                    <span>عدد الإشعارات: {bankTransfers.length}</span>
+                                                    <span>مجموع مبالغ الإشعارات: <strong className="font-mono text-xs text-blue-950">{totalBankTransfers.toLocaleString()} ج.س</strong></span>
                                                 </div>
                                             )}
+
+                                            <div className="space-y-2.5">
+                                                {bankTransfers.map((transfer, index) => (
+                                                    <div key={transfer.id} className="bg-white border border-blue-200 p-2.5 rounded-lg space-y-2 relative shadow-xs">
+                                                        <div className="flex justify-between items-center text-[11px] font-bold text-slate-700 border-b border-slate-100 pb-1">
+                                                            <span className="text-blue-900 font-black">إشعار تحويل #{index + 1}</span>
+                                                            {bankTransfers.length > 1 && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeBankTransfer(transfer.id)}
+                                                                    className="text-red-500 hover:text-red-700 p-0.5 rounded hover:bg-red-50"
+                                                                    title="حذف هذا الإشعار"
+                                                                >
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">البنك / التطبيق</label>
+                                                                <select
+                                                                    value={transfer.bankName}
+                                                                    onChange={(e) => updateBankTransfer(transfer.id, 'bankName', e.target.value)}
+                                                                    className="w-full text-xs font-bold p-1.5 bg-slate-50 border border-slate-300 rounded-md outline-none focus:border-blue-500"
+                                                                >
+                                                                    {POPULAR_BANKS.map(b => (
+                                                                        <option key={b} value={b}>{b}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">رقم الإشعار / المرجع</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={transfer.bankRef}
+                                                                    onChange={(e) => updateBankTransfer(transfer.id, 'bankRef', e.target.value)}
+                                                                    placeholder="رقم الإشعار..."
+                                                                    className="w-full text-xs font-bold p-1.5 bg-slate-50 border border-slate-300 rounded-md outline-none focus:border-blue-500 font-mono"
+                                                                />
+                                                            </div>
+
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">مبلغ الإشعار (ج.س)</label>
+                                                                <input
+                                                                    type="number"
+                                                                    value={transfer.amount}
+                                                                    onChange={(e) => updateBankTransfer(transfer.id, 'amount', e.target.value)}
+                                                                    placeholder={bankTransfers.length === 1 ? `${finalTotal}` : "المبلغ..."}
+                                                                    className="w-full text-xs font-bold p-1.5 bg-slate-50 border border-slate-300 rounded-md outline-none focus:border-blue-500 font-mono"
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        {transfer.bankName === 'أخرى (تحديد يدوي)' && (
+                                                            <div>
+                                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">اكتب اسم البنك</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={transfer.customBankName}
+                                                                    onChange={(e) => updateBankTransfer(transfer.id, 'customBankName', e.target.value)}
+                                                                    placeholder="اسم البنك..."
+                                                                    className="w-full text-xs font-bold p-1.5 bg-white border border-slate-300 rounded-md outline-none"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
 

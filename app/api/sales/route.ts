@@ -116,6 +116,7 @@ export async function POST(request: Request) {
                     chequeAmount: chequeAmount,
                     bankName: json.bankName?.trim() || null,
                     bankRef: json.bankRef?.trim() || null,
+                    bankTransfers: json.bankTransfers ? (typeof json.bankTransfers === 'string' ? json.bankTransfers : JSON.stringify(json.bankTransfers)) : null,
                     chequeNumber: json.chequeNumber?.trim() || null,
                     chequeBank: json.chequeBank?.trim() || null,
                     createdAt: finalCreatedAt,
