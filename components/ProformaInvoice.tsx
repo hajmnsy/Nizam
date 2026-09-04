@@ -16,7 +16,8 @@ export const ProformaInvoice = React.forwardRef<HTMLDivElement, ProformaInvoiceP
             <div className="relative border-b-2 border-slate-900 pb-4 mb-4 flex items-center justify-between h-32">
                 {/* Right: Factory Name */}
                 <div className="text-right w-1/3">
-                    <h1 className="text-3xl font-black text-slate-900">مصنع الجودة</h1>
+                    <h1 className="text-2xl font-black text-slate-900">المصنع السوداني الماليزي</h1>
+                    <p className="text-xs text-slate-500 font-bold">للمنتجات الحديدية ومواد البناء</p>
                 </div>
 
                 {/* Center: Logo */}
@@ -28,8 +29,8 @@ export const ProformaInvoice = React.forwardRef<HTMLDivElement, ProformaInvoiceP
                         <div className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
                         <div className="absolute bottom-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
                         
-                        <span className="text-2xl font-black text-slate-950 tracking-[0.25em] font-sans">
-                            مـركـز الـجـودة
+                        <span className="text-xl font-black text-slate-950 tracking-[0.15em] font-sans">
+                            الـمـصـنـع الـسـودانـي الـمـالـيـزي
                         </span>
                     </div>
                 </div>

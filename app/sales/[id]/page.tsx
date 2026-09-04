@@ -4,37 +4,82 @@ import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import { ArrowLeft, Clock, Printer, Edit, CheckCircle, Phone, AlertCircle, X, Trash2 } from 'lucide-react'
+import {
+    ArrowLeft, Clock, Printer, Edit, CheckCircle, Phone,
+    AlertCircle, X, Trash2, FileText, PackageCheck, FileSpreadsheet,
+    MapPin, Building2, Calendar, User, CreditCard, ShieldCheck
+} from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
 function numberToArabicWords(number: number): string {
+    if (number === 0) return 'صفر';
     const units = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة'];
     const teens = ['عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر'];
-    const tens = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
+    const tens = ['', 'عشرة', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
     const hundreds = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة'];
 
-    if (number === 0) return 'صفر';
-    if (number < 10) return units[number];
-    if (number < 20) return teens[number - 10];
-    if (number < 100) return units[number % 10] ? `${units[number % 10]} و${tens[Math.floor(number / 10)]}` : tens[Math.floor(number / 10)];
-    if (number < 1000) {
-        const h = Math.floor(number / 100);
-        const rem = number % 100;
-        return rem ? `${hundreds[h]} و${numberToArabicWords(rem)}` : hundreds[h];
+    function convertGroup(num: number): string {
+        let str = '';
+        const h = Math.floor(num / 100);
+        const t = Math.floor((num % 100) / 10);
+        const o = num % 10;
+        if (h > 0) str += hundreds[h];
+        if (t === 1) {
+            if (str) str += ' و';
+            str += teens[o];
+        } else {
+            if (o > 0) {
+                if (str) str += ' و';
+                str += units[o];
+            }
+            if (t > 1) {
+                if (str) str += ' و';
+                str += tens[t];
+            }
+        }
+        return str;
     }
-    if (number < 100000) {
-        const th = Math.floor(number / 1000);
-        const rem = number % 1000;
-        let thText = '';
-        if (th === 1) thText = 'ألف';
-        else if (th === 2) thText = 'ألفان';
-        else if (th < 10) thText = `${numberToArabicWords(th)} آلاف`;
-        else thText = `${numberToArabicWords(th)} ألف`;
-        return rem ? `${thText} و${numberToArabicWords(rem)}` : thText;
+
+    const n = Math.abs(Math.floor(number));
+    const billions = Math.floor(n / 1000000000);
+    const millions = Math.floor((n % 1000000000) / 1000000);
+    const thousands = Math.floor((n % 1000000) / 1000);
+    const remainder = Math.floor(n % 1000);
+
+    const parts: string[] = [];
+    if (billions > 0) {
+        if (billions === 1) parts.push('مليار');
+        else if (billions === 2) parts.push('ملياران');
+        else if (billions >= 3 && billions <= 10) parts.push(convertGroup(billions) + ' مليارات');
+        else parts.push(convertGroup(billions) + ' مليار');
     }
-    return number.toString();
+    if (millions > 0) {
+        if (millions === 1) parts.push('مليون');
+        else if (millions === 2) parts.push('مليونان');
+        else if (millions >= 3 && millions <= 10) parts.push(convertGroup(millions) + ' ملايين');
+        else parts.push(convertGroup(millions) + ' مليون');
+    }
+    if (thousands > 0) {
+        if (thousands === 1) parts.push('ألف');
+        else if (thousands === 2) parts.push('ألفان');
+        else if (thousands >= 3 && thousands <= 10) parts.push(convertGroup(thousands) + ' آلاف');
+        else parts.push(convertGroup(thousands) + ' ألف');
+    }
+    if (remainder > 0) {
+        parts.push(convertGroup(remainder));
+    }
+    return parts.join(' و') || 'صفر';
+}
+
+function tafqeetCurrency(amount: number, currency: string = 'SDG'): string {
+    if (!amount || amount === 0) return 'صفر';
+    const words = numberToArabicWords(Math.floor(amount));
+    let currText = 'جنيه سوداني';
+    if (currency === 'USD') currText = 'دولار أمريكي';
+    else if (currency === 'AED') currText = 'درهم إماراتي';
+    return `فقط وقدره ${words} ${currText} لا غير`;
 }
 
 interface SaleItem {
@@ -46,6 +91,7 @@ interface SaleItem {
         type?: string
         thickness?: number
         price?: number
+        unit?: string
     }
 }
 
@@ -69,8 +115,22 @@ interface Sale {
     chequeAmount?: number
     createdAt: string
     status: string
+    branchId?: number
+    branch?: {
+        id: number
+        name: string
+        code: string
+    }
+    dispatchBranchId?: number | null
+    dispatchBranch?: {
+        id: number
+        name: string
+        code: string
+    } | null
     items: SaleItem[]
 }
+
+type InvoiceViewMode = 'INVOICE' | 'DELIVERY' | 'QUOTATION'
 
 export default function InvoiceDetails() {
     const params = useParams()
@@ -82,15 +142,15 @@ export default function InvoiceDetails() {
     const [showPaymentModal, setShowPaymentModal] = useState(false)
     const [paymentAmount, setPaymentAmount] = useState('')
     const [paying, setPaying] = useState(false)
-    const [printAsQuotation, setPrintAsQuotation] = useState(false)
-    const componentRef = useRef(null)
+    const [viewMode, setViewMode] = useState<InvoiceViewMode>('INVOICE')
+    const [deleting, setDeleting] = useState(false)
+    const componentRef = useRef<HTMLDivElement>(null)
 
     const handlePrint = () => {
         window.print()
     }
 
     useEffect(() => {
-        // Fetch both sale and settings concurrently
         Promise.all([
             fetch(`/api/sales/${params.id}`, { cache: 'no-store' }).then(res => res.json()),
             fetch('/api/settings', { cache: 'no-store' }).then(res => res.json())
@@ -98,19 +158,31 @@ export default function InvoiceDetails() {
             .then(([saleData, settingsData]) => {
                 setSale(saleData)
                 setSettings(settingsData)
+                if (saleData?.status === 'QUOTATION') {
+                    setViewMode('QUOTATION')
+                } else {
+                    const urlParams = new URLSearchParams(window.location.search)
+                    const mode = urlParams.get('mode')
+                    if (mode === 'delivery') setViewMode('DELIVERY')
+                    else if (mode === 'quotation') setViewMode('QUOTATION')
+                    else setViewMode('INVOICE')
+                }
                 setLoading(false)
             })
-            .catch(err => console.error(err))
+            .catch(err => {
+                console.error(err)
+                setLoading(false)
+            })
     }, [params.id])
 
     useEffect(() => {
         if (!loading && sale && settings) {
-            const urlParams = new URLSearchParams(window.location.search);
+            const urlParams = new URLSearchParams(window.location.search)
             if (urlParams.get('print') === 'true') {
                 const timer = setTimeout(() => {
-                    window.print();
-                }, 500);
-                return () => clearTimeout(timer);
+                    window.print()
+                }, 500)
+                return () => clearTimeout(timer)
             }
         }
     }, [loading, sale, settings])
@@ -169,7 +241,6 @@ export default function InvoiceDetails() {
         }
     }
 
-    const [deleting, setDeleting] = useState(false)
     const handleDelete = async () => {
         if (!confirm('هل أنت متأكد من حذف هذه الفاتورة نهائياً؟ سيتم استرجاع الكميات المباعة إلى المخزون. هذا الإجراء لا يمكن التراجع عنه.')) return
 
@@ -192,263 +263,496 @@ export default function InvoiceDetails() {
         }
     }
 
-    if (loading) return <div className="p-8 text-center text-gray-500">جاري التحميل...</div>
-    if (!sale) return <div className="p-8 text-center text-red-500">الفاتورة غير موجودة</div>
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500 font-bold">
+                <Clock className="animate-spin ml-2" size={20} />
+                جاري تحميل بيانات الفاتورة...
+            </div>
+        )
+    }
+
+    if (!sale) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-red-500 font-bold gap-4">
+                <AlertCircle size={48} />
+                <span>عذراً، الفاتورة المطلوبة غير موجودة</span>
+                <Link href="/sales">
+                    <Button variant="outline">العودة لسجل المبيعات</Button>
+                </Link>
+            </div>
+        )
+    }
 
     const isActualQuotation = sale.status === 'QUOTATION'
-    const isQuotation = isActualQuotation || printAsQuotation
     const vatAmount = settings?.vatRate ? (sale.total * settings.vatRate) / 100 : 0
     const finalTotalWithVat = sale.total + vatAmount
+    const isMainBranch = sale.branchId === 1 || sale.branch?.code === 'main' || sale.branch?.name === 'الفرع الرئيسي' || !sale.branchId
 
     return (
-        <main className="min-h-screen bg-slate-50 print:bg-white print:min-h-0 print:m-0 print:p-0">
+        <main className="min-h-screen bg-slate-100 print:bg-white print:min-h-0 print:m-0 print:p-0 pb-16 font-sans">
+            {/* Top Navigation Bar */}
             <div className="print:hidden">
                 <Navbar />
             </div>
 
-            <div className="container mx-auto p-4 max-w-4xl print:max-w-none print:w-full print:p-0">
-                {/* Header Actions */}
-                <div className="flex justify-between items-center mb-6 print:hidden">
-                    <Link href="/sales" className="text-gray-500 hover:text-blue-600 flex items-center gap-1">
-                        <ArrowLeft size={16} />
-                        رجوع
-                    </Link>
-                    <div className="flex gap-2">
-                        {isQuotation && (
+            <div className="container mx-auto p-4 max-w-5xl print:max-w-none print:w-full print:p-0">
+                {/* Control Action Bar */}
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 print:hidden flex flex-wrap justify-between items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <Link href="/sales" className="text-slate-500 hover:text-blue-600 flex items-center gap-1 font-bold text-sm bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-colors">
+                            <ArrowLeft size={16} />
+                            رجوع
+                        </Link>
+
+                        {/* View / Print Mode Selector */}
+                        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 mr-2">
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('INVOICE')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
+                                    viewMode === 'INVOICE'
+                                        ? 'bg-blue-600 text-white shadow-md'
+                                        : 'text-slate-700 hover:bg-white/80'
+                                }`}
+                            >
+                                <FileText size={15} />
+                                فاتورة مبيعات مالية
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('DELIVERY')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
+                                    viewMode === 'DELIVERY'
+                                        ? 'bg-amber-600 text-white shadow-md'
+                                        : 'text-slate-700 hover:bg-white/80'
+                                }`}
+                            >
+                                <PackageCheck size={15} />
+                                إذن استلام وصرف مخزني
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('QUOTATION')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
+                                    viewMode === 'QUOTATION'
+                                        ? 'bg-purple-600 text-white shadow-md'
+                                        : 'text-slate-700 hover:bg-white/80'
+                                }`}
+                            >
+                                <FileSpreadsheet size={15} />
+                                عرض سعر
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {isActualQuotation && (
                             <Button
                                 onClick={handleConvertToSale}
                                 disabled={converting}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-bold text-xs"
                             >
-                                {converting ? 'جاري التحويل...' : 'تحويل إلى فاتورة واعتماد'}
+                                {converting ? 'جاري التحويل...' : 'اعتماد وتحويل لفاتورة بيع'}
                             </Button>
                         )}
+
+                        {sale.status === 'CREDIT' && (
+                            <Button
+                                onClick={() => setShowPaymentModal(true)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-bold text-xs"
+                            >
+                                تسجيل دفعة (تحصيل)
+                            </Button>
+                        )}
+
                         <Link href={`/sales/${sale.id}/edit`}>
-                            <Button variant="outline" className="flex items-center gap-2 border-amber-200 text-amber-700 hover:bg-amber-50">
-                                <Edit size={16} />
-                                تعديل الفاتورة
+                            <Button variant="outline" className="flex items-center gap-1.5 border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs">
+                                <Edit size={15} />
+                                تعديل
                             </Button>
                         </Link>
+
                         <Button
                             onClick={handleDelete}
                             disabled={deleting}
                             variant="outline"
-                            className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50"
+                            className="flex items-center gap-1.5 border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs"
                         >
-                            <Trash2 size={16} />
-                            {deleting ? 'جاري الحذف...' : 'حذف الفاتورة'}
+                            <Trash2 size={15} />
+                            {deleting ? 'جاري الحذف...' : 'حذف'}
                         </Button>
-                        <Button onClick={handlePrint} variant="outline" className="flex items-center gap-2">
-                            <Printer size={16} />
-                            طباعة
+
+                        <Button
+                            onClick={handlePrint}
+                            className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                        >
+                            <Printer size={15} />
+                            طباعة ({viewMode === 'INVOICE' ? 'فاتورة' : viewMode === 'DELIVERY' ? 'إذن مخزن' : 'عرض سعر'})
                         </Button>
-                        {!isActualQuotation && (
-                            <Button
-                                onClick={() => {
-                                    setPrintAsQuotation(true)
-                                    setTimeout(() => window.print(), 100)
-                                }}
-                                variant="outline"
-                                className="flex items-center gap-2"
-                            >
-                                <Printer size={16} />
-                                طباعة كعرض سعر
-                            </Button>
-                        )}
                     </div>
                 </div>
 
-                {printAsQuotation && !isActualQuotation && (
-                    <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg flex justify-between items-center print:hidden">
+                {/* Status Notice Banners (Screen Only) */}
+                {sale.status === 'CREDIT' && (
+                    <div className="mb-4 bg-red-50 border-r-4 border-red-500 text-red-800 p-3 rounded-lg flex items-center justify-between print:hidden shadow-sm">
                         <div className="flex items-center gap-2">
-                            <Clock size={20} />
-                            <span className="font-bold">وضع طباعة عرض السعر مفعل.</span>
+                            <AlertCircle size={20} className="text-red-600 flex-shrink-0" />
+                            <div className="text-xs">
+                                <span className="font-black text-sm block">فاتورة غير مسددة بالكامل (آجلة)</span>
+                                <span>إجمالي الفاتورة: {sale.total.toLocaleString()} ج.س | المدفوع: {(sale.paidAmount || 0).toLocaleString()} ج.س | المتبقي: {(sale.remainingAmount || 0).toLocaleString()} ج.س</span>
+                            </div>
                         </div>
-                        <Button size="sm" variant="outline" onClick={() => setPrintAsQuotation(false)}>
-                            إلغاء وضع عرض السعر
+                        <Button size="sm" onClick={() => setShowPaymentModal(true)} className="bg-red-600 hover:bg-red-700 text-white text-xs">
+                            تسجيل دفعة الآن
                         </Button>
                     </div>
                 )}
 
                 {isActualQuotation && (
-                    <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg flex items-center gap-2 print:hidden">
-                        <Clock size={20} />
-                        <span className="font-bold">هذا "عرض سعر" (مسودة).</span>
-                        <span className="text-sm">لم يتم خصم الكميات من المخزون بعد.</span>
-                    </div>
-                )}
-
-                {sale.status === 'CREDIT' && (
-                    <div className="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center justify-between print:hidden">
-                        <div className="flex flex-col">
-                            <span className="font-bold flex items-center gap-2"><AlertCircle size={20} /> فاتورة غير مسددة بالكامل (آجلة)</span>
-                            <span className="text-sm mt-1">
-                                إجمالي الفاتورة: {sale.total.toLocaleString()} جنية | المدفوع: {(sale.paidAmount || 0).toLocaleString()} جنية | المتبقي: {(sale.remainingAmount || 0).toLocaleString()} جنية
-                            </span>
+                    <div className="mb-4 bg-purple-50 border-r-4 border-purple-500 text-purple-900 p-3 rounded-lg flex items-center justify-between print:hidden shadow-sm text-xs">
+                        <div className="flex items-center gap-2">
+                            <Clock size={20} className="text-purple-600 flex-shrink-0" />
+                            <div>
+                                <span className="font-black text-sm block">عرض سعر مسودة (غير معتمد بعد)</span>
+                                <span>لم يتم خصم كميات هذه الأصناف من المخزون بعد. يمكنك تحويله إلى فاتورة بيع معتمدة عند تأكيد العميل.</span>
+                            </div>
                         </div>
-                        <Button onClick={() => setShowPaymentModal(true)} className="bg-red-600 hover:bg-red-700 text-white shadow-sm">
-                            تسجيل دفعة
-                        </Button>
                     </div>
                 )}
 
-                {/* Invoice Paper */}
+                {/* Print Layout Styles */}
                 <style type="text/css" media="print">
                     {`
-                        @page { margin: 5mm; }
+                        @page {
+                            size: A4 portrait;
+                            margin: 6mm 8mm;
+                        }
+                        @media print {
+                            body {
+                                -webkit-print-color-adjust: exact !important;
+                                print-color-adjust: exact !important;
+                                background-color: #ffffff !important;
+                            }
+                            .no-print {
+                                display: none !important;
+                            }
+                        }
                     `}
                 </style>
-                <div ref={componentRef} className="bg-white p-10 rounded-xl shadow-xl print:shadow-none print:p-0 relative overflow-hidden mt-6 print:m-0 mx-auto max-w-[210mm] min-h-[297mm] print:min-h-0 ring-1 ring-slate-200 print:ring-0">
+
+                {/* INVOICE PAPER (A4 Dimension Optimized) */}
+                <div
+                    ref={componentRef}
+                    className="bg-white p-8 sm:p-10 rounded-2xl shadow-xl print:shadow-none print:p-0 relative overflow-hidden mx-auto max-w-[210mm] min-h-[297mm] print:min-h-0 print:m-0 ring-1 ring-slate-200 print:ring-0 text-slate-900"
+                    dir="rtl"
+                >
                     {/* Watermark for Quotation */}
-                    {isActualQuotation && (
-                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none z-0">
-                            <span className="text-[200px] font-black -rotate-45 text-amber-900 px-12 py-6 border-8 border-amber-900 rounded-[3rem]">
-                                مسودة
+                    {viewMode === 'QUOTATION' && (
+                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none z-0 select-none">
+                            <span className="text-[130px] font-black -rotate-45 text-slate-950 px-12 py-6 border-8 border-slate-950 rounded-[3rem]">
+                                عرض سعر
                             </span>
                         </div>
                     )}
 
-                    {/* Header */}
-                    <div className="relative z-10 pb-2 mb-2 print:pb-0 print:mb-0 flex justify-between items-center h-auto">
-                        <div className="w-1/4 text-right space-y-2 mt-1 print:mt-0">
-                            {settings?.companyName && (
-                                <h2 className="text-2xl print:text-xl font-black text-slate-900 tracking-tight">
-                                    {settings.companyName}
-                                </h2>
-                            )}
-                            <div className="flex flex-col items-start gap-0.5 text-slate-600 font-medium text-sm">
-                                <div className="flex items-center gap-1.5"><Phone size={14} className="text-slate-500" /> <span className="font-bold text-slate-700">م. محمد إسماعيل</span></div>
-                                <span dir="ltr" className="font-bold text-slate-700 pr-5">{settings?.phone || '-'}</span>
-                            </div>
-                            {settings?.vatRate > 0 && <p className="text-[10px] text-slate-400 border border-slate-200 inline-block px-1.5 py-0.5 rounded-sm font-bold mt-1">الرقم الضريبي متوفر</p>}
+                    {/* Watermark for Delivery Note */}
+                    {viewMode === 'DELIVERY' && (
+                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.025] pointer-events-none z-0 select-none">
+                            <span className="text-[110px] font-black -rotate-45 text-amber-950 px-10 py-4 border-8 border-amber-950 rounded-[3rem]">
+                                إذن استلام
+                            </span>
                         </div>
-                        <div className="w-1/2 flex flex-col justify-center items-center gap-2">
+                    )}
+
+                    {/* 1. Basmala Header */}
+                    <div className="relative z-10 text-center text-xs font-serif font-bold text-slate-500 mb-2 print:mb-1 tracking-widest border-b border-slate-100 pb-1">
+                        بِسْمِ اللَّـهِ الرَّحْمَـٰنِ الرَّحِيمِ
+                    </div>
+
+                    {/* 2. Official Header */}
+                    <div className="relative z-10 flex justify-between items-center pb-4 mb-4 border-b-2 border-slate-800 gap-4">
+                        {/* Right: Company and Branch Info */}
+                        <div className="w-[36%] text-right space-y-1">
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight">
+                                    {settings?.companyName || 'المصنع السوداني الماليزي'}
+                                </h1>
+                            </div>
+                            <div className="flex items-center gap-1.5 pt-0.5">
+                                <span className="inline-block bg-slate-900 text-white text-[11px] font-black px-2.5 py-0.5 rounded shadow-sm">
+                                    {isMainBranch ? 'الفرع الرئيسي' : ((sale as any)?.branch?.name || 'فرع الشركة')}
+                                </span>
+                                <span className="text-[11px] font-bold text-slate-600">
+                                    صناعة وتجارة كافة أنواع وتخانات الحديد
+                                </span>
+                            </div>
+                            <div className="text-[11px] text-slate-700 font-bold space-y-0.5 pt-1">
+                                <div className="flex items-center gap-1 text-slate-800">
+                                    <Phone size={12} className="text-slate-600" />
+                                    <span>م. محمد إسماعيل:</span>
+                                    <span dir="ltr" className="font-mono">{settings?.phone || '0123456789'}</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-slate-600 text-[10px]">
+                                    <MapPin size={12} className="text-slate-500" />
+                                    <span>{settings?.address || 'الدامر - المنطقة الصناعية - شمال سوق السبت'}</span>
+                                </div>
+                                {settings?.vatRate > 0 && (
+                                    <div className="text-[10px] text-emerald-800 font-extrabold flex items-center gap-1">
+                                        <ShieldCheck size={12} />
+                                        <span>الرقم الضريبي معتمد ({settings.vatRate}%)</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Center: Prestige Emblem / Industrial Logo */}
+                        <div className="w-[34%] flex flex-col justify-center items-center">
                             {settings?.logoUrl ? (
-                                <img src={settings.logoUrl} alt="Logo" className="h-28 print:h-24 max-w-full w-auto object-contain mix-blend-multiply print:contrast-125 print:grayscale" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                <img
+                                    src={settings.logoUrl}
+                                    alt="Logo"
+                                    className="h-24 print:h-20 max-w-full w-auto object-contain mix-blend-multiply"
+                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                                />
                             ) : (
-                                <div className="relative w-full py-4 px-4 bg-slate-50 border-4 border-double border-slate-900 rounded-lg flex items-center justify-center select-none">
+                                <div className="relative w-full py-2.5 px-3 bg-gradient-to-b from-slate-50 to-slate-100 border-2 border-double border-slate-900 rounded-lg flex flex-col items-center justify-center select-none shadow-sm">
                                     {/* Corner industrial rivets */}
-                                    <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
-                                    <div className="absolute top-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
-                                    <div className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
-                                    <div className="absolute bottom-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
-                                    
-                                    <span className="text-3xl print:text-2xl font-black text-slate-950 tracking-[0.25em] font-sans">
-                                        مـركـز الـجـودة
+                                    <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-400"></div>
+                                    <div className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-400"></div>
+                                    <div className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-400"></div>
+                                    <div className="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-400"></div>
+
+                                    <span className="text-sm sm:text-base font-black text-slate-950 tracking-[0.15em] font-sans leading-tight text-center">
+                                        الـمـصـنـع الـسـودانـي الـمـالـيـزي
+                                    </span>
+                                    <span className="text-[9px] font-black text-slate-600 tracking-wider mt-0.5">
+                                        للـمـنـتـجـات الـحـديـديـة ومـواد الـبـنـاء
                                     </span>
                                 </div>
                             )}
                         </div>
-                        <div className="w-1/4 text-left space-y-0.5 print:space-y-0 mt-1 print:mt-0">
-                            {isQuotation && (
-                                <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-                                    عرض سعر
-                                </h1>
-                            )}
-                            {!isQuotation && (
-                                <div>
-                                    <p className="text-slate-400 text-xs font-bold">
-                                        رقم إذن الإستلام
-                                    </p>
-                                    <p className="font-mono text-lg font-bold text-slate-700 leading-tight">{sale.invoiceNumber || sale.id}</p>
+
+                        {/* Left: Document Badge Card */}
+                        <div className="w-[30%] text-left">
+                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3 text-right shadow-sm space-y-1">
+                                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                                    <span className="text-xs font-bold text-slate-500">نوع المستند:</span>
+                                    <span className={`text-xs font-black px-2 py-0.5 rounded ${
+                                        viewMode === 'INVOICE'
+                                            ? 'bg-blue-100 text-blue-900'
+                                            : viewMode === 'DELIVERY'
+                                            ? 'bg-amber-100 text-amber-900'
+                                            : 'bg-purple-100 text-purple-900'
+                                    }`}>
+                                        {viewMode === 'INVOICE' ? 'فاتورة مبيعات' : viewMode === 'DELIVERY' ? 'إذن استلام مخزن' : 'عرض سعر'}
+                                    </span>
                                 </div>
-                            )}
-                            <div className="text-xs text-slate-600 font-medium space-y-0.5">
-                                <div>التاريخ: <span className="text-slate-700 font-bold">{new Date(sale.createdAt).toLocaleDateString('en-GB')}</span></div>
-                                <div>العميل: <span className="text-slate-700 font-bold">{sale.customer}</span></div>
-                                {(sale as any).branch && <div>فرع الفاتورة: <span className="text-slate-800 font-bold">{(sale as any).branch.name}</span></div>}
-                                {(sale as any).dispatchBranch && (
-                                    <div className={`mt-0.5 font-bold ${((sale as any).dispatchBranchId && (sale as any).dispatchBranchId !== (sale as any).branchId) ? 'text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block' : 'text-slate-700'}`}>
-                                        📍 فرع التسليم (الصرف): <span>{(sale as any).dispatchBranch.name}</span>
-                                    </div>
-                                )}
-                                {sale.currency && sale.currency !== 'SDG' && (
-                                    <div className="text-indigo-700 font-bold">
-                                        العملة: {sale.currency === 'USD' ? 'دولار ($ USD)' : 'درهم (AED د.إ)'} (سعر الصرف: {sale.currencyRate || 1} ج.س)
-                                    </div>
-                                )}
-                                {sale.paymentMethod && (
-                                    <div className="text-slate-700 font-bold">
-                                        طريقة الدفع: {
-                                            sale.paymentMethod === 'BANK'
-                                                ? `تحويل بنكي ${sale.bankName ? `(${sale.bankName})` : ''} ${sale.bankRef ? `[إشعار: ${sale.bankRef}]` : ''}`
-                                                : sale.paymentMethod === 'CHEQUE'
-                                                ? `شيك ${sale.chequeBank ? `(${sale.chequeBank})` : ''} ${sale.chequeNumber ? `[رقم: ${sale.chequeNumber}]` : ''}`
-                                                : sale.paymentMethod === 'MULTIPLE'
-                                                ? 'دفع مجزأ'
-                                                : 'نقداً كاش'
-                                        }
-                                    </div>
-                                )}
+
+                                <div className="flex items-center justify-between text-xs pt-0.5">
+                                    <span className="font-bold text-slate-600">
+                                        {viewMode === 'DELIVERY' ? 'رقم الإذن:' : 'رقم الفاتورة:'}
+                                    </span>
+                                    <span className="font-mono text-base font-black text-slate-950">
+                                        #{sale.invoiceNumber || sale.id}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between text-[11px] pt-0.5">
+                                    <span className="font-bold text-slate-600">التاريخ:</span>
+                                    <span className="font-bold text-slate-800 font-mono">
+                                        {new Date(sale.createdAt).toLocaleDateString('en-GB')}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between text-[11px]">
+                                    <span className="font-bold text-slate-600">الوقت:</span>
+                                    <span className="font-bold text-slate-700 font-mono" dir="ltr">
+                                        {new Date(sale.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200">
+                                    <span className="font-bold text-slate-600">الحالة:</span>
+                                    <span className={`font-black text-[10px] px-1.5 py-0.2 rounded ${
+                                        sale.status === 'PAID'
+                                            ? 'text-emerald-700 bg-emerald-50'
+                                            : sale.status === 'CREDIT'
+                                            ? 'text-red-700 bg-red-50'
+                                            : 'text-amber-700 bg-amber-50'
+                                    }`}>
+                                        {sale.status === 'PAID' ? 'خالص السداد' : sale.status === 'CREDIT' ? 'آجل / غير خالص' : 'مسودة'}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Cross-Branch Dispatch Notice Banner */}
-                    {(sale as any).dispatchBranch && (sale as any).dispatchBranchId && (sale as any).dispatchBranchId !== (sale as any).branchId && (
-                        <div className="mb-3 p-3 bg-amber-50 border-2 border-amber-300 rounded-lg text-amber-950 font-bold text-xs flex items-center justify-between relative z-10">
-                            <div className="flex items-center gap-2">
-                                <span className="text-lg">📍</span>
-                                <div>
-                                    <span className="font-black text-amber-900 block text-sm">موقع وتسليم البضاعة (فرع الصرف): {(sale as any).dispatchBranch.name}</span>
-                                    <span className="text-[11px] font-medium text-amber-800">
-                                        ملاحظة هامة لأمين المخزن والعميل: تم توريد مبالغ هذه الفاتورة في (مكتب {(sale as any).branch?.name || 'الفرع الصادر'})، وتستلم البضاعة وتصرف من مخازن فرع ({(sale as any).dispatchBranch.name}).
-                                    </span>
-                                </div>
+                    {/* 3. Client & Metadata Grid */}
+                    <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-xs">
+                        <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
+                            <span className="text-[10px] text-slate-500 font-bold block mb-0.5">العميل المكرم:</span>
+                            <span className="font-black text-slate-950 text-sm block truncate">
+                                {sale.customer || 'عميل نقدي'}
+                            </span>
+                        </div>
+
+                        <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
+                            <span className="text-[10px] text-slate-500 font-bold block mb-0.5">طريقة الدفع:</span>
+                            <span className="font-black text-slate-800 block truncate">
+                                {sale.paymentMethod === 'BANK'
+                                    ? `تحويل بنكي (${sale.bankName || 'البنك'})`
+                                    : sale.paymentMethod === 'CHEQUE'
+                                    ? `شيك مصرفي (${sale.chequeBank || 'البنك'})`
+                                    : sale.paymentMethod === 'MULTIPLE'
+                                    ? 'سداد مجزأ'
+                                    : 'نقداً (كاش)'}
+                            </span>
+                            {sale.paymentMethod === 'BANK' && sale.bankRef && (
+                                <span className="text-[10px] text-slate-600 block mt-0.5 font-mono">
+                                    إشعار: {sale.bankRef}
+                                </span>
+                            )}
+                            {sale.paymentMethod === 'CHEQUE' && sale.chequeNumber && (
+                                <span className="text-[10px] text-slate-600 block mt-0.5 font-mono">
+                                    شيك #: {sale.chequeNumber}
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
+                            <span className="text-[10px] text-slate-500 font-bold block mb-0.5">العملة وسعر الصرف:</span>
+                            <span className="font-black text-slate-800 block">
+                                {sale.currency && sale.currency !== 'SDG'
+                                    ? `${sale.currency === 'USD' ? 'دولار ($ USD)' : 'درهم (AED د.إ)'}`
+                                    : 'الجنيه السوداني (ج.س)'}
+                            </span>
+                            {sale.currency && sale.currency !== 'SDG' && (
+                                <span className="text-[10px] text-indigo-700 font-bold block mt-0.5">
+                                    الصرف: {sale.currencyRate?.toLocaleString()} ج.س
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
+                            <span className="text-[10px] text-slate-500 font-bold block mb-0.5">موقع الاستلام والصرف:</span>
+                            <span className={`font-black block truncate ${
+                                (sale.dispatchBranchId && sale.dispatchBranchId !== sale.branchId)
+                                    ? 'text-amber-800'
+                                    : 'text-slate-800'
+                            }`}>
+                                {sale.dispatchBranch?.name ? sale.dispatchBranch.name : 'مخازن الفرع الرئيسي'}
+                            </span>
+                            {(sale.dispatchBranchId && sale.dispatchBranchId !== sale.branchId) && (
+                                <span className="text-[9px] font-black text-amber-700 block">
+                                    ⚠️ توجيه استلام من فرع آخر
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Cross-Branch Alert Banner (If Dispatched from another branch) */}
+                    {sale.dispatchBranch && sale.dispatchBranchId && sale.dispatchBranchId !== sale.branchId && (
+                        <div className="relative z-10 mb-3 p-2.5 bg-amber-50 border-2 border-amber-300 rounded-xl text-amber-950 font-bold text-xs flex items-center gap-2">
+                            <span className="text-xl">📍</span>
+                            <div>
+                                <span className="font-black text-amber-900 block text-xs">
+                                    ملاحظة صرف مخزني: موقع تسليم البضاعة هو فرع ({sale.dispatchBranch.name})
+                                </span>
+                                <span className="text-[10px] text-amber-800 block font-medium">
+                                    تم سداد القيمة في مكاتب ({sale.branch?.name || 'الفرع الصادر'})، وتسلَم البضاعة وتخصم من مخزون فرع ({sale.dispatchBranch.name}).
+                                </span>
                             </div>
                         </div>
                     )}
 
-                    {/* Items Table */}
-                    <div className="relative z-10 mb-4 print:mb-2">
-                        {isQuotation ? (
-                            <table className="w-full text-right border border-slate-300">
+                    {/* 4. Products Table */}
+                    <div className="relative z-10 mb-4">
+                        {/* Mode A: FINANCIAL INVOICE & QUOTATION */}
+                        {(viewMode === 'INVOICE' || viewMode === 'QUOTATION') && (
+                            <table className="w-full text-right border-collapse border border-slate-800">
                                 <thead>
-                                    <tr className="border-b-2 border-slate-300 text-slate-800 bg-slate-50 print:bg-slate-100">
-                                        <th className="py-1 px-2 w-[10%] text-center font-bold text-lg border-l border-slate-300">العدد</th>
-                                        <th className="py-2 px-2 w-[35%] font-bold text-lg text-right border-l border-slate-300">المنتج</th>
-                                        <th className="py-2 px-2 w-[15%] text-center font-bold text-lg border-l border-slate-300">السماكة</th>
-                                        <th className="py-2 px-2 w-[20%] text-center font-bold text-lg border-l border-slate-300">السعر الإفرادي</th>
-                                        <th className="py-2 px-2 w-[20%] text-center font-bold text-lg">سعر الكمية</th>
+                                    <tr className="bg-slate-900 text-white text-xs">
+                                        <th className="py-2 px-2 w-[5%] text-center font-black border border-slate-700">#</th>
+                                        <th className="py-2 px-3 w-[33%] text-right font-black border border-slate-700">بيان الصنف والمنتج</th>
+                                        <th className="py-2 px-2 w-[10%] text-center font-black border border-slate-700">السماكة</th>
+                                        <th className="py-2 px-2 w-[10%] text-center font-black border border-slate-700">النوع</th>
+                                        <th className="py-2 px-2 w-[8%] text-center font-black border border-slate-700">العدد</th>
+                                        <th className="py-2 px-2 w-[14%] text-center font-black border border-slate-700">الكمية كتابة</th>
+                                        <th className="py-2 px-2 w-[10%] text-center font-black border border-slate-700">السعر الإفرادي</th>
+                                        <th className="py-2 px-2 w-[10%] text-center font-black border border-slate-700">سعر الكمية</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-300">
+                                <tbody className="text-xs divide-y divide-slate-300">
                                     {sale.items.map((item, index) => (
-                                        <tr key={item.id} className="group">
-                                            <td className="py-0.5 px-1 text-center font-black text-slate-900 text-base border-l border-slate-300">{item.quantity}</td>
-                                            <td className="py-0.5 px-1 font-black text-slate-900 text-right border-l border-slate-300 text-base leading-tight">{item.product.name}</td>
-                                            <td className="py-0.5 px-1 text-center text-slate-900 font-black font-mono text-base border-l border-slate-300">{item.product.thickness || '-'}</td>
-                                            <td className="py-0.5 px-1 text-center font-mono text-slate-900 font-black border-l border-slate-300 text-base">
+                                        <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
+                                            <td className="py-1.5 px-2 text-center font-bold text-slate-600 border border-slate-300">
+                                                {index + 1}
+                                            </td>
+                                            <td className="py-1.5 px-3 font-black text-slate-900 border border-slate-300 text-sm leading-tight">
+                                                {item.product.name}
+                                            </td>
+                                            <td className="py-1.5 px-2 text-center font-bold font-mono text-slate-800 border border-slate-300">
+                                                {item.product.thickness ? `${item.product.thickness} مم` : '-'}
+                                            </td>
+                                            <td className="py-1.5 px-2 text-center font-bold text-slate-700 border border-slate-300">
+                                                {item.product.type || '-'}
+                                            </td>
+                                            <td className="py-1.5 px-2 text-center font-black font-mono text-slate-950 text-sm border border-slate-300">
+                                                {item.quantity}
+                                            </td>
+                                            <td className="py-1.5 px-2 text-center font-bold text-slate-700 border border-slate-300 text-[11px] leading-tight">
+                                                {numberToArabicWords(item.quantity)}
+                                            </td>
+                                            <td className="py-1.5 px-2 text-center font-mono font-bold text-slate-800 border border-slate-300">
                                                 {item.price.toLocaleString()}
                                             </td>
-                                            <td className="py-0.5 px-1 text-center font-mono text-slate-900 font-black text-base">
+                                            <td className="py-1.5 px-2 text-center font-mono font-black text-slate-950 border border-slate-300">
                                                 {(item.price * item.quantity).toLocaleString()}
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                        ) : (
-                            <table className="w-full text-right border border-slate-300">
+                        )}
+
+                        {/* Mode B: WAREHOUSE DELIVERY NOTE (إذن استلام وصرف مخزني بدون أسعار) */}
+                        {viewMode === 'DELIVERY' && (
+                            <table className="w-full text-right border-collapse border border-slate-800">
                                 <thead>
-                                    <tr className="border-b-2 border-slate-300 text-slate-800 bg-slate-50 print:bg-slate-100">
-                                        <th className="py-1 px-2 w-[15%] text-center font-bold text-lg border-l border-slate-300">الكمية</th>
-                                        <th className="py-2 px-2 w-[25%] text-center font-bold text-lg border-l border-slate-300">كتابة</th>
-                                        <th className="py-2 px-2 w-[35%] font-bold text-lg text-right border-l border-slate-300">المنتج</th>
-                                        <th className="py-2 px-2 w-[15%] text-center font-bold text-lg border-l border-slate-300">السماكة</th>
-                                        <th className="py-2 px-2 w-[10%] text-center font-bold text-lg">النوع</th>
+                                    <tr className="bg-slate-900 text-white text-xs">
+                                        <th className="py-2.5 px-2 w-[6%] text-center font-black border border-slate-700">م</th>
+                                        <th className="py-2.5 px-3 w-[36%] text-right font-black border border-slate-700">بيان الصنف والمواصفات</th>
+                                        <th className="py-2.5 px-2 w-[12%] text-center font-black border border-slate-700">السماكة</th>
+                                        <th className="py-2.5 px-2 w-[12%] text-center font-black border border-slate-700">النوع</th>
+                                        <th className="py-2.5 px-2 w-[12%] text-center font-black border border-slate-700">الكمية رقماً</th>
+                                        <th className="py-2.5 px-2 w-[22%] text-center font-black border border-slate-700">الكمية كتابة بالأحرف</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-300">
+                                <tbody className="text-xs divide-y divide-slate-300">
                                     {sale.items.map((item, index) => (
-                                        <tr key={item.id} className="group">
-                                            <td className="py-0.5 px-1 text-center font-black text-slate-900 text-base border-l border-slate-300">{item.quantity}</td>
-                                            <td className="py-0.5 px-1 text-center font-black text-slate-900 border-l border-slate-300 text-base leading-tight">
+                                        <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
+                                            <td className="py-2 px-2 text-center font-bold text-slate-600 border border-slate-300">
+                                                {index + 1}
+                                            </td>
+                                            <td className="py-2 px-3 font-black text-slate-900 border border-slate-300 text-sm leading-tight">
+                                                {item.product.name}
+                                            </td>
+                                            <td className="py-2 px-2 text-center font-bold font-mono text-slate-800 border border-slate-300 text-sm">
+                                                {item.product.thickness ? `${item.product.thickness} مم` : '-'}
+                                            </td>
+                                            <td className="py-2 px-2 text-center font-bold text-slate-700 border border-slate-300">
+                                                {item.product.type || '-'}
+                                            </td>
+                                            <td className="py-2 px-2 text-center font-black font-mono text-slate-950 text-base border border-slate-300">
+                                                {item.quantity}
+                                            </td>
+                                            <td className="py-2 px-2 text-center font-black text-slate-900 border border-slate-300 text-xs leading-snug">
                                                 {numberToArabicWords(item.quantity)}
                                             </td>
-                                            <td className="py-0.5 px-1 font-black text-slate-900 text-right border-l border-slate-300 text-base leading-tight">{item.product.name}</td>
-                                            <td className="py-0.5 px-1 text-center text-slate-900 font-black font-mono text-base border-l border-slate-300">{item.product.thickness || '-'}</td>
-                                            <td className="py-0.5 px-1 text-center text-slate-900 font-black break-words text-base">{item.product.type || '-'}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -456,46 +760,72 @@ export default function InvoiceDetails() {
                         )}
                     </div>
 
-                    {/* Totals Section */}
-                    {isQuotation && (
-                        <div className="relative z-10 flex flex-col items-end mb-16 mt-4">
-                            <div className="w-1/2 border-t-2 border-slate-200 pt-4">
-                                <table className="w-full text-right border-collapse">
-                                    <tbody className="text-slate-600 font-medium">
+                    {/* 5. Financial Totals & Tafqeet Section (Shown for INVOICE & QUOTATION) */}
+                    {(viewMode === 'INVOICE' || viewMode === 'QUOTATION') && (
+                        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            {/* Right: Tafqeet & Payment Details */}
+                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3.5 flex flex-col justify-between">
+                                <div>
+                                    <span className="text-[11px] font-black text-slate-500 block mb-1">المبلغ كتابة:</span>
+                                    <div className="text-sm font-black text-slate-900 leading-relaxed bg-white border border-slate-200 p-2.5 rounded-lg shadow-inner">
+                                        {tafqeetCurrency(Math.round(finalTotalWithVat), sale.currency || 'SDG')}
+                                    </div>
+                                </div>
+
+                                {sale.currency && sale.currency !== 'SDG' && (
+                                    <div className="mt-2 text-xs font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 p-2 rounded-lg flex justify-between items-center">
+                                        <span>القيمة بعملة الفاتورة ({sale.currency}):</span>
+                                        <span className="font-mono text-sm font-black">
+                                            {(finalTotalWithVat / (sale.currencyRate || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {sale.currency === 'USD' ? '$ USD' : 'AED د.إ'}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {sale.status === 'CREDIT' && (
+                                    <div className="mt-2 text-xs grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
+                                        <div className="text-slate-700">
+                                            <span>المدفوع:</span> <strong className="text-emerald-700 font-mono">{(sale.paidAmount || 0).toLocaleString()} ج.س</strong>
+                                        </div>
+                                        <div className="text-slate-700 text-left">
+                                            <span>المتبقي:</span> <strong className="text-red-700 font-mono">{(sale.remainingAmount || 0).toLocaleString()} ج.س</strong>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Left: Summary Table */}
+                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3.5">
+                                <table className="w-full text-xs">
+                                    <tbody className="divide-y divide-slate-200">
                                         <tr>
-                                            <td className="py-2 px-4">المجموع الفرعي</td>
-                                            <td className="py-2 px-4 font-mono text-left text-slate-800">
-                                                {sale.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString()}
+                                            <td className="py-1.5 text-slate-600 font-bold">إجمالي الأصناف (المجموع الفرعي):</td>
+                                            <td className="py-1.5 text-left font-mono font-bold text-slate-800 text-sm">
+                                                {sale.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString()} <span className="text-[10px] font-sans">ج.س</span>
                                             </td>
                                         </tr>
+
                                         {sale.discount > 0 && (
                                             <tr>
-                                                <td className="py-2 px-4 text-red-500">الخصم</td>
-                                                <td className="py-2 px-4 font-mono text-red-500 text-left">
-                                                    -{(sale.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) - sale.total).toLocaleString()}
+                                                <td className="py-1.5 text-red-600 font-bold">الخصم الممنوح:</td>
+                                                <td className="py-1.5 text-left font-mono font-bold text-red-600 text-sm">
+                                                    -{(sale.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) - sale.total).toLocaleString()} <span className="text-[10px] font-sans">ج.س</span>
                                                 </td>
                                             </tr>
                                         )}
+
                                         {settings?.vatRate > 0 && (
                                             <tr>
-                                                <td className="py-2 px-4">
-                                                    ضريبة القيمة المضافة ({settings.vatRate}%)
+                                                <td className="py-1.5 text-slate-600 font-bold">ضريبة القيمة المضافة ({settings.vatRate}%):</td>
+                                                <td className="py-1.5 text-left font-mono font-bold text-slate-800">
+                                                    +{vatAmount.toLocaleString()} <span className="text-[10px] font-sans">ج.س</span>
                                                 </td>
-                                                <td className="py-2 px-4 font-mono text-left">+{vatAmount.toLocaleString()}</td>
                                             </tr>
                                         )}
-                                        <tr>
-                                            <td colSpan={2} className="py-2"><div className="border-t border-slate-200 border-dashed"></div></td>
-                                        </tr>
-                                        <tr>
-                                            <td className="py-4 px-4 font-black text-slate-900 text-xl">الإجمالي النهائي</td>
-                                            <td className="py-4 px-4 font-mono font-black text-slate-900 text-2xl text-left">
-                                                {finalTotalWithVat.toLocaleString()} <span className="text-sm text-slate-500 ml-1">ج.س</span>
-                                                {sale.currency && sale.currency !== 'SDG' && (
-                                                    <div className="text-sm font-bold text-emerald-700 font-mono mt-0.5">
-                                                        {((finalTotalWithVat / (sale.currencyRate || 1))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {sale.currency === 'USD' ? '$ USD' : 'AED د.إ'}
-                                                    </div>
-                                                )}
+
+                                        <tr className="border-t-2 border-slate-800">
+                                            <td className="py-2.5 text-slate-950 font-black text-sm sm:text-base">الصافي النهائي المطلوب:</td>
+                                            <td className="py-2.5 text-left font-mono font-black text-slate-950 text-lg sm:text-xl">
+                                                {finalTotalWithVat.toLocaleString()} <span className="text-xs font-sans text-slate-600">ج.س</span>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -503,51 +833,126 @@ export default function InvoiceDetails() {
                             </div>
                         </div>
                     )}
+
+                    {/* 6. Signatures and Approval Section */}
+                    {/* Variant A: For Invoice & Quotation */}
+                    {(viewMode === 'INVOICE' || viewMode === 'QUOTATION') && (
+                        <div className="relative z-10 pt-4 border-t-2 border-slate-800">
+                            <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                                <div className="border border-slate-300 rounded-xl p-2.5 bg-slate-50/50 flex flex-col justify-between h-24">
+                                    <span className="font-bold text-slate-700">توقيع المستلم / العميل</span>
+                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1"></div>
+                                </div>
+
+                                <div className="border border-slate-300 rounded-xl p-2.5 bg-slate-50/50 flex flex-col justify-between h-24">
+                                    <span className="font-bold text-slate-700">أمين المستودع / الصرف</span>
+                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1"></div>
+                                </div>
+
+                                <div className="border border-slate-300 rounded-xl p-2.5 bg-slate-50/50 flex flex-col justify-between h-24">
+                                    <span className="font-bold text-slate-700">المحاسب / المبيعات</span>
+                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1"></div>
+                                </div>
+
+                                <div className="border-2 border-dashed border-slate-400 rounded-xl p-2.5 flex flex-col items-center justify-center h-24 bg-slate-50/30">
+                                    <span className="text-[10px] font-bold text-slate-400">مكان الختم الرسمي</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Variant B: For Warehouse Delivery Note */}
+                    {viewMode === 'DELIVERY' && (
+                        <div className="relative z-10 pt-4 border-t-2 border-slate-800 space-y-4">
+                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs">
+                                <p className="font-bold text-slate-800 mb-2">
+                                    إقرار استلام: أقر أنا الموقع أدناه باستلام كامل الأصناف والكميات المذكورة بعاليه من مستودعات المصنع بحالة جيدة وسليمة ومطابقة للمواصفات المطلوبة.
+                                </p>
+                                <div className="grid grid-cols-3 gap-3 text-slate-700 pt-1">
+                                    <div>اسم المستلم / السائق: .......................................</div>
+                                    <div>رقم الهاتف / الإثبات: .......................................</div>
+                                    <div>رقم مركبة الشحن (العربة): .......................................</div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4 text-center text-xs">
+                                <div className="border border-slate-300 rounded-xl p-3 bg-slate-50/50 flex flex-col justify-between h-24">
+                                    <span className="font-bold text-slate-700">توقيع المستلم / السائق</span>
+                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1"></div>
+                                </div>
+
+                                <div className="border border-slate-300 rounded-xl p-3 bg-slate-50/50 flex flex-col justify-between h-24">
+                                    <span className="font-bold text-slate-700">أمين المستودع ومسؤول الصرف</span>
+                                    <div className="border-b border-dashed border-slate-400 w-3/4 mx-auto mb-1"></div>
+                                </div>
+
+                                <div className="border-2 border-dashed border-slate-400 rounded-xl p-3 flex flex-col items-center justify-center h-24 bg-slate-50/30">
+                                    <span className="text-[10px] font-bold text-slate-400">ختم أمن البوابة وتصريح الخروج</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 7. Footer Note */}
+                    <div className="relative z-10 mt-6 pt-3 border-t border-slate-200 text-center text-[10px] text-slate-500 font-bold space-y-0.5">
+                        <p>
+                            {viewMode === 'DELIVERY'
+                                ? 'يجب إبراز هذا الإذن المعتمد لأمن البوابة عند الخروج من حرم المصنع.'
+                                : viewMode === 'QUOTATION'
+                                ? 'هذا العرض مبدئي وسعره ساري لمدة محددة تبعاً لتقلبات أسعار الصرف وخامات الحديد في السوق.'
+                                : 'البضاعة التي تخرج من حرم المصنع لا ترد ولا تستبدل إلا بموافقة الإدارة ووفقاً لللوائح المعتمدة.'}
+                        </p>
+                        <p className="text-slate-400">
+                            {settings?.companyName || 'المصنع السوداني الماليزي للمنتجات الحديدية'} | الدامر - المنطقة الصناعية | هاتف: {settings?.phone || '0123456789'}
+                        </p>
+                    </div>
                 </div>
             </div>
 
             {/* Payment Modal */}
             {showPaymentModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 print:hidden">
-                    <Card className="w-full max-w-md p-6 bg-white shadow-2xl animate-in zoom-in-95">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 print:hidden p-4">
+                    <Card className="w-full max-w-md p-6 bg-white shadow-2xl animate-in zoom-in-95 rounded-2xl">
                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold flex items-center gap-2">
-                                <AlertCircle size={24} className="text-amber-500" />
-                                تسجيل دفعة جديدة
+                            <h2 className="text-lg font-black flex items-center gap-2 text-slate-900">
+                                <AlertCircle size={22} className="text-amber-500" />
+                                تسجيل دفعة نقدية جديدة
                             </h2>
-                            <button onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-600">
-                                <X size={24} />
+                            <button onClick={() => setShowPaymentModal(false)} className="text-slate-400 hover:text-slate-600">
+                                <X size={22} />
                             </button>
                         </div>
 
                         <div className="space-y-4">
-                            <div className="bg-gray-50 p-3 rounded-lg border flex justify-between items-center">
-                                <span className="font-bold text-gray-600">المبلغ المتبقي:</span>
-                                <span className="font-mono text-xl text-red-600 font-bold">{sale?.remainingAmount?.toLocaleString()} <span className="text-sm font-normal">جنية</span></span>
+                            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex justify-between items-center">
+                                <span className="font-bold text-slate-600 text-xs">المبلغ المتبقي على العميل:</span>
+                                <span className="font-mono text-lg text-red-600 font-black">
+                                    {sale?.remainingAmount?.toLocaleString()} <span className="text-xs font-normal">ج.س</span>
+                                </span>
                             </div>
 
                             <Input
-                                label="قيمة الدفعة الآن"
+                                label="قيمة الدفعة المسددة الآن"
                                 type="number"
-                                placeholder="أدخل المبلغ هنا..."
+                                placeholder="أدخل المبلغ المسدد..."
                                 value={paymentAmount}
                                 onChange={e => setPaymentAmount(e.target.value)}
                                 min="1"
                                 max={sale?.remainingAmount}
                             />
 
-                            <div className="flex gap-3 pt-4">
+                            <div className="flex gap-2 pt-3">
                                 <Button
                                     onClick={() => setShowPaymentModal(false)}
                                     variant="outline"
-                                    className="flex-1"
+                                    className="flex-1 font-bold text-xs"
                                     disabled={paying}
                                 >
                                     إلغاء
                                 </Button>
                                 <Button
                                     onClick={handlePayment}
-                                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
                                     disabled={paying || !paymentAmount}
                                 >
                                     {paying ? 'جاري الحفظ...' : 'حفظ الدفعة'}
