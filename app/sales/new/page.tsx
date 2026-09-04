@@ -181,12 +181,35 @@ export default function NewSale() {
         setCart(prev => prev.map(item => item.productId === id ? { ...item, price: price } : item))
     }
 
+    const POPULAR_BANKS = [
+        'بنك الخرطوم (بنكك)',
+        'بنك فيصل الإسلامي (فوري)',
+        'بنك أم درمان الوطني (أوكاش)',
+        'بنك النيل',
+        'البنك الأهلي السوداني',
+        'بنك العمال الوطني',
+        'بنك البركة السوداني',
+        'بنك دبي الإسلامي (DIB)',
+        'مصرف أبوظبي الإسلامي (ADIB)',
+        'بنك الإمارات دبي الوطني (ENBD)',
+        'مصرف الشارقة الإسلامي',
+        'أخرى (تحديد يدوي)'
+    ]
+
     const [discount, setDiscount] = useState<string>('')
     const [paidAmountInput, setPaidAmountInput] = useState<string>('')
     const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK' | 'CHEQUE' | 'MULTIPLE'>('CASH')
     const [splitCash, setSplitCash] = useState<string>('')
     const [splitBank, setSplitBank] = useState<string>('')
     const [splitCheque, setSplitCheque] = useState<string>('')
+
+    const [currency, setCurrency] = useState<'SDG' | 'USD' | 'AED'>('SDG')
+    const [currencyRate, setCurrencyRate] = useState<string>('1')
+    const [bankName, setBankName] = useState<string>('بنك الخرطوم (بنكك)')
+    const [customBankName, setCustomBankName] = useState<string>('')
+    const [bankRef, setBankRef] = useState<string>('')
+    const [chequeNumber, setChequeNumber] = useState<string>('')
+    const [chequeBank, setChequeBank] = useState<string>('')
 
     const totalWeight = cart.reduce((sum, item) => sum + (item.weight * item.quantity), 0)
     // Round subtotal explicitly at the item level summation to prevent carrying floating points
@@ -228,6 +251,10 @@ export default function NewSale() {
             calcCheque = parseFloat(splitCheque) || 0;
         }
 
+        const finalBankName = (paymentMethod === 'BANK' || (paymentMethod === 'MULTIPLE' && (parseFloat(splitBank) || 0) > 0))
+            ? (bankName === 'أخرى (تحديد يدوي)' ? customBankName : bankName)
+            : null;
+
         try {
             const res = await fetch('/api/sales', {
                 method: 'POST',
@@ -243,6 +270,12 @@ export default function NewSale() {
                     cashAmount: calcCash,
                     bankAmount: calcBank,
                     chequeAmount: calcCheque,
+                    currency: currency,
+                    currencyRate: parseFloat(currencyRate) || 1,
+                    bankName: finalBankName,
+                    bankRef: bankRef?.trim() || null,
+                    chequeNumber: chequeNumber?.trim() || null,
+                    chequeBank: chequeBank?.trim() || null,
                     createdAt: createdAt,
                     dispatchBranchId: dispatchBranchId || null
                 })
@@ -620,7 +653,7 @@ export default function NewSale() {
                                                     type="number"
                                                     placeholder={finalTotal.toString()}
                                                     value={paidAmountInput}
-                                                    onChange={e => setPaidAmountInput(e.target.value)}
+                                                    onChange={(e) => setPaidAmountInput(e.target.value)}
                                                     className="h-10 w-full bg-amber-50 text-base font-bold text-blue-900 border-amber-200"
                                                 />
                                             </div>
@@ -634,6 +667,52 @@ export default function NewSale() {
                                                 }
                                             </div>
                                         </div>
+                                    </div>
+
+                                    {/* Currency Selector */}
+                                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2">
+                                        <div className="flex flex-wrap justify-between items-center gap-2">
+                                            <label className="text-xs font-black text-slate-700">عملة الفاتورة والتحصيل:</label>
+                                            <div className="flex gap-1 bg-white p-1 rounded-lg border border-slate-200">
+                                                {(['SDG', 'USD', 'AED'] as const).map(curr => (
+                                                    <button
+                                                        key={curr}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setCurrency(curr)
+                                                            if (curr === 'USD' && exchangeRate > 0) {
+                                                                setCurrencyRate(exchangeRate.toString())
+                                                            } else if (curr === 'SDG') {
+                                                                setCurrencyRate('1')
+                                                            }
+                                                        }}
+                                                        className={`px-3 py-1 rounded text-xs font-black transition-all ${
+                                                            currency === curr
+                                                                ? 'bg-indigo-600 text-white shadow-sm'
+                                                                : 'text-slate-600 hover:bg-slate-100'
+                                                        }`}
+                                                    >
+                                                        {curr === 'SDG' ? 'جنيه (SDG)' : curr === 'USD' ? 'دولار ($ USD)' : 'درهم (AED)'}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {currency !== 'SDG' && (
+                                            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200">
+                                                <span className="text-[11px] font-bold text-slate-600 whitespace-nowrap">سعر الصرف مقابل الجنيه:</span>
+                                                <input
+                                                    type="number"
+                                                    step="any"
+                                                    value={currencyRate}
+                                                    onChange={(e) => setCurrencyRate(e.target.value)}
+                                                    className="w-24 text-xs font-bold p-1 bg-white border border-slate-300 rounded-lg outline-none font-mono text-center"
+                                                />
+                                                <span className="text-xs font-mono font-black text-indigo-700">
+                                                    القيمة بالعملة: {((finalTotal / (parseFloat(currencyRate) || 1))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency === 'USD' ? '$' : 'د.إ'}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Payment Methods Selector Pills */}
@@ -690,6 +769,78 @@ export default function NewSale() {
                                         </div>
                                     </div>
 
+                                    {/* Bank Transfer Details */}
+                                    {(paymentMethod === 'BANK' || (paymentMethod === 'MULTIPLE' && (parseFloat(splitBank) || 0) > 0)) && (
+                                        <div className="bg-blue-50/70 border border-blue-200 p-3 rounded-xl space-y-2.5 animate-fade-in">
+                                            <span className="text-xs font-black text-blue-900 block">تفاصيل التحويل البنكي:</span>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">اسم البنك المحول إليه</label>
+                                                    <select
+                                                        value={bankName}
+                                                        onChange={(e) => setBankName(e.target.value)}
+                                                        className="w-full text-xs font-bold p-2 bg-white border border-blue-300 rounded-lg outline-none"
+                                                    >
+                                                        {POPULAR_BANKS.map(b => (
+                                                            <option key={b} value={b}>{b}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">رقم الإشعار / المرجع</label>
+                                                    <input
+                                                        type="text"
+                                                        value={bankRef}
+                                                        onChange={(e) => setBankRef(e.target.value)}
+                                                        placeholder="رقم إشعار التحويل..."
+                                                        className="w-full text-xs font-bold p-2 bg-white border border-blue-300 rounded-lg outline-none font-mono"
+                                                    />
+                                                </div>
+                                            </div>
+                                            {bankName === 'أخرى (تحديد يدوي)' && (
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">اكتب اسم البنك</label>
+                                                    <input
+                                                        type="text"
+                                                        value={customBankName}
+                                                        onChange={(e) => setCustomBankName(e.target.value)}
+                                                        placeholder="اسم البنك..."
+                                                        className="w-full text-xs font-bold p-2 bg-white border border-blue-300 rounded-lg outline-none"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Cheque Details */}
+                                    {(paymentMethod === 'CHEQUE' || (paymentMethod === 'MULTIPLE' && (parseFloat(splitCheque) || 0) > 0)) && (
+                                        <div className="bg-purple-50/70 border border-purple-200 p-3 rounded-xl space-y-2.5 animate-fade-in">
+                                            <span className="text-xs font-black text-purple-900 block">تفاصيل الشيك المصرفي:</span>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">رقم الشيك</label>
+                                                    <input
+                                                        type="text"
+                                                        value={chequeNumber}
+                                                        onChange={(e) => setChequeNumber(e.target.value)}
+                                                        placeholder="رقم الشيك..."
+                                                        className="w-full text-xs font-bold p-2 bg-white border border-purple-300 rounded-lg outline-none font-mono"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">اسم بنك الشيك</label>
+                                                    <input
+                                                        type="text"
+                                                        value={chequeBank}
+                                                        onChange={(e) => setChequeBank(e.target.value)}
+                                                        placeholder="اسم البنك المصدر للشيك..."
+                                                        className="w-full text-xs font-bold p-2 bg-white border border-purple-300 rounded-lg outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Split Payment Controls */}
                                     {paymentMethod === 'MULTIPLE' && (
                                         <div className="bg-amber-50/80 border border-amber-200/80 p-3 rounded-xl space-y-2.5 animate-fade-in">
@@ -738,14 +889,32 @@ export default function NewSale() {
                                     {/* Big Total Box */}
                                     <div className="flex justify-between items-center bg-slate-900 text-white p-4 rounded-xl shadow-lg border-b-4 border-blue-500">
                                         <div>
-                                            <span className="font-bold block text-sm opacity-80 mb-1">الإجمالي النهائي</span>
+                                            <span className="font-bold block text-sm opacity-80 mb-1">
+                                                الإجمالي النهائي {currency !== 'SDG' ? `(${currency})` : ''}
+                                            </span>
                                             <div className="flex items-end gap-2">
-                                                <span className="font-black text-3xl leading-none">{finalTotal.toLocaleString()}</span>
-                                                <span className="font-medium text-gray-400 mb-1 text-sm">ج.س</span>
-                                                {exchangeRate > 0 && finalTotal > 0 && (
-                                                    <span className="text-sm text-emerald-400 font-bold ml-2 mb-0.5">
-                                                        (${((finalTotal / exchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                                                    </span>
+                                                {currency === 'SDG' ? (
+                                                    <>
+                                                        <span className="font-black text-3xl leading-none">{finalTotal.toLocaleString()}</span>
+                                                        <span className="font-medium text-gray-400 mb-1 text-sm">ج.س</span>
+                                                        {exchangeRate > 0 && finalTotal > 0 && (
+                                                            <span className="text-sm text-emerald-400 font-bold ml-2 mb-0.5">
+                                                                (${((finalTotal / exchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="font-black text-3xl leading-none">
+                                                            {((finalTotal / (parseFloat(currencyRate) || 1))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </span>
+                                                        <span className="font-medium text-emerald-400 mb-1 text-sm">
+                                                            {currency === 'USD' ? '$ USD' : 'AED د.إ'}
+                                                        </span>
+                                                        <span className="text-xs text-gray-400 font-bold ml-2 mb-0.5">
+                                                            (يعادل: {finalTotal.toLocaleString()} ج.س)
+                                                        </span>
+                                                    </>
                                                 )}
                                             </div>
                                         </div>

@@ -52,9 +52,15 @@ model Sale {
   discount        Float      @default(0)
   status          String     @default("PAID")
   paymentMethod   String     @default("CASH")
+  currency        String     @default("SDG")
+  currencyRate    Float      @default(1)
   cashAmount      Float      @default(0)
   bankAmount      Float      @default(0)
   chequeAmount    Float      @default(0)
+  bankName        String?
+  bankRef         String?
+  chequeNumber    String?
+  chequeBank      String?
   createdAt       DateTime   @default(now())
   items           SaleItem[]
   payments        Payment[]
@@ -184,7 +190,13 @@ model CustomerDeposit {
   customerId    Int
   customer      Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   amount        Float
+  currency      String    @default("SDG")
+  currencyRate  Float     @default(1)
   paymentMethod String    @default("CASH")
+  bankName      String?
+  bankRef       String?
+  chequeNumber  String?
+  chequeBank    String?
   description   String?
   date          DateTime  @default(now())
   createdAt     DateTime  @default(now())
@@ -193,56 +205,86 @@ model CustomerDeposit {
 }
 
 model Supplier {
-  id        Int        @id @default(autoincrement())
+  id        Int               @id @default(autoincrement())
   name      String
   phone     String?
   address   String?
   company   String?
   notes     String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  branchId  Int        @default(1)
-  branch    Branch     @relation(fields: [branchId], references: [id])
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  branchId  Int               @default(1)
+  branch    Branch            @relation(fields: [branchId], references: [id])
   purchases Purchase[]
   expenses  Expense[]
+  deposits  SupplierDeposit[]
+}
+
+model SupplierDeposit {
+  id            Int       @id @default(autoincrement())
+  supplierId    Int
+  supplier      Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  amount        Float
+  currency      String    @default("USD")
+  currencyRate  Float     @default(1)
+  paymentMethod String    @default("BANK")
+  bankName      String?
+  bankRef       String?
+  chequeNumber  String?
+  chequeBank    String?
+  description   String?
+  date          DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  branchId      Int       @default(1)
+  branch        Branch    @relation(fields: [branchId], references: [id])
 }
 
 model Purchase {
-  id            Int            @id @default(autoincrement())
-  invoiceNumber String?
-  supplier      String?
-  supplierId    Int?
-  supplierRel   Supplier?      @relation(fields: [supplierId], references: [id])
-  total         Float
-  status        String         @default("COMPLETED")
-  createdAt     DateTime       @default(now())
-  items         PurchaseItem[]
-  branchId      Int            @default(1)
-  branch        Branch         @relation(fields: [branchId], references: [id])
+  id              Int            @id @default(autoincrement())
+  invoiceNumber   String?
+  supplier        String?
+  supplierId      Int?
+  supplierRel     Supplier?      @relation(fields: [supplierId], references: [id])
+  total           Float
+  currency        String         @default("SDG")
+  currencyRate    Float          @default(1)
+  paymentMethod   String         @default("CASH")
+  bankName        String?
+  bankRef         String?
+  chequeNumber    String?
+  chequeBank      String?
+  depositDeducted Float          @default(0)
+  status          String         @default("COMPLETED")
+  createdAt       DateTime       @default(now())
+  items           PurchaseItem[]
+  branchId        Int            @default(1)
+  branch          Branch         @relation(fields: [branchId], references: [id])
 }
 
 model PurchaseItem {
-  id         Int      @id @default(autoincrement())
-  purchaseId Int
-  productId  Int
-  quantity   Int
-  price      Float
-  product    Product  @relation(fields: [productId], references: [id])
-  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  id                    Int      @id @default(autoincrement())
+  purchaseId            Int
+  productId             Int
+  quantity              Int
+  price                 Float
+  purchasePriceCurrency Float?
+  sellingPrice          Float?
+  product               Product  @relation(fields: [productId], references: [id])
+  purchase              Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
 }
 
 model Branch {
-  id                  Int            @id @default(autoincrement())
-  name                String         @unique
-  code                String         @unique
+  id                  Int               @id @default(autoincrement())
+  name                String            @unique
+  code                String            @unique
   address             String?
   phone               String?
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
   products            Product[]
-  sales               Sale[]         @relation("InvoiceBranch")
-  dispatchedSales     Sale[]         @relation("DispatchBranch")
-  dispatchedSaleItems SaleItem[]     @relation("SaleItemDispatchBranch")
+  sales               Sale[]            @relation("InvoiceBranch")
+  dispatchedSales     Sale[]            @relation("DispatchBranch")
+  dispatchedSaleItems SaleItem[]        @relation("SaleItemDispatchBranch")
   expenses            Expense[]
   purchases           Purchase[]
   users               User[]
@@ -254,6 +296,7 @@ model Branch {
   suppliers           Supplier[]
   customers           Customer[]
   customerDeposits    CustomerDeposit[]
+  supplierDeposits    SupplierDeposit[]
 }
 
 model SaleReturn {

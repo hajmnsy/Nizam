@@ -57,6 +57,16 @@ interface Sale {
     discount: number
     paidAmount?: number
     remainingAmount?: number
+    currency?: string
+    currencyRate?: number
+    paymentMethod?: string
+    bankName?: string | null
+    bankRef?: string | null
+    chequeNumber?: string | null
+    chequeBank?: string | null
+    cashAmount?: number
+    bankAmount?: number
+    chequeAmount?: number
     createdAt: string
     status: string
     items: SaleItem[]
@@ -352,6 +362,24 @@ export default function InvoiceDetails() {
                                         📍 فرع التسليم (الصرف): <span>{(sale as any).dispatchBranch.name}</span>
                                     </div>
                                 )}
+                                {sale.currency && sale.currency !== 'SDG' && (
+                                    <div className="text-indigo-700 font-bold">
+                                        العملة: {sale.currency === 'USD' ? 'دولار ($ USD)' : 'درهم (AED د.إ)'} (سعر الصرف: {sale.currencyRate || 1} ج.س)
+                                    </div>
+                                )}
+                                {sale.paymentMethod && (
+                                    <div className="text-slate-700 font-bold">
+                                        طريقة الدفع: {
+                                            sale.paymentMethod === 'BANK'
+                                                ? `تحويل بنكي ${sale.bankName ? `(${sale.bankName})` : ''} ${sale.bankRef ? `[إشعار: ${sale.bankRef}]` : ''}`
+                                                : sale.paymentMethod === 'CHEQUE'
+                                                ? `شيك ${sale.chequeBank ? `(${sale.chequeBank})` : ''} ${sale.chequeNumber ? `[رقم: ${sale.chequeNumber}]` : ''}`
+                                                : sale.paymentMethod === 'MULTIPLE'
+                                                ? 'دفع مجزأ'
+                                                : 'نقداً كاش'
+                                        }
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -462,7 +490,12 @@ export default function InvoiceDetails() {
                                         <tr>
                                             <td className="py-4 px-4 font-black text-slate-900 text-xl">الإجمالي النهائي</td>
                                             <td className="py-4 px-4 font-mono font-black text-slate-900 text-2xl text-left">
-                                                {finalTotalWithVat.toLocaleString()} <span className="text-sm text-slate-500 ml-1">SDG</span>
+                                                {finalTotalWithVat.toLocaleString()} <span className="text-sm text-slate-500 ml-1">ج.س</span>
+                                                {sale.currency && sale.currency !== 'SDG' && (
+                                                    <div className="text-sm font-bold text-emerald-700 font-mono mt-0.5">
+                                                        {((finalTotalWithVat / (sale.currencyRate || 1))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {sale.currency === 'USD' ? '$ USD' : 'AED د.إ'}
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     </tbody>

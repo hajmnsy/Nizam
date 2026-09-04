@@ -275,7 +275,19 @@ export default function SalesList() {
                                                     {new Date(sale.createdAt).toLocaleTimeString('ar-SD', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </td>
-                                            <td className="p-4 font-bold text-slate-800">{sale.total.toLocaleString()}ج</td>
+                                            <td className="p-4">
+                                                <div className="font-bold text-slate-800">{sale.total.toLocaleString()} ج.س</div>
+                                                {(sale as any).currency && (sale as any).currency !== 'SDG' && (
+                                                    <span className="text-[11px] font-mono font-bold text-emerald-700 block">
+                                                        {((sale.total / ((sale as any).currencyRate || 1))).toLocaleString(undefined, { maximumFractionDigits: 2 })} {(sale as any).currency}
+                                                    </span>
+                                                )}
+                                                {(sale as any).paymentMethod && (sale as any).paymentMethod !== 'CASH' && (
+                                                    <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold mt-0.5 inline-block border border-slate-200">
+                                                        {(sale as any).paymentMethod === 'BANK' ? `بنك: ${(sale as any).bankName || 'تحويل'}` : (sale as any).paymentMethod === 'CHEQUE' ? `شيك #${(sale as any).chequeNumber || ''}` : 'مجزأ'}
+                                                    </span>
+                                                )}
+                                            </td>
                                             <td className="p-4">
                                                 <div className="flex flex-col gap-1 max-w-[250px]">
                                                     {sale.items.map((item: any, i: number) => (

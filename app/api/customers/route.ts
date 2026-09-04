@@ -26,7 +26,13 @@ export async function GET() {
                     select: {
                         id: true,
                         amount: true,
+                        currency: true,
+                        currencyRate: true,
                         paymentMethod: true,
+                        bankName: true,
+                        bankRef: true,
+                        chequeNumber: true,
+                        chequeBank: true,
                         description: true,
                         date: true
                     }
@@ -38,16 +44,21 @@ export async function GET() {
         const customersWithBalances = customers.map(c => {
             const totalSales = c.sales.reduce((sum, s) => sum + s.total, 0)
             const totalDeposits = c.deposits.reduce((sum, d) => sum + d.amount, 0)
-            // Balance: deposits minus total goods purchased
-            // Positive (>0): Customer has remaining deposit / credit balance in store (له رصيد مودع)
-            // Negative (<0): Customer has unpaid credit / debt (عليه مستحق)
             const remainingBalance = totalDeposits - totalSales
+
+            // Multi-currency deposits breakdown
+            const depositsByCurrency: Record<string, number> = { SDG: 0, USD: 0, AED: 0 }
+            c.deposits.forEach(d => {
+                const curr = d.currency || 'SDG'
+                depositsByCurrency[curr] = (depositsByCurrency[curr] || 0) + d.amount
+            })
 
             return {
                 ...c,
                 totalSales,
                 totalDeposits,
                 remainingBalance,
+                depositsByCurrency,
                 salesCount: c.sales.length,
                 depositsCount: c.deposits.length
             }
@@ -64,7 +75,20 @@ export async function POST(request: Request) {
     try {
         const branchId = getActiveBranchId()
         const body = await request.json()
-        const { name, phone, company, address, notes, initialDeposit, depositPaymentMethod } = body
+        const {
+            name,
+            phone,
+            company,
+            address,
+            notes,
+            initialDeposit,
+            depositCurrency = 'SDG',
+            depositPaymentMethod = 'CASH',
+            depositBankName,
+            depositBankRef,
+            depositChequeNumber,
+            depositChequeBank
+        } = body
 
         if (!name || name.trim() === '') {
             return NextResponse.json({ error: 'اسم العميل مطلوب' }, { status: 400 })
@@ -88,7 +112,12 @@ export async function POST(request: Request) {
                 data: {
                     customerId: customer.id,
                     amount: depositVal,
+                    currency: depositCurrency || 'SDG',
                     paymentMethod: depositPaymentMethod || 'CASH',
+                    bankName: depositBankName?.trim() || null,
+                    bankRef: depositBankRef?.trim() || null,
+                    chequeNumber: depositChequeNumber?.trim() || null,
+                    chequeBank: depositChequeBank?.trim() || null,
                     description: 'إيداع رصيد افتتاحي عند التسجيل',
                     date: new Date(),
                     branchId

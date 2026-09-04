@@ -11,6 +11,10 @@ export async function POST(request: Request) {
         const branchId = getActiveBranchId()
         const total = json.items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
         const supplierId = json.supplierId ? parseInt(json.supplierId) : null
+        const currency = json.currency || 'SDG'
+        const currencyRate = parseFloat(json.currencyRate) || 1
+        const paymentMethod = json.paymentMethod || 'CASH'
+        const depositDeducted = parseFloat(json.depositDeducted || '0')
 
         const result = await prisma.$transaction(async (tx) => {
             const purchase = await tx.purchase.create({
@@ -19,6 +23,14 @@ export async function POST(request: Request) {
                     supplier: json.supplier || 'مورد عام',
                     supplierId: supplierId,
                     total: total,
+                    currency: currency,
+                    currencyRate: currencyRate,
+                    paymentMethod: paymentMethod,
+                    bankName: json.bankName?.trim() || null,
+                    bankRef: json.bankRef?.trim() || null,
+                    chequeNumber: json.chequeNumber?.trim() || null,
+                    chequeBank: json.chequeBank?.trim() || null,
+                    depositDeducted: depositDeducted,
                     status: 'COMPLETED',
                     createdAt: json.createdAt ? new Date(`${json.createdAt}T00:00:00.000+02:00`) : new Date(),
                     branchId,
@@ -26,7 +38,9 @@ export async function POST(request: Request) {
                         create: json.items.map((item: any) => ({
                             productId: parseInt(item.productId),
                             quantity: parseInt(item.quantity),
-                            price: parseFloat(item.price)
+                            price: parseFloat(item.price),
+                            purchasePriceCurrency: item.purchasePriceCurrency ? parseFloat(item.purchasePriceCurrency) : null,
+                            sellingPrice: item.sellingPrice ? parseFloat(item.sellingPrice) : null
                         }))
                     }
                 },
@@ -35,15 +49,23 @@ export async function POST(request: Request) {
                 }
             });
 
-            // Update stock
+            // Update stock quantity and optionally update selling price if provided
             for (const item of json.items) {
+                const updateData: any = {
+                    quantity: {
+                        increment: parseInt(item.quantity)
+                    }
+                }
+                if (item.sellingPrice && parseFloat(item.sellingPrice) > 0) {
+                    updateData.price = parseFloat(item.sellingPrice)
+                }
+                if (currency === 'USD' && item.purchasePriceCurrency) {
+                    updateData.purchasePriceUSD = parseFloat(item.purchasePriceCurrency)
+                }
+
                 await tx.product.update({
                     where: { id: parseInt(item.productId) },
-                    data: {
-                        quantity: {
-                            increment: parseInt(item.quantity)
-                        }
-                    }
+                    data: updateData
                 })
             }
 

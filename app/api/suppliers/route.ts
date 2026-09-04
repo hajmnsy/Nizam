@@ -14,6 +14,10 @@ export async function GET() {
                     select: {
                         id: true,
                         total: true,
+                        currency: true,
+                        currencyRate: true,
+                        paymentMethod: true,
+                        depositDeducted: true,
                         createdAt: true,
                         invoiceNumber: true
                     }
@@ -26,6 +30,21 @@ export async function GET() {
                         date: true,
                         category: true
                     }
+                },
+                deposits: {
+                    select: {
+                        id: true,
+                        amount: true,
+                        currency: true,
+                        currencyRate: true,
+                        paymentMethod: true,
+                        bankName: true,
+                        bankRef: true,
+                        chequeNumber: true,
+                        chequeBank: true,
+                        description: true,
+                        date: true
+                    }
                 }
             },
             orderBy: { createdAt: 'desc' }
@@ -34,13 +53,36 @@ export async function GET() {
         const suppliersWithBalances = suppliers.map(s => {
             const totalPurchases = s.purchases.reduce((sum, p) => sum + p.total, 0)
             const totalPayments = s.expenses.reduce((sum, e) => sum + e.amount, 0)
-            const remainingBalance = totalPurchases - totalPayments // Positive means we owe the supplier money
+            const remainingBalance = totalPurchases - totalPayments // We owe the supplier money
+
+            // Multi-currency advance deposits with factory
+            const depositsByCurrency: Record<string, number> = { USD: 0, AED: 0, SDG: 0 }
+            s.deposits.forEach(d => {
+                const curr = d.currency || 'USD'
+                depositsByCurrency[curr] = (depositsByCurrency[curr] || 0) + d.amount
+            })
+
+            // Total deposits deducted in purchases
+            const deductedByCurrency: Record<string, number> = { USD: 0, AED: 0, SDG: 0 }
+            s.purchases.forEach(p => {
+                if (p.depositDeducted && p.depositDeducted > 0) {
+                    const curr = p.currency || 'USD'
+                    deductedByCurrency[curr] = (deductedByCurrency[curr] || 0) + p.depositDeducted
+                }
+            })
+
+            const advanceBalanceByCurrency: Record<string, number> = {}
+            Object.keys(depositsByCurrency).forEach(curr => {
+                advanceBalanceByCurrency[curr] = (depositsByCurrency[curr] || 0) - (deductedByCurrency[curr] || 0)
+            })
 
             return {
                 ...s,
                 totalPurchases,
                 totalPayments,
-                remainingBalance
+                remainingBalance,
+                depositsByCurrency,
+                advanceBalanceByCurrency
             }
         })
 

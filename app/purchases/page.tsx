@@ -113,36 +113,77 @@ export default function PurchasesList() {
                             <thead className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
                                 <tr>
                                     <th className="p-4">رقم الفاتورة</th>
-                                    <th className="p-4">المورد</th>
+                                    <th className="p-4">المورد / المصنع</th>
                                     <th className="p-4">التاريخ</th>
-                                    <th className="p-4">الإجمالي</th>
+                                    <th className="p-4">طريقة السداد والبيان</th>
+                                    <th className="p-4">الإجمالي وتكلفة المخزن</th>
                                     <th className="p-4">تفاصيل الأصناف</th>
                                     <th className="p-4">إجراءات</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-100 text-sm">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={6} className="p-8 text-center text-gray-500">جاري التحميل...</td>
+                                        <td colSpan={7} className="p-8 text-center text-gray-500">جاري التحميل...</td>
                                     </tr>
                                 ) : purchases.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="p-12 text-center text-gray-400 flex flex-col items-center">
+                                        <td colSpan={7} className="p-12 text-center text-gray-400 flex flex-col items-center">
                                             <Package size={48} className="mb-2 opacity-50" />
                                             لا توجد مشتريات حتى الآن
                                         </td>
                                     </tr>
                                 ) : (
                                     purchases.map(purchase => (
-                                        <tr key={purchase.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="p-4 font-mono font-bold text-slate-700">
+                                        <tr key={purchase.id} className="hover:bg-slate-50 transition-colors font-bold">
+                                            <td className="p-4 font-mono font-black text-slate-700">
                                                 #{purchase.invoiceNumber || purchase.id}
                                             </td>
-                                            <td className="p-4 font-bold text-slate-800">{purchase.supplier || 'مورد عام'}</td>
-                                            <td className="p-4 text-gray-600 text-sm">
-                                                {new Date(purchase.createdAt).toLocaleDateString('ar-SD')}
+                                            <td className="p-4 font-black text-slate-800">{purchase.supplier || 'مورد عام'}</td>
+                                            <td className="p-4 text-gray-600 text-xs font-mono">
+                                                {new Date(purchase.createdAt).toLocaleDateString('ar-EG')}
                                             </td>
-                                            <td className="p-4 font-bold text-slate-800">{purchase.total.toLocaleString()}ج</td>
+                                            <td className="p-4 text-xs">
+                                                {(purchase as any).paymentMethod === 'DEPOSIT_DEDUCTION' ? (
+                                                    <span className="bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md font-black">
+                                                        خصم من رصيد الوديعة
+                                                    </span>
+                                                ) : (purchase as any).paymentMethod === 'BANK' ? (
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-md font-black w-fit">
+                                                            تحويل بنكي: {(purchase as any).bankName || 'بنكي'}
+                                                        </span>
+                                                        {(purchase as any).bankRef && (
+                                                            <span className="text-[10px] text-blue-700 font-mono">إشعار: {(purchase as any).bankRef}</span>
+                                                        )}
+                                                    </div>
+                                                ) : (purchase as any).paymentMethod === 'CHEQUE' ? (
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md font-black w-fit">
+                                                            شيك رقم: {(purchase as any).chequeNumber || '-'}
+                                                        </span>
+                                                        {(purchase as any).chequeBank && (
+                                                            <span className="text-[10px] text-purple-700">بنك: {(purchase as any).chequeBank}</span>
+                                                        )}
+                                                    </div>
+                                                ) : (purchase as any).paymentMethod === 'CREDIT' ? (
+                                                    <span className="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md font-black">
+                                                        آجل (على الحساب)
+                                                    </span>
+                                                ) : (
+                                                    <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-black">
+                                                        كاش (نقداً)
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 font-mono font-black text-slate-800">
+                                                <div>{purchase.total.toLocaleString()} ج.س</div>
+                                                {(purchase as any).currency && (purchase as any).currency !== 'SDG' && (
+                                                    <div className="text-xs text-purple-700 font-bold">
+                                                        {(purchase as any).currency === 'USD' ? '$' : (purchase as any).currency} {(((purchase as any).depositDeducted || (purchase.total / ((purchase as any).currencyRate || 1)))).toLocaleString()}
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td className="p-4">
                                                 <div className="flex flex-col gap-1 max-w-[250px]">
                                                     {purchase.items.map((item: any, i: number) => (

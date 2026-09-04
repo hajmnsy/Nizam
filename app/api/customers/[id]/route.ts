@@ -32,11 +32,18 @@ export async function GET(request: Request, { params }: { params: { id: string }
         const totalDeposits = customer.deposits.reduce((sum, d) => sum + d.amount, 0)
         const remainingBalance = totalDeposits - totalSales
 
+        const depositsByCurrency: Record<string, number> = { SDG: 0, USD: 0, AED: 0 }
+        customer.deposits.forEach(d => {
+            const curr = d.currency || 'SDG'
+            depositsByCurrency[curr] = (depositsByCurrency[curr] || 0) + d.amount
+        })
+
         return NextResponse.json({
             ...customer,
             totalSales,
             totalDeposits,
-            remainingBalance
+            remainingBalance,
+            depositsByCurrency
         })
     } catch (error) {
         console.error('Error fetching customer details:', error)

@@ -16,6 +16,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
                 },
                 expenses: {
                     orderBy: { date: 'desc' }
+                },
+                deposits: {
+                    orderBy: { date: 'desc' }
                 }
             }
         })
@@ -28,11 +31,32 @@ export async function GET(request: Request, { params }: { params: { id: string }
         const totalPayments = supplier.expenses.reduce((sum, e) => sum + e.amount, 0)
         const remainingBalance = totalPurchases - totalPayments
 
+        const depositsByCurrency: Record<string, number> = { USD: 0, AED: 0, SDG: 0 }
+        supplier.deposits.forEach(d => {
+            const curr = d.currency || 'USD'
+            depositsByCurrency[curr] = (depositsByCurrency[curr] || 0) + d.amount
+        })
+
+        const deductedByCurrency: Record<string, number> = { USD: 0, AED: 0, SDG: 0 }
+        supplier.purchases.forEach(p => {
+            if (p.depositDeducted && p.depositDeducted > 0) {
+                const curr = p.currency || 'USD'
+                deductedByCurrency[curr] = (deductedByCurrency[curr] || 0) + p.depositDeducted
+            }
+        })
+
+        const advanceBalanceByCurrency: Record<string, number> = {}
+        Object.keys(depositsByCurrency).forEach(curr => {
+            advanceBalanceByCurrency[curr] = (depositsByCurrency[curr] || 0) - (deductedByCurrency[curr] || 0)
+        })
+
         return NextResponse.json({
             ...supplier,
             totalPurchases,
             totalPayments,
-            remainingBalance
+            remainingBalance,
+            depositsByCurrency,
+            advanceBalanceByCurrency
         })
     } catch (error) {
         console.error('Error fetching supplier details:', error)
