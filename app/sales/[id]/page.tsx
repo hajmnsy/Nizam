@@ -594,22 +594,38 @@ export default function InvoiceDetails() {
                     </div>
                 )}
 
-                {/* Print Layout Styles - Dynamic A4 Single-Sheet Containment */}
+                {/* Print Guidance Alert (Screen only) */}
+                <div className="mb-4 bg-blue-50 border-r-4 border-blue-600 text-blue-900 p-2.5 rounded-lg flex items-center justify-between print:hidden shadow-xs text-xs">
+                    <div className="flex items-center gap-2">
+                        <span className="text-base">🖨️</span>
+                        <div>
+                            <span className="font-bold block">ملاحظة لطباعة ألوان كاملة وواضحة:</span>
+                            <span>في نافذة الطباعة (Ctrl+P)، انقر على «المزيد من الإعدادات / More settings» وتأكد من تفعيل خيار <strong>«رسومات الخلفية / Background graphics»</strong> لتظهر كافة الخلفيات والألوان المميزة.</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Print Layout Styles - Exact A4 Single-Sheet Fit without Zoom */}
                 <style type="text/css" media="print">
                     {`
                         @page {
                             size: A4 portrait;
-                            margin: 4mm 5mm;
+                            margin: 7mm 8mm 6mm 8mm;
                         }
                         @media print {
+                            *, *::before, *::after {
+                                -webkit-print-color-adjust: exact !important;
+                                print-color-adjust: exact !important;
+                                color-adjust: exact !important;
+                                box-sizing: border-box !important;
+                            }
                             html, body {
-                                width: 210mm !important;
-                                height: 297mm !important;
+                                width: 100% !important;
+                                height: auto !important;
                                 margin: 0 !important;
                                 padding: 0 !important;
                                 background-color: #ffffff !important;
-                                -webkit-print-color-adjust: exact !important;
-                                print-color-adjust: exact !important;
+                                overflow: visible !important;
                             }
                             .no-print {
                                 display: none !important;
@@ -617,17 +633,24 @@ export default function InvoiceDetails() {
                             .invoice-a4-sheet {
                                 width: 100% !important;
                                 max-width: 100% !important;
-                                min-height: 0 !important;
-                                margin: 0 auto !important;
+                                min-height: auto !important;
+                                margin: 0 !important;
                                 padding: 0 !important;
+                                border: none !important;
+                                box-shadow: none !important;
+                                overflow: visible !important;
                                 page-break-inside: avoid !important;
                                 break-inside: avoid !important;
                                 page-break-after: avoid !important;
                                 break-after: avoid !important;
-                                overflow: visible !important;
-                                ${totalPrintRows > 22 ? 'zoom: 0.67;' : totalPrintRows > 16 ? 'zoom: 0.74;' : totalPrintRows > 12 ? 'zoom: 0.82;' : totalPrintRows > 8 ? 'zoom: 0.88;' : totalPrintRows > 5 ? 'zoom: 0.94;' : 'zoom: 0.98;'}
                             }
-                            table, tr, td, th {
+                            table {
+                                width: 100% !important;
+                                border-collapse: collapse !important;
+                                page-break-inside: avoid !important;
+                                break-inside: avoid !important;
+                            }
+                            tr, td, th {
                                 page-break-inside: avoid !important;
                                 break-inside: avoid !important;
                             }
@@ -638,7 +661,7 @@ export default function InvoiceDetails() {
                 {/* INVOICE PAPER (A4 Dimension Optimized) */}
                 <div
                     ref={componentRef}
-                    className="invoice-a4-sheet bg-white p-8 sm:p-10 rounded-2xl shadow-xl print:shadow-none print:p-0 relative overflow-hidden mx-auto max-w-[210mm] min-h-[297mm] print:min-h-0 print:m-0 ring-1 ring-slate-200 print:ring-0 text-slate-900"
+                    className="invoice-a4-sheet bg-white p-8 sm:p-10 rounded-2xl shadow-xl print:shadow-none print:p-0 relative overflow-hidden mx-auto max-w-[210mm] print:max-w-none print:w-full min-h-[297mm] print:min-h-0 print:m-0 ring-1 ring-slate-200 print:ring-0 text-slate-900"
                     dir="rtl"
                 >
                     {/* Watermark for Quotation */}
@@ -665,31 +688,31 @@ export default function InvoiceDetails() {
                     </div>
 
                     {/* 2. Official Header */}
-                    <div className="relative z-10 flex justify-between items-center pb-4 mb-4 border-b-2 border-slate-800 gap-4 print:pb-1.5 print:mb-1.5 print:gap-2">
-                        {/* Right: Company and Branch Info */}
-                        <div className="w-[36%] text-right space-y-1 print:space-y-0.5">
-                            <div className="flex items-center gap-2">
+                    <div className="relative z-10 grid grid-cols-12 items-center pb-3 mb-3 border-b-2 border-slate-900 gap-2 print:pb-1.5 print:mb-1.5 print:gap-1.5">
+                        {/* Right: Company and Branch Info (col-span-5) */}
+                        <div className="col-span-5 text-right space-y-1 print:space-y-0.5">
+                            <div className="flex items-center gap-1.5">
                                 <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight print:text-base">
-                                    {settings?.companyName || 'المصنع السوداني الماليزي'}
+                                    المصنع السوداني الماليزي
                                 </h1>
                             </div>
                             <div className="flex items-center gap-1.5 pt-0.5 print:gap-1 print:pt-0">
-                                <span className="inline-block bg-slate-900 text-white text-[11px] font-black px-2.5 py-0.5 rounded shadow-sm print:text-[9px] print:px-1.5 print:py-0">
+                                <span className="inline-block bg-slate-900 text-white text-[11px] font-black px-2.5 py-0.5 rounded shadow-sm print:text-[9px] print:px-1.5 print:py-0 print:bg-slate-900">
                                     {isMainBranch ? 'الفرع الرئيسي' : ((sale as any)?.branch?.name || 'فرع الشركة')}
                                 </span>
-                                <span className="text-[11px] font-bold text-slate-600 print:text-[9px]">
+                                <span className="text-[11px] font-bold text-slate-700 print:text-[9px]">
                                     صناعة وتجارة كافة أنواع وتخانات الحديد
                                 </span>
                             </div>
                             <div className="text-[11px] text-slate-700 font-bold space-y-0.5 pt-1 print:text-[9px] print:space-y-0 print:pt-0.5">
-                                <div className="flex items-center gap-1 text-slate-800 print:gap-0.5">
+                                <div className="flex items-center gap-1 text-slate-900 print:gap-0.5">
                                     <Phone size={12} className="text-slate-600 print:w-2.5 print:h-2.5" />
-                                    <span>م. محمد إسماعيل:</span>
-                                    <span dir="ltr" className="font-mono">{settings?.phone || '0123456789'}</span>
+                                    <span className="font-black">صالح عوض صالح:</span>
+                                    <span dir="ltr" className="font-mono font-black">0120021085</span>
                                 </div>
-                                <div className="flex items-center gap-1 text-slate-600 text-[10px] print:text-[8.5px] print:gap-0.5">
+                                <div className="flex items-center gap-1 text-slate-700 text-[10.5px] print:text-[8.5px] print:gap-0.5">
                                     <MapPin size={12} className="text-slate-500 print:w-2.5 print:h-2.5" />
-                                    <span>{settings?.address || 'الدامر - المنطقة الصناعية - شمال سوق السبت'}</span>
+                                    <span className="font-bold">الموقع: سوق عطبرة - السينما الوطنية</span>
                                 </div>
                                 {settings?.vatRate > 0 && (
                                     <div className="text-[10px] text-emerald-800 font-extrabold flex items-center gap-1 print:text-[8.5px] print:gap-0.5">
@@ -700,66 +723,69 @@ export default function InvoiceDetails() {
                             </div>
                         </div>
 
-                        {/* Center: Prestige Emblem / Industrial Logo */}
-                        <div className="w-[34%] flex flex-col justify-center items-center">
-                            {settings?.logoUrl ? (
-                                <img
-                                    src={settings.logoUrl}
-                                    alt="Logo"
-                                    className="h-24 print:h-12 max-w-full w-auto object-contain mix-blend-multiply"
-                                    onError={(e) => (e.currentTarget.style.display = 'none')}
-                                />
-                            ) : (
-                                <div className="relative w-full py-2.5 px-3 bg-gradient-to-b from-slate-50 to-slate-100 border-2 border-double border-slate-900 rounded-lg flex flex-col items-center justify-center select-none shadow-sm print:py-1 print:px-2">
-                                    {/* Corner industrial rivets */}
-                                    <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-400"></div>
-                                    <div className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-400"></div>
-                                    <div className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-400"></div>
-                                    <div className="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full bg-slate-800 border border-slate-400"></div>
+                        {/* Center: High-End Industrial Textual Logo for 'المصنع السوداني الماليزي' (col-span-4) */}
+                        <div className="col-span-4 flex flex-col justify-center items-center">
+                            <div className="relative w-full py-2 px-3 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white border-2 border-slate-900 rounded-xl flex flex-col items-center justify-center select-none shadow-md print:shadow-none print:py-1.5 print:px-2 print:bg-slate-950 print:border-slate-900">
+                                {/* Corner steel rivets */}
+                                <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
+                                <div className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
+                                <div className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
+                                <div className="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
 
-                                    <span className="text-sm sm:text-base font-black text-slate-950 tracking-[0.15em] font-sans leading-tight text-center print:text-xs">
-                                        الـمـصـنـع الـسـودانـي الـمـالـيـزي
-                                    </span>
-                                    <span className="text-[9px] font-black text-slate-600 tracking-wider mt-0.5 print:text-[8px] print:mt-0">
-                                        للـمـنـتـجـات الـحـديـديـة ومـواد الـبـنـاء
+                                <div className="flex items-center gap-1 mb-0.5">
+                                    <svg className="w-4 h-4 print:w-3.5 print:h-3.5 text-amber-400 print:text-amber-300" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.8L19.5 8 12 11.2 4.5 8 12 4.8zM4 9.6l7 3.7v7.1l-7-3.5V9.6zm9 10.8v-7.1l7-3.7v7.3l-7 3.5z"/>
+                                    </svg>
+                                    <span className="text-[11px] sm:text-xs font-black tracking-wider text-amber-400 print:text-amber-300 font-sans">
+                                        SMS STEEL
                                     </span>
                                 </div>
-                            )}
+
+                                <span className="text-xs sm:text-sm font-black text-white tracking-tight leading-tight text-center">
+                                    الـمـصـنـع الـسـودانـي الـمـالـيـزي
+                                </span>
+                                <span className="text-[8.5px] font-bold text-slate-200 tracking-wider mt-0.5 text-center">
+                                    للـحـديـد والـصـلـب ومـواد الـبـنـاء
+                                </span>
+                                <span className="text-[7px] font-mono tracking-wider text-slate-400 uppercase mt-0.5">
+                                    Sudanese Malaysian Steel Factory
+                                </span>
+                            </div>
                         </div>
 
-                        {/* Left: Document Badge Card */}
-                        <div className="w-[30%] text-left">
-                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3 text-right shadow-sm space-y-1 print:p-1.5 print:space-y-0.5 print:rounded-lg">
-                                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 print:pb-0.5">
-                                    <span className="text-xs font-bold text-slate-500 print:text-[9.5px]">نوع المستند:</span>
-                                    <span className={`text-xs font-black px-2 py-0.5 rounded print:text-[9.5px] print:px-1.5 print:py-0 ${
+                        {/* Left: Document Badge Card (col-span-3) */}
+                        <div className="col-span-3 text-left">
+                            <div className="bg-slate-50 border-2 border-slate-300 rounded-xl p-2.5 text-right shadow-sm space-y-1 print:p-1.5 print:space-y-0.5 print:rounded-lg print:border-slate-400">
+                                <div className="flex items-center justify-between border-b border-slate-200 pb-1 print:pb-0.5">
+                                    <span className="text-xs font-bold text-slate-500 print:text-[9px]">المستند:</span>
+                                    <span className={`text-[11px] font-black px-2 py-0.5 rounded print:text-[9px] print:px-1.5 print:py-0 ${
                                         viewMode === 'INVOICE'
-                                            ? 'bg-blue-100 text-blue-900'
+                                            ? 'bg-blue-600 text-white print:bg-blue-600 print:text-white'
                                             : viewMode === 'DELIVERY'
-                                            ? 'bg-amber-100 text-amber-900'
-                                            : 'bg-purple-100 text-purple-900'
+                                            ? 'bg-amber-600 text-white print:bg-amber-600 print:text-white'
+                                            : 'bg-purple-600 text-white print:bg-purple-600 print:text-white'
                                     }`}>
                                         {viewMode === 'INVOICE' ? 'فاتورة مبيعات' : viewMode === 'DELIVERY' ? 'إذن استلام مخزن' : 'عرض سعر'}
                                     </span>
                                 </div>
 
-                                <div className="flex items-center justify-between text-xs pt-0.5 print:text-[9.5px] print:pt-0">
-                                    <span className="font-bold text-slate-600 print:text-[9.5px]">
-                                        {viewMode === 'DELIVERY' ? 'رقم الإذن:' : 'رقم الفاتورة:'}
+                                <div className="flex items-center justify-between text-xs pt-0.5 print:text-[9px] print:pt-0">
+                                    <span className="font-bold text-slate-600 print:text-[9px]">
+                                        {viewMode === 'DELIVERY' ? 'رقم الإذن:' : 'الرقم:'}
                                     </span>
-                                    <span className="font-mono text-base font-black text-slate-950 print:text-xs">
+                                    <span className="font-mono text-sm sm:text-base font-black text-slate-950 print:text-xs">
                                         #{sale.invoiceNumber || sale.id}
                                     </span>
                                 </div>
 
-                                <div className="flex items-center justify-between text-[11px] pt-0.5 print:text-[9px] print:pt-0">
+                                <div className="flex items-center justify-between text-[11px] pt-0.5 print:text-[8.5px] print:pt-0">
                                     <span className="font-bold text-slate-600">التاريخ:</span>
                                     <span className="font-bold text-slate-800 font-mono">
                                         {new Date(sale.createdAt).toLocaleDateString('en-GB')}
                                     </span>
                                 </div>
 
-                                <div className="flex items-center justify-between text-[11px] print:text-[9px]">
+                                <div className="flex items-center justify-between text-[11px] print:text-[8.5px]">
                                     <span className="font-bold text-slate-600">الوقت:</span>
                                     <span className="font-bold text-slate-700 font-mono" dir="ltr">
                                         {new Date(sale.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
@@ -768,12 +794,12 @@ export default function InvoiceDetails() {
 
                                 <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200 print:text-[8.5px] print:pt-0.5">
                                     <span className="font-bold text-slate-600">الحالة:</span>
-                                    <span className={`font-black text-[10px] px-1.5 py-0.2 rounded print:text-[8.5px] print:px-1 print:py-0 ${
+                                    <span className={`font-black text-[10px] px-1.5 py-0.5 rounded print:text-[8px] print:px-1 print:py-0 ${
                                         sale.status === 'PAID'
-                                            ? 'text-emerald-700 bg-emerald-50'
+                                            ? 'text-emerald-700 bg-emerald-100 border border-emerald-300 print:bg-emerald-600 print:text-white'
                                             : sale.status === 'CREDIT'
-                                            ? 'text-red-700 bg-red-50'
-                                            : 'text-amber-700 bg-amber-50'
+                                            ? 'text-red-700 bg-red-100 border border-red-300 print:bg-red-600 print:text-white'
+                                            : 'text-amber-700 bg-amber-100 border border-amber-300 print:bg-amber-600 print:text-white'
                                     }`}>
                                         {sale.status === 'PAID' ? 'خالص السداد' : sale.status === 'CREDIT' ? 'آجل / غير خالص' : 'مسودة'}
                                     </span>
@@ -844,16 +870,16 @@ export default function InvoiceDetails() {
                         {(viewMode === 'INVOICE' || viewMode === 'QUOTATION') && (
                             <table className="w-full text-right border-collapse border border-slate-800">
                                 <thead>
-                                    <tr className="bg-slate-900 text-white text-xs print:text-[10px]">
-                                        <th className="py-2.5 px-2 w-[5%] text-center font-black border border-slate-700 print:py-1 print:px-1">#</th>
-                                        <th className="py-2.5 px-3 w-[41%] text-right font-black border border-slate-700 print:py-1 print:px-1.5">بيان الصنف والمنتج</th>
-                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700 print:py-1 print:px-1">السماكة</th>
-                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700 print:py-1 print:px-1">النوع</th>
-                                        <th className="py-2.5 px-2 w-[10%] text-center font-black border border-slate-700 print:py-1 print:px-1">الكمية</th>
-                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700 print:py-1 print:px-1">
+                                    <tr className="bg-slate-900 text-white text-xs print:text-[10px] print:bg-slate-900">
+                                        <th className="py-2 px-1.5 w-[4%] text-center font-black border border-slate-700 print:py-1 print:px-0.5">#</th>
+                                        <th className="py-2 px-2.5 w-[38%] text-right font-black border border-slate-700 print:py-1 print:px-1.5">بيان الصنف والمنتج</th>
+                                        <th className="py-2 px-1.5 w-[10%] text-center font-black border border-slate-700 print:py-1 print:px-1">السماكة</th>
+                                        <th className="py-2 px-1.5 w-[10%] text-center font-black border border-slate-700 print:py-1 print:px-1">النوع</th>
+                                        <th className="py-2 px-1.5 w-[10%] text-center font-black border border-slate-700 print:py-1 print:px-1">الكمية</th>
+                                        <th className="py-2 px-1.5 w-[14%] text-center font-black border border-slate-700 print:py-1 print:px-1">
                                             السعر الإفرادي (ج.س)
                                         </th>
-                                        <th className="py-2.5 px-2 w-[11%] text-center font-black border border-slate-700 print:py-1 print:px-1">
+                                        <th className="py-2 px-1.5 w-[14%] text-center font-black border border-slate-700 print:py-1 print:px-1">
                                             سعر الكمية (ج.س)
                                         </th>
                                     </tr>
@@ -981,13 +1007,13 @@ export default function InvoiceDetails() {
                             <div className="overflow-x-auto">
                                 <table className="w-full text-right border-collapse border border-slate-300 bg-white">
                                     <thead>
-                                        <tr className="bg-slate-200/80 text-slate-800 text-[11px] print:text-[9.5px]">
-                                            <th className="py-2 px-2 text-center font-black border border-slate-300 w-[5%] print:py-0.5 print:px-1">#</th>
-                                            <th className="py-2 px-2.5 text-right font-black border border-slate-300 w-[24%] print:py-0.5 print:px-1.5">طريقة السداد / البنك</th>
-                                            <th className="py-2 px-2 text-center font-black border border-slate-300 w-[18%] print:py-0.5 print:px-1">رقم الإشعار / الشيك</th>
-                                            <th className="py-2 px-2 text-center font-black border border-slate-300 w-[20%] print:py-0.5 print:px-1">المحول منه (المرسل / الساحب)</th>
-                                            <th className="py-2 px-2 text-center font-black border border-slate-300 w-[20%] print:py-0.5 print:px-1">المحول لحسابه (المستلم / المستفيد)</th>
-                                            <th className="py-2 px-2.5 text-center font-black border border-slate-300 w-[13%] print:py-0.5 print:px-1.5">المبلغ المدفوع</th>
+                                        <tr className="bg-slate-800 text-white text-[11px] print:text-[9px] print:bg-slate-800">
+                                            <th className="py-1.5 px-1 text-center font-black border border-slate-500 w-[4%] print:py-0.5 print:px-0.5">#</th>
+                                            <th className="py-1.5 px-2 text-right font-black border border-slate-500 w-[22%] print:py-0.5 print:px-1.5">طريقة السداد / البنك</th>
+                                            <th className="py-1.5 px-1.5 text-center font-black border border-slate-500 w-[16%] print:py-0.5 print:px-1">رقم الإشعار / الشيك</th>
+                                            <th className="py-1.5 px-1.5 text-center font-black border border-slate-500 w-[18%] print:py-0.5 print:px-1">المحول منه (المرسل / الساحب)</th>
+                                            <th className="py-1.5 px-1.5 text-center font-black border border-slate-500 w-[18%] print:py-0.5 print:px-1">المحول لحسابه (المستلم / المستفيد)</th>
+                                            <th className="py-1.5 px-2 text-center font-black border border-slate-500 w-[22%] print:py-0.5 print:px-1.5">المبلغ المدفوع</th>
                                         </tr>
                                     </thead>
                                     <tbody className="text-xs divide-y divide-slate-200">
@@ -1208,11 +1234,11 @@ export default function InvoiceDetails() {
                                             </tr>
                                         )}
 
-                                        <tr className="border-t-2 border-slate-800 print:border-t">
-                                            <td className="py-2.5 text-slate-950 font-black text-sm sm:text-base print:py-1 print:text-xs">
+                                        <tr className="border-t-2 border-slate-900 bg-slate-900 text-white rounded-lg print:bg-slate-900 print:text-white">
+                                            <td className="py-2 px-2.5 text-white font-black text-sm sm:text-base print:py-1 print:px-2 print:text-xs">
                                                 الصافي النهائي المطلوب {isForeignCurrency ? `(${currencyCode})` : ''}:
                                             </td>
-                                            <td className="py-2.5 text-left font-mono font-black text-slate-950 text-lg sm:text-2xl print:py-1 print:text-sm">
+                                            <td className="py-2 px-2.5 text-left font-mono font-black text-white text-base sm:text-xl print:py-1 print:px-2 print:text-sm">
                                                 {isForeignCurrency ? (
                                                     <div className="space-y-0.5">
                                                         <div className="text-indigo-950">
@@ -1298,7 +1324,7 @@ export default function InvoiceDetails() {
                     )}
 
                     {/* 7. Footer Note */}
-                    <div className="relative z-10 mt-6 pt-3 border-t border-slate-200 text-center text-[10px] text-slate-500 font-bold space-y-0.5 print:mt-1 print:pt-0.5 print:text-[8px] print:space-y-0">
+                    <div className="relative z-10 mt-4 pt-2 border-t border-slate-300 text-center text-[10px] text-slate-600 font-bold space-y-0.5 print:mt-1 print:pt-0.5 print:text-[8px] print:space-y-0">
                         <p>
                             {viewMode === 'DELIVERY'
                                 ? 'يجب إبراز هذا الإذن المعتمد لأمن البوابة عند الخروج من حرم المصنع.'
@@ -1306,8 +1332,8 @@ export default function InvoiceDetails() {
                                 ? 'هذا العرض مبدئي وسعره ساري لمدة محددة تبعاً لتقلبات أسعار الصرف وخامات الحديد في السوق.'
                                 : 'البضاعة التي تخرج من حرم المصنع لا ترد ولا تستبدل إلا بموافقة الإدارة ووفقاً لللوائح المعتمدة.'}
                         </p>
-                        <p className="text-slate-400">
-                            {settings?.companyName || 'المصنع السوداني الماليزي للمنتجات الحديدية'} | الدامر - المنطقة الصناعية | هاتف: {settings?.phone || '0123456789'}
+                        <p className="text-slate-500 font-bold">
+                            المصنع السوداني الماليزي للمنتجات الحديدية | الموقع: سوق عطبرة - السينما الوطنية | هاتف: 0120021085
                         </p>
                     </div>
                 </div>

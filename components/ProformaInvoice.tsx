@@ -88,7 +88,7 @@ export const ProformaInvoice = React.forwardRef<HTMLDivElement, ProformaInvoiceP
             {/* Footer */}
             <div className="text-center text-sm mt-8 pt-4 border-t border-black">
                 <p className="font-bold mb-1">هذه الفاتورة مبدئية وغير ملزمة ولا تعتبر سند قبض.</p>
-                <p className="text-gray-600">العنوان: الدامر - المنطقة الصناعية - شمال سوق السبت</p>
+                <p className="text-gray-600">الموقع: سوق عطبرة - السينما الوطنية | هاتف: 0120021085</p>
             </div>
         </div>
     )
