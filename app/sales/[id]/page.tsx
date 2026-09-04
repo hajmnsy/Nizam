@@ -624,7 +624,7 @@ export default function InvoiceDetails() {
                     </div>
 
                     {/* 3. Client & Metadata Grid */}
-                    <div className={`relative z-10 grid grid-cols-1 ${isForeignCurrency ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 mb-4 text-xs`}>
+                    <div className={`relative z-10 grid grid-cols-1 ${isForeignCurrency ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3 mb-4 text-xs`}>
                         {/* Box 1: Customer */}
                         <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
                             <span className="text-[10px] text-slate-500 font-bold block mb-0.5">العميل المكرم:</span>
@@ -633,107 +633,7 @@ export default function InvoiceDetails() {
                             </span>
                         </div>
 
-                        {/* Box 2: Payment Details (Handles Single/Multiple Bankak/Fawry/Cash/Cheque) */}
-                        <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
-                            <span className="text-[10px] text-slate-500 font-bold block mb-0.5">طريقة الدفع:</span>
-                            {sale.paymentMethod === 'BANK' && (
-                                <div>
-                                    {bankTransfersList.length > 1 ? (
-                                        <div className="space-y-1">
-                                            <span className="font-black text-blue-900 block text-xs">
-                                                تحويلات بنكية ({bankTransfersList.length} إشعارات):
-                                            </span>
-                                            <div className="space-y-1 mt-0.5 max-h-24 overflow-y-auto">
-                                                {bankTransfersList.map((t, idx) => (
-                                                    <div key={idx} className="bg-white/80 border border-blue-200 rounded px-1.5 py-0.5 text-[10px] flex justify-between items-center">
-                                                        <span className="font-bold text-slate-800">
-                                                            {t.bank} <span className="font-mono text-slate-600">(إشعار: {t.ref || '-'})</span>
-                                                        </span>
-                                                        {t.amount ? (
-                                                            <span className="font-mono font-black text-blue-950 mr-1">
-                                                                {Number(t.amount).toLocaleString()} ج.س
-                                                            </span>
-                                                        ) : null}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <span className="font-black text-slate-800 block">
-                                                تحويل بنكي ({bankTransfersList[0]?.bank || sale.bankName || 'بنك الخرطوم (بنكك)'})
-                                            </span>
-                                            <span className="text-[10px] text-slate-600 block mt-0.5 font-mono">
-                                                إشعار: {bankTransfersList[0]?.ref || sale.bankRef || '-'}
-                                            </span>
-                                            {bankTransfersList[0]?.amount ? (
-                                                <span className="text-[10px] text-blue-900 font-bold block mt-0.5">
-                                                    المبلغ: {Number(bankTransfersList[0].amount).toLocaleString()} ج.س
-                                                </span>
-                                            ) : null}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {sale.paymentMethod === 'CHEQUE' && (
-                                <div>
-                                    <span className="font-black text-slate-800 block">
-                                        شيك مصرفي ({sale.chequeBank || 'البنك'})
-                                    </span>
-                                    <span className="text-[10px] text-slate-600 block mt-0.5 font-mono">
-                                        شيك #: {sale.chequeNumber || '-'}
-                                    </span>
-                                </div>
-                            )}
-
-                            {sale.paymentMethod === 'MULTIPLE' && (
-                                <div className="space-y-1">
-                                    <span className="font-black text-amber-900 block text-xs">سداد مجزأ:</span>
-                                    <div className="text-[10px] space-y-0.5">
-                                        {(sale.cashAmount || 0) > 0 && (
-                                            <div>كاش: <strong className="font-mono">{sale.cashAmount?.toLocaleString()} ج.س</strong></div>
-                                        )}
-                                        {bankTransfersList.length > 0 ? (
-                                            <div className="space-y-0.5">
-                                                {bankTransfersList.map((t, idx) => (
-                                                    <div key={idx} className="bg-blue-50/50 border border-blue-200/60 rounded px-1.5 py-0.5">
-                                                        بنك: <strong className="font-bold">{t.bank}</strong> (إشعار: <span className="font-mono">{t.ref || '-'}</span>) - <span className="font-mono font-bold text-blue-900">{Number(t.amount || sale.bankAmount || 0).toLocaleString()} ج.س</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (sale.bankAmount || 0) > 0 ? (
-                                            <div>بنك: <strong className="font-mono">{sale.bankAmount?.toLocaleString()} ج.س</strong></div>
-                                        ) : null}
-                                        {(sale.chequeAmount || 0) > 0 && (
-                                            <div>شيك: <strong className="font-mono">{sale.chequeAmount?.toLocaleString()} ج.س</strong> ({sale.chequeBank || 'بنك الشيك'} - #{sale.chequeNumber || '-'})</div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {sale.paymentMethod === 'CASH' && (
-                                <div>
-                                    <span className="font-black text-slate-800 block">نقداً (كاش)</span>
-                                    <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">تم استلام المبلغ نقداً بالخزينة</span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Box 3: Currency & Rate - ONLY SHOWN IF NOT SDG */}
-                        {isForeignCurrency && (
-                            <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
-                                <span className="text-[10px] text-slate-500 font-bold block mb-0.5">العملة وسعر الصرف:</span>
-                                <span className="font-black text-slate-800 block">
-                                    {sale.currency === 'USD' ? 'دولار ($ USD)' : 'درهم (AED د.إ)'}
-                                </span>
-                                <span className="text-[10px] text-indigo-700 font-bold block mt-0.5">
-                                    الصرف: {sale.currencyRate?.toLocaleString()} ج.س
-                                </span>
-                            </div>
-                        )}
-
-                        {/* Box 4 (or 3 if SDG): Dispatch Location */}
+                        {/* Box 2: Dispatch Location */}
                         <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
                             <span className="text-[10px] text-slate-500 font-bold block mb-0.5">موقع الاستلام والصرف:</span>
                             <span className={`font-black block truncate ${
@@ -749,6 +649,19 @@ export default function InvoiceDetails() {
                                 </span>
                             )}
                         </div>
+
+                        {/* Box 3: Currency & Rate - ONLY SHOWN IF NOT SDG */}
+                        {isForeignCurrency && (
+                            <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
+                                <span className="text-[10px] text-slate-500 font-bold block mb-0.5">العملة وسعر الصرف:</span>
+                                <span className="font-black text-slate-800 block">
+                                    {sale.currency === 'USD' ? 'دولار ($ USD)' : 'درهم (AED د.إ)'}
+                                </span>
+                                <span className="text-[10px] text-indigo-700 font-bold block mt-0.5">
+                                    الصرف: {sale.currencyRate?.toLocaleString()} ج.س
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Cross-Branch Alert Banner (If Dispatched from another branch) */}
@@ -852,6 +765,190 @@ export default function InvoiceDetails() {
                             </table>
                         )}
                     </div>
+
+                    {/* 4.5. Payment Details & Bank Transfer Notifications (أسفل جدول بيانات الأصناف مباشرة) */}
+                    {(viewMode === 'INVOICE' || viewMode === 'QUOTATION') && (
+                        <div className="relative z-10 mb-4 bg-slate-50 border-2 border-slate-300 rounded-xl p-3 shadow-xs">
+                            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2.5 border-b border-slate-200">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-base">💳</span>
+                                    <span className="text-xs font-black text-slate-800">بيانات وطريقة السداد:</span>
+                                    <span className={`text-xs font-black px-2.5 py-0.5 rounded ${
+                                        sale.paymentMethod === 'CASH'
+                                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                            : sale.paymentMethod === 'BANK'
+                                            ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                            : sale.paymentMethod === 'CHEQUE'
+                                            ? 'bg-purple-100 text-purple-800 border border-purple-300'
+                                            : 'bg-amber-100 text-amber-800 border border-amber-300'
+                                    }`}>
+                                        {sale.paymentMethod === 'CASH' && 'نقداً (كاش)'}
+                                        {sale.paymentMethod === 'BANK' && (bankTransfersList.length > 1 ? `تحويلات بنكية (${bankTransfersList.length} إشعارات)` : 'تحويل بنكي')}
+                                        {sale.paymentMethod === 'CHEQUE' && 'شيك مصرفي'}
+                                        {sale.paymentMethod === 'MULTIPLE' && 'سداد مجزأ (نقداً / بنك / شيك)'}
+                                    </span>
+                                </div>
+                                <div className="text-[11px] font-bold text-slate-600">
+                                    حالة الفاتورة: <strong className={sale.status === 'PAID' ? 'text-emerald-700 font-black' : 'text-red-700 font-black'}>
+                                        {sale.status === 'PAID' ? 'خالص السداد بالكامل' : `متبقي آجل: ${(sale.remainingAmount || 0).toLocaleString()} ج.س`}
+                                    </strong>
+                                </div>
+                            </div>
+
+                            {/* Detailed Payment Display */}
+                            {sale.paymentMethod === 'BANK' && (
+                                <div>
+                                    {bankTransfersList.length > 0 ? (
+                                        <div className="space-y-2">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                {bankTransfersList.map((t, idx) => (
+                                                    <div key={idx} className="bg-white border-2 border-blue-200 rounded-lg p-2.5 text-xs flex flex-col justify-between shadow-xs">
+                                                        <div className="flex justify-between items-center mb-1.5">
+                                                            <span className="font-black text-blue-950 text-xs">{t.bank}</span>
+                                                            <span className="text-[10px] bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded font-black border border-blue-200">
+                                                                إشعار #{idx + 1}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-xs py-1 border-t border-slate-100 font-mono">
+                                                            <span className="text-slate-600 font-sans text-[11px] font-bold">رقم الإشعار / المرجع:</span>
+                                                            <span className="font-black text-slate-950 bg-slate-100 px-2 py-0.5 rounded tracking-wider select-all border border-slate-200">
+                                                                {t.ref || 'بدون رقم'}
+                                                            </span>
+                                                        </div>
+                                                        {t.amount ? (
+                                                            <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 font-mono">
+                                                                <span className="text-slate-600 font-sans text-[11px] font-bold">المبلغ:</span>
+                                                                <span className="font-black text-blue-900 text-sm">
+                                                                    {Number(t.amount).toLocaleString()} ج.س
+                                                                </span>
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {bankTransfersList.length > 1 && (
+                                                <div className="text-xs font-bold text-blue-950 bg-blue-100/80 px-3 py-2 rounded-lg flex justify-between items-center border border-blue-200">
+                                                    <span>مجموع مبالغ التحويلات ({bankTransfersList.length} إشعارات):</span>
+                                                    <span className="font-mono text-sm font-black text-blue-950">
+                                                        {bankTransfersList.reduce((sum, t) => sum + (Number(t.amount) || 0), 0).toLocaleString()} ج.س
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="text-xs font-bold text-slate-700 bg-white p-2.5 rounded-lg border border-blue-200">
+                                            تحويل عبر: {sale.bankName || 'بنك الخرطوم (بنكك)'} | إشعار: <strong className="font-mono">{sale.bankRef || '-'}</strong>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {sale.paymentMethod === 'MULTIPLE' && (
+                                <div className="space-y-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        {(sale.cashAmount || 0) > 0 && (
+                                            <div className="bg-white border-2 border-emerald-200 rounded-lg p-2.5 text-xs">
+                                                <span className="text-[11px] font-black text-emerald-800 block mb-1">💵 نقداً (كاش):</span>
+                                                <span className="font-mono text-base font-black text-emerald-950">
+                                                    {sale.cashAmount?.toLocaleString()} ج.س
+                                                </span>
+                                            </div>
+                                        )}
+                                        {(sale.chequeAmount || 0) > 0 && (
+                                            <div className="bg-white border-2 border-purple-200 rounded-lg p-2.5 text-xs">
+                                                <span className="text-[11px] font-black text-purple-800 block mb-1">📑 شيك مصرفي:</span>
+                                                <span className="font-mono text-base font-black text-purple-950 block">
+                                                    {sale.chequeAmount?.toLocaleString()} ج.س
+                                                </span>
+                                                <span className="text-[10px] text-slate-600 block mt-1">
+                                                    {sale.chequeBank || 'البنك'} - رقم: <strong className="font-mono text-slate-900">{sale.chequeNumber || '-'}</strong>
+                                                </span>
+                                            </div>
+                                        )}
+                                        {(sale.bankAmount || 0) > 0 && bankTransfersList.length === 0 && (
+                                            <div className="bg-white border-2 border-blue-200 rounded-lg p-2.5 text-xs">
+                                                <span className="text-[11px] font-black text-blue-800 block mb-1">💳 تحويل بنكي:</span>
+                                                <span className="font-mono text-base font-black text-blue-950">
+                                                    {sale.bankAmount?.toLocaleString()} ج.س
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {bankTransfersList.length > 0 && (
+                                        <div className="mt-2 space-y-1.5">
+                                            <span className="text-[11px] font-black text-blue-950 block">
+                                                💳 تفاصيل إشعارات التحويل البنكي ({bankTransfersList.length} إشعارات):
+                                            </span>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                {bankTransfersList.map((t, idx) => (
+                                                    <div key={idx} className="bg-white border-2 border-blue-200 rounded-lg p-2.5 text-xs flex flex-col justify-between shadow-xs">
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <span className="font-black text-blue-950 text-xs">{t.bank}</span>
+                                                            <span className="text-[10px] bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded font-black border border-blue-200">
+                                                                إشعار #{idx + 1}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-xs py-1 border-t border-slate-100 font-mono">
+                                                            <span className="text-slate-600 font-sans text-[11px] font-bold">رقم الإشعار:</span>
+                                                            <span className="font-black text-slate-950 bg-slate-100 px-2 py-0.5 rounded tracking-wider select-all border border-slate-200">
+                                                                {t.ref || 'بدون رقم'}
+                                                            </span>
+                                                        </div>
+                                                        {t.amount ? (
+                                                            <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 font-mono">
+                                                                <span className="text-slate-600 font-sans text-[11px] font-bold">المبلغ:</span>
+                                                                <span className="font-black text-blue-900">
+                                                                    {Number(t.amount).toLocaleString()} ج.س
+                                                                </span>
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {sale.paymentMethod === 'CHEQUE' && (
+                                <div className="bg-white border-2 border-purple-200 rounded-lg p-3 text-xs flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <span className="font-black text-purple-950 text-sm block">شيك مصرفي مسحوب على: {sale.chequeBank || 'البنك'}</span>
+                                        <span className="text-slate-600 text-xs mt-1 block">رقم الشيك: <strong className="font-mono text-slate-900 text-sm bg-purple-50 px-2 py-0.5 rounded border border-purple-200">{sale.chequeNumber || '-'}</strong></span>
+                                    </div>
+                                    {(sale.chequeAmount || sale.paidAmount) ? (
+                                        <div className="text-left font-mono">
+                                            <span className="text-[10px] text-slate-500 block font-sans">قيمة الشيك:</span>
+                                            <span className="font-black text-purple-950 text-base">{(sale.chequeAmount || sale.paidAmount)?.toLocaleString()} ج.س</span>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            )}
+
+                            {sale.paymentMethod === 'CASH' && (
+                                <div className="bg-white border border-emerald-200 rounded-lg p-2.5 text-xs flex items-center justify-between">
+                                    <span className="text-emerald-700 font-bold text-xs flex items-center gap-1.5">
+                                        ✓ تم استلام المبلغ نقداً بالكامل في الخزينة
+                                    </span>
+                                    <span className="font-mono font-black text-emerald-950 text-sm">
+                                        {(sale.cashAmount || sale.paidAmount || sale.total)?.toLocaleString()} ج.س
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {viewMode === 'DELIVERY' && (
+                        <div className="relative z-10 mb-4 bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-bold text-slate-700">حالة السداد المخزني: <strong className={sale.status === 'PAID' ? 'text-emerald-700 font-black' : 'text-amber-700 font-black'}>{sale.status === 'PAID' ? 'خالص السداد (معتمد للصرف والتسليم)' : 'آجل / غير خالص'}</strong></span>
+                            {bankTransfersList.length > 0 && (
+                                <span className="text-[11px] font-mono font-bold text-slate-600">
+                                    إشعارات البنك: {bankTransfersList.map(t => `${t.bank} (${t.ref || '-'})`).join(' | ')}
+                                </span>
+                            )}
+                        </div>
+                    )}
 
                     {/* 5. Financial Totals & Tafqeet Section (Shown for INVOICE & QUOTATION) */}
                     {(viewMode === 'INVOICE' || viewMode === 'QUOTATION') && (

@@ -38,6 +38,29 @@ interface CartItem {
     thickness?: number | null
 }
 
+const POPULAR_BANKS = [
+    'بنك الخرطوم (بنكك)',
+    'بنك فيصل الإسلامي (فوري)',
+    'بنك أم درمان الوطني (أوكاش)',
+    'بنك النيل',
+    'البنك الأهلي السوداني',
+    'بنك العمال الوطني',
+    'بنك البركة السوداني',
+    'بنك دبي الإسلامي (DIB)',
+    'مصرف أبوظبي الإسلامي (ADIB)',
+    'بنك الإمارات دبي الوطني (ENBD)',
+    'مصرف الشارقة الإسلامي',
+    'أخرى (تحديد يدوي)'
+]
+
+interface BankTransferRow {
+    id: number
+    bankName: string
+    customBankName: string
+    bankRef: string
+    amount: string
+}
+
 export default function EditSale() {
     const router = useRouter()
     const params = useParams()
@@ -53,6 +76,34 @@ export default function EditSale() {
     const [searchTerm, setSearchTerm] = useState('')
     const [discount, setDiscount] = useState<string>('')
     const [paidAmountInput, setPaidAmountInput] = useState<string>('')
+    const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK' | 'CHEQUE' | 'MULTIPLE'>('CASH')
+    const [splitCash, setSplitCash] = useState<string>('')
+    const [splitBank, setSplitBank] = useState<string>('')
+    const [splitCheque, setSplitCheque] = useState<string>('')
+    const [chequeNumber, setChequeNumber] = useState<string>('')
+    const [chequeBank, setChequeBank] = useState<string>('')
+
+    const [bankTransfers, setBankTransfers] = useState<BankTransferRow[]>([
+        { id: 1, bankName: 'بنك الخرطوم (بنكك)', customBankName: '', bankRef: '', amount: '' }
+    ])
+
+    const addBankTransfer = () => {
+        setBankTransfers(prev => [
+            ...prev,
+            { id: Date.now(), bankName: 'بنك الخرطوم (بنكك)', customBankName: '', bankRef: '', amount: '' }
+        ])
+    }
+
+    const removeBankTransfer = (id: number) => {
+        if (bankTransfers.length <= 1) return
+        setBankTransfers(prev => prev.filter(t => t.id !== id))
+    }
+
+    const updateBankTransfer = (id: number, field: keyof BankTransferRow, value: string) => {
+        setBankTransfers(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t))
+    }
+
+    const totalBankTransfers = bankTransfers.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
     const getTodayLocal = () => {
         const d = new Date()
         const offset = d.getTimezoneOffset()
@@ -107,6 +158,40 @@ export default function EditSale() {
                     setPaidAmountInput(saleData.paidAmount?.toString() || '0')
                 } else {
                     setPaidAmountInput((saleData.total - (saleData.discount || 0)).toString())
+                }
+
+                if (saleData.paymentMethod) {
+                    setPaymentMethod(saleData.paymentMethod)
+                }
+                if (saleData.cashAmount !== undefined && saleData.cashAmount !== null) setSplitCash(saleData.cashAmount.toString())
+                if (saleData.bankAmount !== undefined && saleData.bankAmount !== null) setSplitBank(saleData.bankAmount.toString())
+                if (saleData.chequeAmount !== undefined && saleData.chequeAmount !== null) setSplitCheque(saleData.chequeAmount.toString())
+                if (saleData.chequeNumber) setChequeNumber(saleData.chequeNumber)
+                if (saleData.chequeBank) setChequeBank(saleData.chequeBank)
+
+                if (saleData.bankTransfers) {
+                    try {
+                        const parsed = JSON.parse(saleData.bankTransfers)
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            setBankTransfers(parsed.map((t: any, idx: number) => ({
+                                id: idx + 1,
+                                bankName: POPULAR_BANKS.includes(t.bank) ? t.bank : 'أخرى (تحديد يدوي)',
+                                customBankName: POPULAR_BANKS.includes(t.bank) ? '' : t.bank,
+                                bankRef: t.ref || '',
+                                amount: t.amount ? t.amount.toString() : ''
+                            })))
+                        }
+                    } catch (e) {
+                        console.error('Error parsing bankTransfers in edit', e)
+                    }
+                } else if (saleData.bankRef || saleData.bankName) {
+                    setBankTransfers([{
+                        id: 1,
+                        bankName: POPULAR_BANKS.includes(saleData.bankName) ? saleData.bankName : (saleData.bankName ? 'أخرى (تحديد يدوي)' : 'بنك الخرطوم (بنكك)'),
+                        customBankName: POPULAR_BANKS.includes(saleData.bankName) ? '' : (saleData.bankName || ''),
+                        bankRef: saleData.bankRef || '',
+                        amount: saleData.bankAmount ? saleData.bankAmount.toString() : ''
+                    }])
                 }
 
                 const populatedCart = saleData.items.map((item: any) => ({
@@ -219,6 +304,56 @@ export default function EditSale() {
             if (finalPaid >= finalTotal) {
                 finalStatus = 'PAID';
             }
+        } else if (paymentMethod === 'MULTIPLE') {
+            const sumSplit = (parseFloat(splitCash) || 0) + (parseFloat(splitBank) || 0) + (parseFloat(splitCheque) || 0);
+            finalPaid = sumSplit;
+            if (finalPaid < finalTotal) {
+                finalStatus = 'CREDIT';
+            }
+        }
+
+        let calcCash = 0;
+        let calcBank = 0;
+        let calcCheque = 0;
+
+        if (paymentMethod === 'CASH') calcCash = finalPaid;
+        else if (paymentMethod === 'BANK') {
+            const sumTransfers = bankTransfers.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+            if (sumTransfers > 0) {
+                calcBank = sumTransfers;
+                if (calcBank < finalTotal) {
+                    finalPaid = calcBank;
+                    finalStatus = 'CREDIT';
+                }
+            } else {
+                calcBank = finalPaid;
+            }
+        }
+        else if (paymentMethod === 'CHEQUE') calcCheque = finalPaid;
+        else if (paymentMethod === 'MULTIPLE') {
+            calcCash = parseFloat(splitCash) || 0;
+            const sumTransfers = bankTransfers.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+            calcBank = (parseFloat(splitBank) || 0) > 0 ? (parseFloat(splitBank) || 0) : sumTransfers;
+            calcCheque = parseFloat(splitCheque) || 0;
+        }
+
+        const activeTransfers = bankTransfers.map(t => ({
+            bank: t.bankName === 'أخرى (تحديد يدوي)' ? (t.customBankName || 'أخرى') : t.bankName,
+            ref: t.bankRef?.trim() || '',
+            amount: (parseFloat(t.amount) || 0) > 0 ? parseFloat(t.amount) : (bankTransfers.length === 1 ? calcBank : 0)
+        })).filter(t => t.ref || t.amount > 0 || bankTransfers.length === 1);
+
+        let finalBankName = null;
+        let finalBankRef = null;
+        if (paymentMethod === 'BANK' || (paymentMethod === 'MULTIPLE' && calcBank > 0)) {
+            if (activeTransfers.length === 1) {
+                finalBankName = activeTransfers[0].bank;
+                finalBankRef = activeTransfers[0].ref || null;
+            } else if (activeTransfers.length > 1) {
+                const names = Array.from(new Set(activeTransfers.map(t => t.bank.replace(/\s*\(.*?\)/g, ''))));
+                finalBankName = names.join(' + ') + ` (${activeTransfers.length} إشعارات)`;
+                finalBankRef = activeTransfers.map(t => `${t.bank}: ${t.ref || 'بدون إشعار'} [${t.amount.toLocaleString()} ج.س]`).join(' | ');
+            }
         }
 
         try {
@@ -232,12 +367,21 @@ export default function EditSale() {
                     total: finalTotal,
                     discount: parseFloat(discount) || 0,
                     paidAmount: finalPaid,
-                    createdAt: createdAt
+                    createdAt: createdAt,
+                    paymentMethod: paymentMethod,
+                    cashAmount: calcCash,
+                    bankAmount: calcBank,
+                    chequeAmount: calcCheque,
+                    bankName: finalBankName,
+                    bankRef: finalBankRef,
+                    bankTransfers: JSON.stringify(activeTransfers),
+                    chequeNumber: chequeNumber?.trim() || null,
+                    chequeBank: chequeBank?.trim() || null,
                 })
             })
 
             if (res.ok) {
-                alert('تم تحديث الفاتورة بنجاح')
+                alert('تم تحديث الفاتورة وبيانات السداد بنجاح')
                 router.push(`/sales/${saleId}`)
                 router.refresh()
             } else {
@@ -534,74 +678,290 @@ export default function EditSale() {
                                 )}
                             </div>
 
-                            <div className="space-y-3 bg-white pt-2">
-                                {/* Discount Input */}
-                                <div className="flex items-center gap-2 px-1">
-                                    <span className="font-bold text-sm text-gray-600">خصم:</span>
-                                    <Input
-                                        type="number"
-                                        placeholder="0"
-                                        value={discount}
-                                        onChange={e => setDiscount(e.target.value)}
-                                        className="h-10 w-full"
-                                    />
+                            <div className="space-y-3 bg-white pt-2 overflow-y-auto max-h-[58vh] pr-1">
+                                {/* Discount & Paid Amount Inputs */}
+                                <div className="flex gap-2">
+                                    <div className="flex-1">
+                                        <label className="text-[11px] font-bold text-slate-600 block mb-1">خصم إضافي:</label>
+                                        <Input
+                                            type="number"
+                                            placeholder="0"
+                                            value={discount}
+                                            onChange={e => setDiscount(e.target.value)}
+                                            className="h-9 w-full text-xs font-bold"
+                                        />
+                                    </div>
+                                    {paymentMethod !== 'MULTIPLE' && (
+                                        <div className="flex-1">
+                                            <label className="text-[11px] font-bold text-slate-600 block mb-1">المدفوع (للآجل):</label>
+                                            <Input
+                                                type="number"
+                                                placeholder={finalTotal.toString()}
+                                                value={paidAmountInput}
+                                                onChange={e => setPaidAmountInput(e.target.value)}
+                                                className="h-9 w-full bg-amber-50 text-xs font-bold text-blue-900 border-amber-200 font-mono"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="flex-1">
+                                        <label className="text-[11px] font-bold text-slate-600 block mb-1">المتبقي:</label>
+                                        <div className="h-9 flex items-center px-2 border border-red-200 rounded-lg bg-red-50 text-red-600 font-bold text-xs font-mono overflow-hidden">
+                                            {paymentMethod === 'MULTIPLE'
+                                                ? Math.max(0, finalTotal - ((parseFloat(splitCash) || 0) + (parseFloat(splitBank) || 0) + (parseFloat(splitCheque) || 0))).toLocaleString()
+                                                : (paidAmountInput === '' ? 0 : Math.max(0, finalTotal - parseFloat(paidAmountInput || '0')).toLocaleString())
+                                            }
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div className="flex justify-between items-center bg-slate-900 text-white p-4 rounded-xl shadow-lg">
+                                {/* Payment Method Selector */}
+                                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-xs font-black text-slate-800">طريقة السداد المعتمدة:</label>
+                                        <span className="text-[10px] text-blue-600 font-bold">يمكنك تغيير طريقة الدفع</span>
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-1 bg-white p-1 rounded-lg border border-slate-200">
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentMethod('CASH')}
+                                            className={`py-1.5 px-1 rounded-lg text-xs font-black transition-all ${
+                                                paymentMethod === 'CASH'
+                                                    ? 'bg-emerald-600 text-white shadow-md'
+                                                    : 'text-slate-700 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            كاش
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentMethod('BANK')}
+                                            className={`py-1.5 px-1 rounded-lg text-xs font-black transition-all ${
+                                                paymentMethod === 'BANK'
+                                                    ? 'bg-blue-600 text-white shadow-md'
+                                                    : 'text-slate-700 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            تحويل بنكي
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentMethod('CHEQUE')}
+                                            className={`py-1.5 px-1 rounded-lg text-xs font-black transition-all ${
+                                                paymentMethod === 'CHEQUE'
+                                                    ? 'bg-purple-600 text-white shadow-md'
+                                                    : 'text-slate-700 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            شيك
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentMethod('MULTIPLE')}
+                                            className={`py-1.5 px-1 rounded-lg text-xs font-black transition-all ${
+                                                paymentMethod === 'MULTIPLE'
+                                                    ? 'bg-amber-600 text-white shadow-md'
+                                                    : 'text-slate-700 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            مجزأ
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Bank Transfer Details (BANK or MULTIPLE) */}
+                                {(paymentMethod === 'BANK' || (paymentMethod === 'MULTIPLE' && (parseFloat(splitBank) || 0) > 0)) && (
+                                    <div className="bg-blue-50/80 border-2 border-blue-200 p-3 rounded-xl space-y-2.5 animate-fade-in">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[11px] font-black text-blue-950 flex items-center gap-1">
+                                                💳 إشعارات التحويل (بنكك، فوري، إلخ):
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={addBankTransfer}
+                                                className="text-[10px] font-black text-blue-700 hover:text-blue-900 bg-white border border-blue-300 hover:bg-blue-100/50 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-xs transition-all"
+                                            >
+                                                <Plus size={12} />
+                                                + إضافة إشعار آخر
+                                            </button>
+                                        </div>
+
+                                        {bankTransfers.length > 1 && (
+                                            <div className="text-[10px] font-bold text-blue-900 bg-blue-100/80 p-1.5 rounded-lg flex justify-between items-center border border-blue-200">
+                                                <span>عدد الإشعارات: {bankTransfers.length}</span>
+                                                <span>المجموع: <strong className="font-mono text-blue-950">{totalBankTransfers.toLocaleString()} ج.س</strong></span>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            {bankTransfers.map((transfer, index) => (
+                                                <div key={transfer.id} className="bg-white border border-blue-200 p-2 rounded-lg space-y-1.5 relative shadow-xs text-xs">
+                                                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-700 border-b border-slate-100 pb-0.5">
+                                                        <span className="text-blue-900 font-black">إشعار #{index + 1}</span>
+                                                        {bankTransfers.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeBankTransfer(transfer.id)}
+                                                                className="text-red-500 hover:text-red-700 p-0.5 rounded hover:bg-red-50"
+                                                                title="حذف هذا الإشعار"
+                                                            >
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                                                        <div>
+                                                            <label className="text-[9px] font-bold text-slate-600 block mb-0.5">البنك / التطبيق</label>
+                                                            <select
+                                                                value={transfer.bankName}
+                                                                onChange={(e) => updateBankTransfer(transfer.id, 'bankName', e.target.value)}
+                                                                className="w-full text-xs font-bold p-1 bg-slate-50 border border-slate-300 rounded outline-none"
+                                                            >
+                                                                {POPULAR_BANKS.map(b => (
+                                                                    <option key={b} value={b}>{b}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="text-[9px] font-bold text-slate-600 block mb-0.5">رقم الإشعار</label>
+                                                            <input
+                                                                type="text"
+                                                                value={transfer.bankRef}
+                                                                onChange={(e) => updateBankTransfer(transfer.id, 'bankRef', e.target.value)}
+                                                                placeholder="رقم الإشعار..."
+                                                                className="w-full text-xs font-bold p-1 bg-slate-50 border border-slate-300 rounded outline-none font-mono"
+                                                            />
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="text-[9px] font-bold text-slate-600 block mb-0.5">المبلغ (ج.س)</label>
+                                                            <input
+                                                                type="number"
+                                                                value={transfer.amount}
+                                                                onChange={(e) => updateBankTransfer(transfer.id, 'amount', e.target.value)}
+                                                                placeholder={bankTransfers.length === 1 ? `${finalTotal}` : "المبلغ..."}
+                                                                className="w-full text-xs font-bold p-1 bg-slate-50 border border-slate-300 rounded outline-none font-mono"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {transfer.bankName === 'أخرى (تحديد يدوي)' && (
+                                                        <div>
+                                                            <label className="text-[9px] font-bold text-slate-600 block mb-0.5">اكتب اسم البنك</label>
+                                                            <input
+                                                                type="text"
+                                                                value={transfer.customBankName}
+                                                                onChange={(e) => updateBankTransfer(transfer.id, 'customBankName', e.target.value)}
+                                                                placeholder="اسم البنك..."
+                                                                className="w-full text-xs font-bold p-1 bg-white border border-slate-300 rounded outline-none"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Cheque Details (CHEQUE or MULTIPLE) */}
+                                {(paymentMethod === 'CHEQUE' || (paymentMethod === 'MULTIPLE' && (parseFloat(splitCheque) || 0) > 0)) && (
+                                    <div className="bg-purple-50/80 border border-purple-200 p-2.5 rounded-xl space-y-2 animate-fade-in text-xs">
+                                        <span className="text-[11px] font-black text-purple-950 block">تفاصيل الشيك:</span>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">رقم الشيك</label>
+                                                <input
+                                                    type="text"
+                                                    value={chequeNumber}
+                                                    onChange={(e) => setChequeNumber(e.target.value)}
+                                                    placeholder="رقم الشيك..."
+                                                    className="w-full text-xs font-bold p-1.5 bg-white border border-purple-300 rounded-lg outline-none font-mono"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">البنك المسحوب عليه</label>
+                                                <input
+                                                    type="text"
+                                                    value={chequeBank}
+                                                    onChange={(e) => setChequeBank(e.target.value)}
+                                                    placeholder="اسم البنك..."
+                                                    className="w-full text-xs font-bold p-1.5 bg-white border border-purple-300 rounded-lg outline-none"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Split Payment Inputs (MULTIPLE) */}
+                                {paymentMethod === 'MULTIPLE' && (
+                                    <div className="bg-amber-50/80 border border-amber-200 p-2.5 rounded-xl space-y-2 animate-fade-in text-xs">
+                                        <span className="text-[11px] font-black text-amber-950 block">توزيع مبالغ السداد المجزأ:</span>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-700 block mb-0.5">نقد (كاش)</label>
+                                                <input
+                                                    type="number"
+                                                    value={splitCash}
+                                                    onChange={(e) => setSplitCash(e.target.value)}
+                                                    placeholder="0"
+                                                    className="w-full text-xs font-bold p-1.5 bg-white border border-slate-300 rounded-lg outline-none font-mono"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-700 block mb-0.5">تحويل بنكي</label>
+                                                <input
+                                                    type="number"
+                                                    value={splitBank}
+                                                    onChange={(e) => setSplitBank(e.target.value)}
+                                                    placeholder="0"
+                                                    className="w-full text-xs font-bold p-1.5 bg-white border border-slate-300 rounded-lg outline-none font-mono"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-slate-700 block mb-0.5">شيك مصرفي</label>
+                                                <input
+                                                    type="number"
+                                                    value={splitCheque}
+                                                    onChange={(e) => setSplitCheque(e.target.value)}
+                                                    placeholder="0"
+                                                    className="w-full text-xs font-bold p-1.5 bg-white border border-slate-300 rounded-lg outline-none font-mono"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Big Total */}
+                                <div className="flex justify-between items-center bg-slate-900 text-white p-3 rounded-xl shadow-md">
                                     <div>
-                                        <span className="font-bold block text-xs opacity-70">الإجمالي النهائي</span>
-                                        <span className="font-bold text-2xl">{finalTotal.toLocaleString()} <span className="text-sm font-normal text-gray-400">ج.س</span></span>
+                                        <span className="font-bold block text-[11px] opacity-70">الإجمالي بعد التعديل</span>
+                                        <span className="font-black text-xl">{finalTotal.toLocaleString()} <span className="text-xs font-normal text-gray-400">ج.س</span></span>
                                     </div>
                                     {(parseFloat(discount) > 0) && (
                                         <div className="text-right">
-                                            <span className="block text-xs text-red-300 line-through">{subtotal.toLocaleString()}</span>
+                                            <span className="block text-[10px] text-red-300 line-through">{subtotal.toLocaleString()}</span>
                                             <span className="text-xs text-green-400 font-bold">خصم {parseFloat(discount).toLocaleString()}</span>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="flex items-center gap-2">
-                                    <div className="flex-1">
-                                        <span className="font-bold text-sm text-gray-600 block mb-1">المدفوع (للآجل):</span>
-                                        <Input
-                                            type="number"
-                                            placeholder={finalTotal.toString()}
-                                            value={paidAmountInput}
-                                            onChange={e => setPaidAmountInput(e.target.value)}
-                                            className="h-10 w-full bg-amber-50"
-                                        />
-                                    </div>
-                                    <div className="flex-1">
-                                        <span className="font-bold text-sm text-gray-600 block mb-1">المتبقي:</span>
-                                        <div className="h-10 flex items-center px-3 border border-red-200 rounded-lg bg-red-50 text-red-600 font-bold">
-                                            {paidAmountInput === '' ? 0 : Math.max(0, finalTotal - parseFloat(paidAmountInput || '0')).toLocaleString()}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3 pb-2">
+                                {/* Save Action Buttons */}
+                                <div className="grid grid-cols-2 gap-2 pb-1">
                                     <Button
                                         onClick={() => handleUpdate('PAID')}
-                                        className="py-3 text-sm bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 shadow-lg"
+                                        className="py-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 shadow-md font-bold text-white"
                                         disabled={loading}
                                     >
-                                        {loading ? '...' : (
-                                            <div className="flex flex-col items-center justify-center">
-                                                <span className="font-bold">حفظ التعديلات (كاش)</span>
-                                            </div>
-                                        )}
+                                        {loading ? '...' : 'حفظ التعديلات (سداد كامل)'}
                                     </Button>
 
                                     <Button
                                         onClick={() => handleUpdate('CREDIT')}
-                                        className="py-3 text-sm bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200 shadow-lg"
+                                        className="py-2.5 text-xs bg-amber-500 hover:bg-amber-600 text-white shadow-md font-bold"
                                         disabled={loading}
                                     >
-                                        {loading ? '...' : (
-                                            <div className="flex flex-col items-center justify-center">
-                                                <span className="font-bold">حفظ التعديلات (آجل)</span>
-                                            </div>
-                                        )}
+                                        {loading ? '...' : 'حفظ التعديلات (آجل)'}
                                     </Button>
                                 </div>
                             </div>
