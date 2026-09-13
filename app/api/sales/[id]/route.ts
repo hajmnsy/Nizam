@@ -24,12 +24,12 @@ export async function GET(
                 invoiceNumber: id
             },
             include: {
-                branch: { select: { id: true, name: true, code: true } },
-                dispatchBranch: { select: { id: true, name: true, code: true } },
+                branch: { select: { id: true, name: true, code: true, phone: true, address: true } },
+                dispatchBranch: { select: { id: true, name: true, code: true, phone: true, address: true } },
                 items: {
                     include: {
                         product: true,
-                        dispatchBranch: { select: { id: true, name: true, code: true } }
+                        dispatchBranch: { select: { id: true, name: true, code: true, phone: true, address: true } }
                     }
                 },
                 payments: true
@@ -41,8 +41,8 @@ export async function GET(
             sale = await prisma.sale.findUnique({
                 where: { id },
                 include: {
-                    branch: { select: { id: true, name: true, code: true } },
-                    dispatchBranch: { select: { id: true, name: true, code: true } },
+                    branch: { select: { id: true, name: true, code: true, phone: true, address: true } },
+                    dispatchBranch: { select: { id: true, name: true, code: true, phone: true, address: true } },
                     items: {
                         include: {
                             product: true,

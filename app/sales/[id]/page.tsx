@@ -138,12 +138,16 @@ interface Sale {
         id: number
         name: string
         code: string
+        phone?: string | null
+        address?: string | null
     }
     dispatchBranchId?: number | null
     dispatchBranch?: {
         id: number
         name: string
         code: string
+        phone?: string | null
+        address?: string | null
     } | null
     items: SaleItem[]
 }
@@ -206,6 +210,7 @@ export default function InvoiceDetails() {
     const [paymentAmount, setPaymentAmount] = useState('')
     const [paying, setPaying] = useState(false)
     const [viewMode, setViewMode] = useState<InvoiceViewMode>('INVOICE')
+    const [branchOverride, setBranchOverride] = useState<'AUTO' | 'MAIN' | 'JAWDA'>('AUTO')
     const [deleting, setDeleting] = useState(false)
     const componentRef = useRef<HTMLDivElement>(null)
 
@@ -350,7 +355,12 @@ export default function InvoiceDetails() {
     const isActualQuotation = sale.status === 'QUOTATION'
     const vatAmount = settings?.vatRate ? (sale.total * settings.vatRate) / 100 : 0
     const finalTotalWithVat = sale.total + vatAmount
-    const isMainBranch = sale.branchId === 1 || sale.branch?.code === 'main' || sale.branch?.name === 'الفرع الرئيسي' || !sale.branchId
+    const isJawdaBranch = branchOverride === 'MAIN'
+        ? false
+        : branchOverride === 'JAWDA'
+        ? true
+        : Boolean(sale.branchId === 2 || sale.branch?.code === 'aljawda' || sale.branch?.name?.includes('الجودة'));
+    const isMainBranch = !isJawdaBranch;
     const isForeignCurrency = Boolean(sale.currency && sale.currency !== 'SDG')
     const currencyRate = sale.currencyRate && sale.currencyRate > 0 ? sale.currencyRate : 1
     const currencyCode = sale.currency || 'SDG'
@@ -514,6 +524,20 @@ export default function InvoiceDetails() {
                             >
                                 <FileSpreadsheet size={15} />
                                 عرض سعر
+                            </button>
+                        </div>
+
+                        {/* Branch Identity Switcher */}
+                        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 mr-1">
+                            <button
+                                type="button"
+                                onClick={() => setBranchOverride(isJawdaBranch ? 'MAIN' : 'JAWDA')}
+                                title="التبديل بين هوية الفرع الرئيسي وفرع الجودة"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 shadow-sm"
+                            >
+                                <Building2 size={15} className="text-amber-600" />
+                                <span>الفرع: {isJawdaBranch ? 'فرع الجودة (مركز الجودة)' : 'الفرع الرئيسي (المصنع السوداني الماليزي)'}</span>
+                                <span className="text-[10px] text-blue-600 font-bold mr-1 underline">(تبديل)</span>
                             </button>
                         </div>
                     </div>
@@ -693,62 +717,106 @@ export default function InvoiceDetails() {
                     {/* 2. Official Header */}
                     <div className="relative z-10 grid grid-cols-3 items-center pb-3 mb-3 border-b-2 border-slate-900 gap-2 print:pb-1.5 print:mb-1.5 print:gap-1.5">
                         {/* Right: Company and Branch Info */}
-                        <div className="text-right space-y-1 print:space-y-0.5">
-                            <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight print:text-base">
-                                المصنع السوداني الماليزي
-                            </h1>
-                            <div className="flex items-center gap-1.5 pt-0.5 print:gap-1 print:pt-0">
-                                <span className="inline-block bg-slate-900 text-white text-[11px] font-black px-2.5 py-0.5 rounded shadow-sm print:text-[9px] print:px-1.5 print:py-0 print:bg-slate-900">
-                                    {isMainBranch ? 'الفرع الرئيسي' : ((sale as any)?.branch?.name || 'فرع الشركة')}
-                                </span>
-                            </div>
-                            <div className="text-[11px] text-slate-700 font-bold space-y-0.5 pt-1 print:text-[9px] print:space-y-0 print:pt-0.5">
-                                <div className="flex items-center gap-1 text-slate-900 print:gap-0.5">
-                                    <Phone size={12} className="text-slate-600 print:w-2.5 print:h-2.5" />
-                                    <span className="font-black">صالح عوض صالح:</span>
-                                    <span dir="ltr" className="font-mono font-black">0120021085</span>
-                                </div>
-                                <div className="flex items-center gap-1 text-slate-700 text-[10.5px] print:text-[8.5px] print:gap-0.5">
-                                    <MapPin size={12} className="text-slate-500 print:w-2.5 print:h-2.5" />
-                                    <span className="font-bold">الموقع: سوق عطبرة - السينما الوطنية</span>
-                                </div>
-                                {settings?.vatRate > 0 && (
-                                    <div className="text-[10px] text-emerald-800 font-extrabold flex items-center gap-1 print:text-[8.5px] print:gap-0.5">
-                                        <ShieldCheck size={12} className="print:w-2.5 print:h-2.5" />
-                                        <span>الرقم الضريبي معتمد ({settings.vatRate}%)</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Center: Exactly Centered High-End Industrial Textual Logo */}
-                        <div className="flex flex-col justify-center items-center text-center">
-                            <div className="relative w-full max-w-[260px] py-2 px-3 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white border-2 border-slate-900 rounded-xl flex flex-col items-center justify-center select-none shadow-md print:shadow-none print:py-1.5 print:px-2 print:bg-slate-950 print:border-slate-900 mx-auto">
-                                {/* Corner steel rivets */}
-                                <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
-                                <div className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
-                                <div className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
-                                <div className="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
-
-                                <div className="flex items-center gap-1 mb-0.5">
-                                    <svg className="w-4 h-4 print:w-3.5 print:h-3.5 text-amber-400 print:text-amber-300" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.8L19.5 8 12 11.2 4.5 8 12 4.8zM4 9.6l7 3.7v7.1-7-3.5V9.6zm9 10.8v-7.1l7-3.7v7.3l-7 3.5z"/>
-                                    </svg>
-                                    <span className="text-[11px] sm:text-xs font-black tracking-wider text-amber-400 print:text-amber-300 font-sans">
-                                        SMS STEEL
+                        {isJawdaBranch ? (
+                            <div className="text-right space-y-1 print:space-y-0.5">
+                                <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight print:text-base">
+                                    مركز الجودة للحديد
+                                </h1>
+                                <div className="flex items-center gap-1.5 pt-0.5 print:gap-1 print:pt-0">
+                                    <span className="inline-block bg-slate-900 text-white text-[11px] font-black px-2.5 py-0.5 rounded shadow-sm print:text-[9px] print:px-1.5 print:py-0 print:bg-slate-900">
+                                        فرع الجودة
                                     </span>
                                 </div>
-
-                                <span className="text-xs sm:text-sm font-black text-white tracking-tight leading-tight text-center">
-                                    الـمـصـنـع الـسـودانـي الـمـالـيـزي
-                                </span>
-                                <span className="text-[8.5px] font-bold text-slate-200 tracking-wider mt-0.5 text-center">
-                                    للـحـديـد والـصـلـب ومـواد الـبـنـاء
-                                </span>
-                                <span className="text-[7px] font-mono tracking-wider text-slate-400 uppercase mt-0.5 text-center">
-                                    Sudanese Malaysian Steel Factory
-                                </span>
+                                <div className="text-[11px] text-slate-700 font-bold space-y-0.5 pt-1 print:text-[9px] print:space-y-0 print:pt-0.5">
+                                    <div className="flex items-center gap-1 text-slate-900 print:gap-0.5">
+                                        <Phone size={12} className="text-slate-600 print:w-2.5 print:h-2.5" />
+                                        <span className="font-black">م. محمد إسماعيل:</span>
+                                        <span dir="ltr" className="font-mono font-black">{sale.branch?.phone || settings?.phone || '0120021085'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-slate-700 text-[10.5px] print:text-[8.5px] print:gap-0.5">
+                                        <MapPin size={12} className="text-slate-500 print:w-2.5 print:h-2.5" />
+                                        <span className="font-bold">{sale.branch?.address ? `الموقع: ${sale.branch.address}` : 'الموقع: فرع الجودة'}</span>
+                                    </div>
+                                    {settings?.vatRate > 0 && (
+                                        <div className="text-[10px] text-emerald-800 font-extrabold flex items-center gap-1 print:text-[8.5px] print:gap-0.5">
+                                            <ShieldCheck size={12} className="print:w-2.5 print:h-2.5" />
+                                            <span>الرقم الضريبي معتمد ({settings.vatRate}%)</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+                        ) : (
+                            <div className="text-right space-y-1 print:space-y-0.5">
+                                <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight print:text-base">
+                                    المصنع السوداني الماليزي
+                                </h1>
+                                <div className="flex items-center gap-1.5 pt-0.5 print:gap-1 print:pt-0">
+                                    <span className="inline-block bg-slate-900 text-white text-[11px] font-black px-2.5 py-0.5 rounded shadow-sm print:text-[9px] print:px-1.5 print:py-0 print:bg-slate-900">
+                                        {isMainBranch ? 'الفرع الرئيسي' : ((sale as any)?.branch?.name || 'فرع الشركة')}
+                                    </span>
+                                </div>
+                                <div className="text-[11px] text-slate-700 font-bold space-y-0.5 pt-1 print:text-[9px] print:space-y-0 print:pt-0.5">
+                                    <div className="flex items-center gap-1 text-slate-900 print:gap-0.5">
+                                        <Phone size={12} className="text-slate-600 print:w-2.5 print:h-2.5" />
+                                        <span className="font-black">صالح عوض صالح:</span>
+                                        <span dir="ltr" className="font-mono font-black">0120021085</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-slate-700 text-[10.5px] print:text-[8.5px] print:gap-0.5">
+                                        <MapPin size={12} className="text-slate-500 print:w-2.5 print:h-2.5" />
+                                        <span className="font-bold">الموقع: سوق عطبرة - السينما الوطنية</span>
+                                    </div>
+                                    {settings?.vatRate > 0 && (
+                                        <div className="text-[10px] text-emerald-800 font-extrabold flex items-center gap-1 print:text-[8.5px] print:gap-0.5">
+                                            <ShieldCheck size={12} className="print:w-2.5 print:h-2.5" />
+                                            <span>الرقم الضريبي معتمد ({settings.vatRate}%)</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Center: Logo (Restored simple logo for Al-Jawda branch, Prestige textual logo for Main factory) */}
+                        <div className="flex flex-col justify-center items-center text-center">
+                            {isJawdaBranch ? (
+                                <div className="relative w-full max-w-[260px] py-3.5 px-4 bg-slate-50 border-4 border-double border-slate-900 rounded-xl flex items-center justify-center select-none shadow-sm print:shadow-none print:py-2 print:px-3 mx-auto">
+                                    {/* Corner industrial rivets */}
+                                    <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                                    <div className="absolute top-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                                    <div className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                                    <div className="absolute bottom-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+
+                                    <span className="text-2xl print:text-xl font-black text-slate-950 tracking-[0.15em] font-sans">
+                                        مـركـز الـجـودة للـحـديـد
+                                    </span>
+                                </div>
+                            ) : (
+                                <div className="relative w-full max-w-[260px] py-2 px-3 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white border-2 border-slate-900 rounded-xl flex flex-col items-center justify-center select-none shadow-md print:shadow-none print:py-1.5 print:px-2 print:bg-slate-950 print:border-slate-900 mx-auto">
+                                    {/* Corner steel rivets */}
+                                    <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
+                                    <div className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
+                                    <div className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
+                                    <div className="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
+
+                                    <div className="flex items-center gap-1 mb-0.5">
+                                        <svg className="w-4 h-4 print:w-3.5 print:h-3.5 text-amber-400 print:text-amber-300" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.8L19.5 8 12 11.2 4.5 8 12 4.8zM4 9.6l7 3.7v7.1-7-3.5V9.6zm9 10.8v-7.1l7-3.7v7.3l-7 3.5z"/>
+                                        </svg>
+                                        <span className="text-[11px] sm:text-xs font-black tracking-wider text-amber-400 print:text-amber-300 font-sans">
+                                            SMS STEEL
+                                        </span>
+                                    </div>
+
+                                    <span className="text-xs sm:text-sm font-black text-white tracking-tight leading-tight text-center">
+                                        الـمـصـنـع الـسـودانـي الـمـالـيـزي
+                                    </span>
+                                    <span className="text-[8.5px] font-bold text-slate-200 tracking-wider mt-0.5 text-center">
+                                        للـحـديـد والـصـلـب ومـواد الـبـنـاء
+                                    </span>
+                                    <span className="text-[7px] font-mono tracking-wider text-slate-400 uppercase mt-0.5 text-center">
+                                        Sudanese Malaysian Steel Factory
+                                    </span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Left: Document Badge Card */}
@@ -1331,7 +1399,9 @@ export default function InvoiceDetails() {
                                 : 'البضاعة التي تخرج من حرم المصنع لا ترد ولا تستبدل إلا بموافقة الإدارة ووفقاً لللوائح المعتمدة.'}
                         </p>
                         <p className="text-slate-500 font-bold">
-                            المصنع السوداني الماليزي للمنتجات الحديدية | الموقع: سوق عطبرة - السينما الوطنية | هاتف: 0120021085
+                            {isJawdaBranch
+                                ? `مركز الجودة للحديد | ${sale.branch?.address || 'فرع الجودة'} | م. محمد إسماعيل: ${sale.branch?.phone || settings?.phone || '0120021085'}`
+                                : 'المصنع السوداني الماليزي للمنتجات الحديدية | الموقع: سوق عطبرة - السينما الوطنية | صالح عوض صالح: 0120021085'}
                         </p>
                     </div>
                 </div>

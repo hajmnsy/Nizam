@@ -7,17 +7,21 @@ interface ProformaInvoiceProps {
     total: number
     discount?: number
     date: string
+    branchName?: string
+    isJawdaBranch?: boolean
 }
 
-export const ProformaInvoice = React.forwardRef<HTMLDivElement, ProformaInvoiceProps>(({ items, customer, total, discount, date }, ref) => {
+export const ProformaInvoice = React.forwardRef<HTMLDivElement, ProformaInvoiceProps>(({ items, customer, total, discount, date, branchName, isJawdaBranch }, ref) => {
+    const isJawda = isJawdaBranch || branchName?.includes('الجودة');
+
     return (
         <div ref={ref} className="hidden print:block print-container font-sans text-right bg-white" dir="rtl">
             {/* Header */}
             <div className="relative border-b-2 border-slate-900 pb-4 mb-4 flex items-center justify-between h-32">
-                {/* Right: Factory Name */}
+                {/* Right: Factory / Center Name */}
                 <div className="text-right w-1/3">
-                    <h1 className="text-2xl font-black text-slate-900">المصنع السوداني الماليزي</h1>
-                    <p className="text-xs text-slate-500 font-bold">للمنتجات الحديدية ومواد البناء</p>
+                    <h1 className="text-2xl font-black text-slate-900">{isJawda ? 'مركز الجودة للحديد' : 'المصنع السوداني الماليزي'}</h1>
+                    <p className="text-xs text-slate-500 font-bold">{isJawda ? 'فرع الجودة - مواد البناء والصلب' : 'للمنتجات الحديدية ومواد البناء'}</p>
                 </div>
 
                 {/* Center: Logo */}
@@ -30,7 +34,7 @@ export const ProformaInvoice = React.forwardRef<HTMLDivElement, ProformaInvoiceP
                         <div className="absolute bottom-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
                         
                         <span className="text-xl font-black text-slate-950 tracking-[0.15em] font-sans">
-                            الـمـصـنـع الـسـودانـي الـمـالـيـزي
+                            {isJawda ? 'مـركـز الـجـودة للـحـديـد' : 'الـمـصـنـع الـسـودانـي الـمـالـيـزي'}
                         </span>
                     </div>
                 </div>
