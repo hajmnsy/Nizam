@@ -112,6 +112,14 @@ interface Sale {
     id: number
     invoiceNumber?: number | null
     customer: string
+    customerId?: number | null
+    customerRel?: {
+        id: number
+        name: string
+        phone?: string | null
+        sales?: Array<{ id: number; total: number; paidAmount?: number; remainingAmount?: number; status: string }>
+        deposits?: Array<{ id: number; amount: number; currency: string; currencyRate?: number }>
+    } | null
     total: number
     discount: number
     paidAmount?: number
@@ -465,6 +473,31 @@ export default function InvoiceDetails() {
             })
         }
     }
+
+    const paymentRowsTotal = paymentRows.reduce((sum, r) => sum + (r.amount || 0), 0)
+
+    // Accurate financial settlement calculations
+    const paidSDG = paymentRowsTotal > 0
+        ? paymentRowsTotal
+        : (sale.status === 'PAID'
+            ? Math.max(sale.paidAmount || 0, finalTotalSDG)
+            : (sale.paidAmount || 0))
+
+    const remainingSDG = sale.status === 'PAID'
+        ? 0
+        : Math.max(0, finalTotalSDG - paidSDG)
+
+    const overpaidSDG = Math.max(0, paidSDG - finalTotalSDG)
+
+    const paidCurrency = isForeignCurrency && currencyRate > 0 ? (paidSDG / currencyRate) : 0
+    const remainingCurrency = isForeignCurrency && currencyRate > 0 ? (remainingSDG / currencyRate) : 0
+    const overpaidCurrency = isForeignCurrency && currencyRate > 0 ? (overpaidSDG / currencyRate) : 0
+
+    const customerAccountBalance = sale.customerRel ? (() => {
+        const totSales = (sale.customerRel.sales || []).reduce((s, x) => s + (x.total || 0), 0)
+        const totDeposits = (sale.customerRel.deposits || []).reduce((s, d) => s + (d.amount || 0), 0)
+        return totDeposits - totSales
+    })() : null
 
     // Calculate total rows to dynamically optimize print density for a single A4 sheet
     const totalPrintRows = (sale?.items?.length || 0) + (paymentRows?.length || 1);
@@ -1180,65 +1213,176 @@ export default function InvoiceDetails() {
                     {/* 5. Financial Totals & Tafqeet Section (Shown for INVOICE & QUOTATION) */}
                     {(viewMode === 'INVOICE' || viewMode === 'QUOTATION') && (
                         <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:gap-2 print:mb-1.5">
-                            {/* Right: Tafqeet & Payment Details */}
-                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3.5 flex flex-col justify-between print:p-1.5 print:rounded-lg">
+                            {/* Right: Payment Status Card (المدفوع والمتبقي وله) */}
+                            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3 flex flex-col justify-between print:p-1.5 print:rounded-lg">
                                 <div>
-                                    <span className="text-[11px] font-black text-slate-500 block mb-1 print:text-[9px] print:mb-0.5">المبلغ كتابة (المطلوب سداده):</span>
-                                    <div className="text-sm font-black text-slate-900 leading-relaxed bg-white border border-slate-200 p-2.5 rounded-lg shadow-inner print:p-1.5 print:text-[10px] print:leading-tight print:rounded-md">
-                                        {isForeignCurrency ? (
-                                            <div className="space-y-1">
-                                                <div className="text-indigo-950">
-                                                    {tafqeetCurrency(finalTotalCurrency, sale.currency || 'SDG')}
-                                                </div>
-                                                <div className="text-[11px] text-slate-500 font-bold pt-1 border-t border-slate-100">
-                                                    يعادل بالجنيه: {tafqeetCurrency(Math.round(finalTotalSDG), 'SDG')}
-                                                </div>
-                                            </div>
+                                    <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-2 print:pb-1 print:mb-1">
+                                        <div className="flex items-center gap-1.5">
+                                            <CreditCard className="w-4 h-4 text-slate-700 print:w-3 print:h-3" />
+                                            <span className="text-xs font-black text-slate-800 print:text-[10px]">حالة السداد والمستحقات:</span>
+                                        </div>
+                                        {remainingSDG === 0 && overpaidSDG === 0 && sale.status === 'PAID' ? (
+                                            <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 print:text-[8px] print:px-1.5">
+                                                خالص السداد بالكامل
+                                            </span>
+                                        ) : remainingSDG > 0 ? (
+                                            <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-red-100 text-red-800 border border-red-300 print:text-[8px] print:px-1.5">
+                                                آجل / غير خالص
+                                            </span>
+                                        ) : overpaidSDG > 0 ? (
+                                            <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-blue-100 text-blue-800 border border-blue-300 print:text-[8px] print:px-1.5">
+                                                فائض سداد (له رصيد)
+                                            </span>
                                         ) : (
-                                            tafqeetCurrency(Math.round(finalTotalSDG), 'SDG')
+                                            <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-100 text-amber-800 border border-amber-300 print:text-[8px] print:px-1.5">
+                                                عرض سعر
+                                            </span>
                                         )}
+                                    </div>
+
+                                    {/* 3 Metric Cards: المدفوع | المتبقي | وله */}
+                                    <div className="grid grid-cols-3 gap-2 my-2 print:gap-1.5 print:my-1">
+                                        {/* 1. المدفوع */}
+                                        <div className="bg-emerald-50/80 border border-emerald-200 rounded-lg p-2 text-center flex flex-col justify-between print:p-1 print:rounded-md">
+                                            <span className="text-[11px] font-black text-emerald-800 block mb-1 print:text-[8.5px] print:mb-0">
+                                                المدفوع
+                                            </span>
+                                            <div className="font-mono font-black text-xs sm:text-sm text-emerald-950 print:text-[10px]">
+                                                {isForeignCurrency ? (
+                                                    <div>
+                                                        <div>
+                                                            {paidCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] font-sans font-bold text-emerald-700">{shortCurrencySymbol}</span>
+                                                        </div>
+                                                        <div className="text-[9px] text-emerald-700/80 font-sans font-normal print:text-[7.5px]">
+                                                            ({paidSDG.toLocaleString()} ج.س)
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        {paidSDG.toLocaleString()} <span className="text-[10px] font-sans font-bold text-emerald-700">ج.س</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* 2. المتبقي */}
+                                        <div className={`rounded-lg p-2 text-center flex flex-col justify-between print:p-1 print:rounded-md ${
+                                            remainingSDG > 0 
+                                                ? 'bg-red-50/80 border border-red-300' 
+                                                : 'bg-white border border-slate-200'
+                                        }`}>
+                                            <span className={`text-[11px] font-black block mb-1 print:text-[8.5px] print:mb-0 ${
+                                                remainingSDG > 0 ? 'text-red-800' : 'text-slate-600'
+                                            }`}>
+                                                المتبقي
+                                            </span>
+                                            <div className={`font-mono font-black text-xs sm:text-sm print:text-[10px] ${
+                                                remainingSDG > 0 ? 'text-red-700' : 'text-slate-500'
+                                            }`}>
+                                                {remainingSDG > 0 ? (
+                                                    isForeignCurrency ? (
+                                                        <div>
+                                                            <div>
+                                                                {remainingCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] font-sans font-bold">{shortCurrencySymbol}</span>
+                                                            </div>
+                                                            <div className="text-[9px] text-red-600/80 font-sans font-normal print:text-[7.5px]">
+                                                                ({remainingSDG.toLocaleString()} ج.س)
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div>
+                                                            {remainingSDG.toLocaleString()} <span className="text-[10px] font-sans font-bold">ج.س</span>
+                                                        </div>
+                                                    )
+                                                ) : (
+                                                    <div>
+                                                        0 <span className="text-[10px] font-sans font-bold">ج.س</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* 3. وله (فائض سداد دائن) */}
+                                        <div className={`rounded-lg p-2 text-center flex flex-col justify-between print:p-1 print:rounded-md ${
+                                            overpaidSDG > 0 
+                                                ? 'bg-blue-50/80 border border-blue-300' 
+                                                : 'bg-white border border-slate-200'
+                                        }`}>
+                                            <span className={`text-[11px] font-black block mb-1 print:text-[8.5px] print:mb-0 ${
+                                                overpaidSDG > 0 ? 'text-blue-800' : 'text-slate-600'
+                                            }`}>
+                                                ولـه
+                                            </span>
+                                            <div className={`font-mono font-black text-xs sm:text-sm print:text-[10px] ${
+                                                overpaidSDG > 0 ? 'text-blue-700' : 'text-slate-500'
+                                            }`}>
+                                                {overpaidSDG > 0 ? (
+                                                    isForeignCurrency ? (
+                                                        <div>
+                                                            <div>
+                                                                +{overpaidCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] font-sans font-bold">{shortCurrencySymbol}</span>
+                                                            </div>
+                                                            <div className="text-[9px] text-blue-600/80 font-sans font-normal print:text-[7.5px]">
+                                                                (+{overpaidSDG.toLocaleString()} ج.س)
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div>
+                                                            +{overpaidSDG.toLocaleString()} <span className="text-[10px] font-sans font-bold">ج.س</span>
+                                                        </div>
+                                                    )
+                                                ) : (
+                                                    <div>
+                                                        0 <span className="text-[10px] font-sans font-bold">ج.س</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {isForeignCurrency && (
-                                    <div className="mt-2 text-xs font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 p-2 rounded-lg flex justify-between items-center print:mt-1 print:p-1 print:text-[9px] print:rounded-md">
-                                        <span>القيمة بعملة الفاتورة ({sale.currency}):</span>
-                                        <span className="font-mono text-sm font-black">
-                                            {finalTotalCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
-                                        </span>
-                                    </div>
-                                )}
+                                {/* Bottom Status / Foreign Currency Alert */}
+                                <div className="mt-2 space-y-1 print:mt-1">
+                                    {isForeignCurrency && (
+                                        <div className="text-[10px] font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded flex justify-between items-center print:text-[8px] print:px-1 print:py-0.5">
+                                            <span>الصافي المطلوب بعملة الفاتورة ({currencyCode}):</span>
+                                            <span className="font-mono font-black">
+                                                {finalTotalCurrency.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] font-sans font-bold">{shortCurrencySymbol}</span>
+                                            </span>
+                                        </div>
+                                    )}
 
-                                {sale.status === 'CREDIT' && (
-                                    <div className="mt-2 text-xs grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 print:mt-1 print:pt-1 print:text-[9px]">
-                                        <div className="text-slate-700">
-                                            <span>المدفوع:</span>{' '}
-                                            <strong className="text-emerald-700 font-mono">
-                                                {isForeignCurrency
-                                                    ? `${((sale.paidAmount || 0) / currencyRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${shortCurrencySymbol}`
-                                                    : `${(sale.paidAmount || 0).toLocaleString()} ج.س`}
-                                            </strong>
-                                            {isForeignCurrency && (
-                                                <span className="text-[10px] text-slate-500 block font-mono">
-                                                    ({(sale.paidAmount || 0).toLocaleString()} ج.س)
-                                                </span>
-                                            )}
+                                    {remainingSDG > 0 ? (
+                                        <div className="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 print:text-[8px] print:px-1 print:py-0.5">
+                                            تنبيه: متبقي آجل على العميل بقيمة ({remainingSDG.toLocaleString()} ج.س) مقيد لحين السداد.
                                         </div>
-                                        <div className="text-slate-700 text-left">
-                                            <span>المتبقي:</span>{' '}
-                                            <strong className="text-red-700 font-mono">
-                                                {isForeignCurrency
-                                                    ? `${((sale.remainingAmount || 0) / currencyRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${shortCurrencySymbol}`
-                                                    : `${(sale.remainingAmount || 0).toLocaleString()} ج.س`}
-                                            </strong>
-                                            {isForeignCurrency && (
-                                                <span className="text-[10px] text-red-500 block font-mono">
-                                                    ({(sale.remainingAmount || 0).toLocaleString()} ج.س)
-                                                </span>
-                                            )}
+                                    ) : overpaidSDG > 0 ? (
+                                        <div className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1 print:text-[8px] print:px-1 print:py-0.5">
+                                            ملاحظة: قام العميل بسداد مبلغ إضافي، والمتبقي له كـ رصيد دائن هو (+{overpaidSDG.toLocaleString()} ج.س).
                                         </div>
-                                    </div>
-                                )}
+                                    ) : sale.status === 'PAID' ? (
+                                        <div className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-2 py-1 print:text-[8px] print:px-1 print:py-0.5">
+                                            تم سداد كامل قيمة الفاتورة بنجاح ولا يوجد أي متبقي آجل على العميل.
+                                        </div>
+                                    ) : (
+                                        <div className="text-[10px] font-bold text-slate-700 bg-slate-100 border border-slate-200 rounded px-2 py-1 print:text-[8px] print:px-1 print:py-0.5">
+                                            عرض سعر مبدئي غير معتمد مالياً حتى يتم اعتماد الفاتورة وتسجيل السداد.
+                                        </div>
+                                    )}
+
+                                    {customerAccountBalance !== null && (
+                                        <div className="text-[9.5px] font-bold text-slate-600 bg-white border border-slate-200 rounded px-2 py-0.5 flex justify-between items-center print:text-[7.5px] print:px-1">
+                                            <span>رصيد الحساب العام للعميل:</span>
+                                            <span className={`font-mono font-black ${customerAccountBalance > 0 ? 'text-blue-700' : customerAccountBalance < 0 ? 'text-red-600' : 'text-slate-700'}`}>
+                                                {customerAccountBalance > 0 
+                                                    ? `له: +${customerAccountBalance.toLocaleString()} ج.س` 
+                                                    : customerAccountBalance < 0 
+                                                    ? `عليه: ${Math.abs(customerAccountBalance).toLocaleString()} ج.س` 
+                                                    : '0 ج.س (متوازن)'}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Left: Summary Table */}

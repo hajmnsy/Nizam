@@ -26,6 +26,19 @@ export async function GET(
             include: {
                 branch: { select: { id: true, name: true, code: true, phone: true, address: true } },
                 dispatchBranch: { select: { id: true, name: true, code: true, phone: true, address: true } },
+                customerRel: {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                        sales: {
+                            select: { id: true, total: true, paidAmount: true, remainingAmount: true, status: true }
+                        },
+                        deposits: {
+                            select: { id: true, amount: true, currency: true, currencyRate: true }
+                        }
+                    }
+                },
                 items: {
                     include: {
                         product: true,
@@ -43,6 +56,19 @@ export async function GET(
                 include: {
                     branch: { select: { id: true, name: true, code: true, phone: true, address: true } },
                     dispatchBranch: { select: { id: true, name: true, code: true, phone: true, address: true } },
+                    customerRel: {
+                        select: {
+                            id: true,
+                            name: true,
+                            phone: true,
+                            sales: {
+                                select: { id: true, total: true, paidAmount: true, remainingAmount: true, status: true }
+                            },
+                            deposits: {
+                                select: { id: true, amount: true, currency: true, currencyRate: true }
+                            }
+                        }
+                    },
                     items: {
                         include: {
                             product: true,
