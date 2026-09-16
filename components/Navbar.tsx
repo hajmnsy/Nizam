@@ -255,7 +255,7 @@ export default function Navbar() {
                                 <img 
                                     src="/malaysi_logo_square.png" 
                                     alt="شعار الشركة" 
-                                    className="h-10 w-10 object-contain rounded-full border border-slate-200 bg-white shadow-sm group-hover:scale-105 transition-transform" 
+                                    className="h-10 w-10 object-contain drop-shadow-sm group-hover:scale-105 transition-transform" 
                                 />
                                 {settings?.companyName && 
                                  !settings.companyName.includes('المصنع السوداني الماليزي') && 

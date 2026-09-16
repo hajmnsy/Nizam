@@ -78,11 +78,11 @@ export default function Home() {
 
                     <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                         <div className="flex items-center gap-4">
-                            <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white p-1 shadow-lg shadow-black/40 border border-slate-700 flex items-center justify-center shrink-0">
+                            <div className="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center shrink-0">
                                 <img 
                                     src="/malaysi_logo_square.png" 
                                     alt="شعار الشركة" 
-                                    className="w-full h-full object-contain rounded-xl"
+                                    className="w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
                                 />
                             </div>
                             <div className="space-y-2">
