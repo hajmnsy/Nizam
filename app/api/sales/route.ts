@@ -208,8 +208,13 @@ export async function GET(request: Request) {
     const endDateParam = searchParams.get('endDate')
 
     try {
-        const branchId = getActiveBranchId()
-        let whereClause: any = { branchId }
+        const branchParam = searchParams.get('branchId')
+        let whereClause: any = {}
+        if (branchParam && branchParam !== 'ALL') {
+            whereClause.branchId = parseInt(branchParam)
+        } else if (!branchParam) {
+            whereClause.branchId = getActiveBranchId()
+        }
 
         const customer = searchParams.get('customer')
         if (customer) {
@@ -240,7 +245,11 @@ export async function GET(request: Request) {
 
         const sales = await prisma.sale.findMany({
             where: whereClause,
-            include: { items: { include: { product: true } } },
+            include: { 
+                items: { include: { product: true } },
+                branch: true,
+                dispatchBranch: true
+            },
             orderBy: { createdAt: 'desc' }
         })
         return NextResponse.json(sales)

@@ -105,6 +105,7 @@ interface SaleItem {
         thickness?: number
         price?: number
         unit?: string
+        weightPerUnit?: number
     }
 }
 
@@ -502,6 +503,26 @@ export default function InvoiceDetails() {
     // Calculate total rows to dynamically optimize print density for a single A4 sheet
     const totalPrintRows = (sale?.items?.length || 0) + (paymentRows?.length || 1);
 
+    const totalWeightKg = (sale?.items || []).reduce((sum, item) => sum + ((item.product?.weightPerUnit || 0) * item.quantity), 0);
+    const totalWeightTons = totalWeightKg > 0 ? (totalWeightKg / 1000) : 0;
+
+    const invoiceUrl = typeof window !== 'undefined' ? `${window.location.origin}/sales/${sale.id}` : `https://nizam-ruddy.vercel.app/sales/${sale.id}`;
+    const customerPhone = sale.customerRel?.phone ? sale.customerRel.phone.replace(/[^0-9]/g, '') : '';
+    const whatsappPhone = customerPhone ? (customerPhone.startsWith('0') ? `249${customerPhone.substring(1)}` : customerPhone) : '';
+
+    const whatsappMessage = `*مصنع الجودة للمنتجات الحديدية*
+📄 *${viewMode === 'DELIVERY' ? 'إذن استلام مخزن' : viewMode === 'QUOTATION' ? 'عرض سعر' : 'فاتورة مبيعات'}* رقم #${sale.invoiceNumber || sale.id}
+👤 العميل: ${sale.customer || 'عميل نقدي'}
+📅 التاريخ: ${new Date(sale.createdAt).toLocaleDateString('ar-SD')}
+${totalWeightKg > 0 ? `⚖️ وزن البضاعة: ${totalWeightTons >= 1 ? `${totalWeightTons.toFixed(2)} طن ` : ''}(${totalWeightKg.toLocaleString()} كجم)\n` : ''}💰 الإجمالي: ${sale.total.toLocaleString()} ${currencySymbol}
+${paidSDG > 0 ? `✅ المدفوع: ${paidSDG.toLocaleString()} ${currencySymbol}\n` : ''}${remainingSDG > 0 ? `⏳ المتبقي: ${remainingSDG.toLocaleString()} ${currencySymbol}\n` : ''}🔗 رابط الفاتورة:
+${invoiceUrl}
+شكراً لتعاملكم معنا.`;
+
+    const whatsappHref = whatsappPhone 
+        ? `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(whatsappMessage)}`
+        : `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
+
     return (
         <main className="min-h-screen bg-slate-100 print:bg-white print:min-h-0 print:m-0 print:p-0 pb-16 print:pb-0 font-sans">
             {/* Top Navigation Bar */}
@@ -612,6 +633,19 @@ export default function InvoiceDetails() {
                             <Trash2 size={15} />
                             {deleting ? 'جاري الحذف...' : 'حذف'}
                         </Button>
+
+                        <a
+                            href={whatsappHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 px-3 py-2 rounded-lg shadow-sm transition-all"
+                            title="إرسال الفاتورة للعميل عبر واتساب"
+                        >
+                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                            </svg>
+                            <span>واتساب</span>
+                        </a>
 
                         <Button
                             onClick={handlePrint}
@@ -781,7 +815,7 @@ export default function InvoiceDetails() {
                         ) : (
                             <div className="text-right space-y-1 print:space-y-0.5">
                                 <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight print:text-base">
-                                    المصنع السوداني الماليزي
+                                    مصنع الجودة للمنتجات الحديدية
                                 </h1>
                                 <div className="flex items-center gap-1.5 pt-0.5 print:gap-1 print:pt-0">
                                     <span className="inline-block bg-slate-900 text-white text-[11px] font-black px-2.5 py-0.5 rounded shadow-sm print:text-[9px] print:px-1.5 print:py-0 print:bg-slate-900">
@@ -884,6 +918,15 @@ export default function InvoiceDetails() {
                                         {sale.status === 'PAID' ? 'خالص السداد' : sale.status === 'CREDIT' ? 'آجل / غير خالص' : 'مسودة'}
                                     </span>
                                 </div>
+
+                                {totalWeightKg > 0 && (
+                                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200 print:text-[8.5px] print:pt-0.5">
+                                        <span className="font-bold text-slate-600">وزن البضاعة:</span>
+                                        <span className="font-black text-slate-900 font-mono text-[10px]">
+                                            {totalWeightTons >= 1 ? `${totalWeightTons.toFixed(2)} طن` : `${totalWeightKg.toLocaleString()} كجم`}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -1425,6 +1468,16 @@ export default function InvoiceDetails() {
                                             </tr>
                                         )}
 
+                                        {totalWeightKg > 0 && (
+                                            <tr>
+                                                <td className="py-1.5 text-slate-600 font-bold">وزن البضاعة الإجمالي:</td>
+                                                <td className="py-1.5 text-left font-mono font-bold text-slate-900 text-xs sm:text-sm">
+                                                    <span>{totalWeightTons >= 1 ? `${totalWeightTons.toFixed(2)} طن ` : ''}</span>
+                                                    <span className="text-[10px] text-slate-500 font-normal">({totalWeightKg.toLocaleString()} كجم)</span>
+                                                </td>
+                                            </tr>
+                                        )}
+
                                         <tr className="border-t-2 border-slate-900 bg-slate-900 text-white rounded-lg print:bg-slate-900 print:text-white">
                                             <td className="py-2 px-2.5 text-white font-black text-sm sm:text-base print:py-1 print:px-2 print:text-xs">
                                                 الصافي النهائي المطلوب {isForeignCurrency ? `(${currencyCode})` : ''}:
@@ -1486,9 +1539,16 @@ export default function InvoiceDetails() {
                     {viewMode === 'DELIVERY' && (
                         <div className="relative z-10 pt-4 border-t-2 border-slate-800 space-y-4 print:pt-1 print:space-y-1.5 print:border-t">
                             <div className="bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs print:p-1.5 print:text-[9.5px] print:rounded-md">
-                                <p className="font-bold text-slate-800 mb-2 print:mb-1">
-                                    إقرار استلام: أقر أنا الموقع أدناه باستلام كامل الأصناف والكميات المذكورة بعاليه من مستودعات المصنع بحالة جيدة وسليمة ومطابقة للمواصفات المطلوبة.
-                                </p>
+                                <div className="flex flex-wrap items-center justify-between gap-2 mb-2 pb-1.5 border-b border-slate-200">
+                                    <p className="font-bold text-slate-800 mb-0">
+                                        إقرار استلام: أقر أنا الموقع أدناه باستلام كامل الأصناف والكميات المذكورة بعاليه من مستودعات المصنع بحالة جيدة وسليمة ومطابقة للمواصفات المطلوبة.
+                                    </p>
+                                    {totalWeightKg > 0 && (
+                                        <div className="bg-slate-900 text-white px-2.5 py-1 rounded-lg text-xs font-mono font-black shrink-0 whitespace-nowrap shadow-sm print:bg-slate-900 print:text-white">
+                                            حمولة الشاحنة: {totalWeightTons >= 1 ? `${totalWeightTons.toFixed(2)} طن ` : ''}({totalWeightKg.toLocaleString()} كجم)
+                                        </div>
+                                    )}
+                                </div>
                                 <div className="grid grid-cols-3 gap-3 text-slate-700 pt-1 print:pt-0.5 print:gap-1.5 print:text-[9px]">
                                     <div>اسم المستلم / السائق: .......................................</div>
                                     <div>رقم الهاتف / الإثبات: .......................................</div>
@@ -1526,7 +1586,7 @@ export default function InvoiceDetails() {
                         <p className="text-slate-500 font-bold">
                             {isJawdaBranch
                                 ? `مركز الجودة للحديد | ${sale.branch?.address || 'فرع الجودة'} | م. محمد إسماعيل: ${sale.branch?.phone || settings?.phone || '0120021085'}`
-                                : 'المصنع السوداني الماليزي للمنتجات الحديدية | الموقع: سوق عطبرة - السينما الوطنية | صالح عوض صالح: 0120021085'}
+                                : 'مصنع الجودة للمنتجات الحديدية | الموقع: سوق عطبرة - السينما الوطنية | صالح عوض صالح: 0120021085'}
                         </p>
                     </div>
                 </div>

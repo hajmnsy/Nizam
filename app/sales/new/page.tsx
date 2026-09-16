@@ -245,6 +245,13 @@ export default function NewSale() {
     const [chequeRecipient, setChequeRecipient] = useState<string>('')
 
     const totalWeight = cart.reduce((sum, item) => sum + (item.weight * item.quantity), 0)
+    const totalWeightKg = totalWeight
+    const totalWeightTons = totalWeightKg > 0 ? (totalWeightKg / 1000) : 0
+    const selectedCustomer = useMemo(() => {
+        if (!selectedCustomerId) return null;
+        return registeredCustomers.find(c => c.id === parseInt(selectedCustomerId)) || null;
+    }, [registeredCustomers, selectedCustomerId]);
+
     // Round subtotal explicitly at the item level summation to prevent carrying floating points
     const subtotal = cart.reduce((sum, item) => sum + Math.round(item.price * item.quantity), 0)
     const finalTotal = Math.round(subtotal - (parseFloat(discount) || 0))
@@ -571,7 +578,15 @@ export default function NewSale() {
                                     <div className="flex items-center gap-2">
                                         سلة المشتريات
                                     </div>
-                                    <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs font-mono">{cart.length} أصناف</span>
+                                    <div className="flex items-center gap-2">
+                                        {totalWeightKg > 0 && (
+                                            <span className="bg-slate-800 text-white px-2.5 py-0.5 rounded-full text-xs font-mono font-bold flex items-center gap-1 shadow-sm" title="إجمالي وزن أصناف السلة">
+                                                <span>⚖️ {totalWeightTons >= 1 ? `${totalWeightTons.toFixed(2)} طن` : `${totalWeightKg.toLocaleString()} كجم`}</span>
+                                                <span className="text-[10px] text-slate-300">({totalWeightKg.toLocaleString()} كجم)</span>
+                                            </span>
+                                        )}
+                                        <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs font-mono">{cart.length} أصناف</span>
+                                    </div>
                                 </h2>
 
                                 {/* Dispatch / Delivery Branch Selector */}
@@ -591,6 +606,49 @@ export default function NewSale() {
                                                 </option>
                                             ))}
                                         </select>
+                                    </div>
+                                )}
+
+                                {/* Customer Account Notice (Deposit or Debt) */}
+                                {selectedCustomer && (
+                                    <div className="pt-1">
+                                        {selectedCustomer.remainingBalance > 0 ? (
+                                            <div className="bg-emerald-50 border border-emerald-300 p-2 rounded-xl flex flex-wrap items-center justify-between gap-2 shadow-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-base">💰</span>
+                                                    <div>
+                                                        <div className="text-xs font-black text-emerald-950">
+                                                            رصيد العميل المودع: <span className="font-mono text-emerald-700 font-black">{selectedCustomer.remainingBalance.toLocaleString()} ج.س</span>
+                                                        </div>
+                                                        <div className="text-[10px] text-emerald-700 font-medium">
+                                                            يمكنك خصم قيمة الفاتورة من رصيده المودع سابقاً
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const deduct = Math.min(finalTotal, selectedCustomer.remainingBalance);
+                                                        setPaidAmountInput(deduct.toString());
+                                                    }}
+                                                    className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black shadow transition-all whitespace-nowrap"
+                                                >
+                                                    خصم من الرصيد ({Math.min(finalTotal, selectedCustomer.remainingBalance).toLocaleString()} ج.س)
+                                                </button>
+                                            </div>
+                                        ) : selectedCustomer.remainingBalance < 0 ? (
+                                            <div className="bg-amber-50 border border-amber-300 p-2 rounded-xl flex items-center gap-2 shadow-xs text-amber-950">
+                                                <span className="text-base">⚠️</span>
+                                                <div>
+                                                    <div className="text-xs font-black text-amber-900">
+                                                        تنبيه مديونية: العميل مدين بمبلغ سابق: <span className="font-mono text-red-600 font-black">{Math.abs(selectedCustomer.remainingBalance).toLocaleString()} ج.س</span>
+                                                    </div>
+                                                    <div className="text-[10px] text-amber-700">
+                                                        يرجى تحصيل المتبقي السابق أو أخذ موافقة الإدارة قبل اعتماد بيع آجل إضافي.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : null}
                                     </div>
                                 )}
                             </div>
@@ -617,13 +675,29 @@ export default function NewSale() {
                                                 const itemWeight = item.weight || 0;
                                                 const itemPPU = item.purchasePriceUSD || 0;
                                                 const itemTransport = item.transportCostUSD || 15;
+                                                const origProd = products.find(p => p.id === item.productId);
+                                                const isOverStock = origProd && item.quantity > origProd.quantity;
+                                                const itemLineWeightKg = itemWeight * itemQty;
+                                                const itemLineWeightTons = itemLineWeightKg / 1000;
 
                                                 return (
                                                     <div key={item.productId} className="bg-white p-3 rounded-lg border shadow-sm flex flex-col gap-2">
                                                         <div className="flex justify-between items-start">
                                                             <div className="flex flex-col">
-                                                                <span className="font-bold text-sm">{item.name}</span>
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <span className="font-bold text-sm">{item.name}</span>
+                                                                    {itemLineWeightKg > 0 && (
+                                                                        <span className="text-[10px] text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded font-mono font-bold whitespace-nowrap" title="وزن البضاعة لهذا الصنف">
+                                                                            ⚖️ {itemLineWeightTons >= 1 ? `${itemLineWeightTons.toFixed(2)} طن ` : ''}({itemLineWeightKg.toLocaleString()} كجم)
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                                 {item.thickness && <span className="text-xs text-gray-500 mb-1">سمك: {item.thickness}مم</span>}
+                                                                {isOverStock && (
+                                                                    <div className="bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 my-1">
+                                                                        <span>⚠️ الكمية ({item.quantity}) تتجاوز المخزون المتوفر ({origProd.quantity} فقط)!</span>
+                                                                    </div>
+                                                                )}
                                                                 {discountRatio > 0 && (
                                                                     <span className="text-xs text-green-600 font-bold mb-1">السعر بعد الخصم: {(itemDiscountedTotal / itemQty).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                                                                 )}
@@ -1083,6 +1157,14 @@ export default function NewSale() {
                                                     </>
                                                 )}
                                             </div>
+                                            {totalWeightKg > 0 && (
+                                                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-300 font-bold">
+                                                    <span>⚖️ وزن البضاعة الإجمالي:</span>
+                                                    <span className="text-white font-black font-mono">
+                                                        {totalWeightTons >= 1 ? `${totalWeightTons.toFixed(2)} طن ` : ''}({totalWeightKg.toLocaleString()} كجم)
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                         {(parseFloat(discount) > 0) && (
                                             <div className="text-right">
