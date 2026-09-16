@@ -10,6 +10,11 @@
   --primary-dark: 29, 78, 216;
 }
 
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background-color: #f1f5f9;

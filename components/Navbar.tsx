@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LogOut, Menu, X, Rocket, Search, DollarSign, Bell } from 'lucide-react'
+import { LogOut, Menu, X, Rocket, Search, DollarSign, Bell, ChevronDown, RotateCcw, Activity, Users, Settings, UserCheck } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import CommandPalette from './CommandPalette'
 
@@ -14,6 +14,7 @@ export default function Navbar() {
 
     const [notifications, setNotifications] = useState<any[]>([])
     const [showNotifications, setShowNotifications] = useState(false)
+    const notificationsPopupRef = useRef<HTMLDivElement>(null)
 
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [settings, setSettings] = useState<any>(null)
@@ -34,6 +35,10 @@ export default function Navbar() {
     const [creatingBranch, setCreatingBranch] = useState(false)
     const branchPopupRef = useRef<HTMLDivElement>(null)
 
+    // More Menu Dropdown State
+    const [showMoreMenu, setShowMoreMenu] = useState(false)
+    const moreMenuRef = useRef<HTMLDivElement>(null)
+
     const getCookie = (name: string) => {
         if (typeof document === 'undefined') return null;
         const value = `; ${document.cookie}`;
@@ -42,7 +47,7 @@ export default function Navbar() {
         return null;
     }
 
-    // Handle Output clicks for Exchange & Branch Popups
+    // Handle clicks outside for Exchange, Branch, More, and Notifications Popups
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (exchangePopupRef.current && !exchangePopupRef.current.contains(event.target as Node)) {
@@ -51,10 +56,25 @@ export default function Navbar() {
             if (branchPopupRef.current && !branchPopupRef.current.contains(event.target as Node)) {
                 setShowBranchModal(false)
             }
+            if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+                setShowMoreMenu(false)
+            }
+            if (notificationsPopupRef.current && !notificationsPopupRef.current.contains(event.target as Node)) {
+                setShowNotifications(false)
+            }
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    // Close all popups on route change
+    useEffect(() => {
+        setShowMoreMenu(false)
+        setShowExchangeModal(false)
+        setShowBranchModal(false)
+        setShowNotifications(false)
+        setIsOpen(false)
+    }, [pathname])
 
     // Handle scroll effect
     useEffect(() => {
@@ -214,24 +234,30 @@ export default function Navbar() {
         return pathname.startsWith(path)
     }
 
-    const navLinks = [
+    const primaryNavLinks = [
         { name: 'الرئيسية', path: '/' },
+        { name: 'المبيعات', path: '/sales' },
         { name: 'المخزون', path: '/inventory' },
         { name: 'المشتريات', path: '/purchases' },
-        { name: 'الموردين', path: '/suppliers' },
-        { name: 'المبيعات', path: '/sales' },
         { name: 'العملاء', path: '/customers' },
-        { name: 'راجع البضاعة', path: '/sales/returns' },
+        { name: 'الموردين', path: '/suppliers' },
         { name: 'المصروفات', path: '/expenses' },
-        { name: 'حركة الأصناف', path: '/reports/items' },
         { name: 'التقارير', path: '/reports' },
-        { name: 'الموظفين', path: '/employees' },
+    ]
+
+    const secondaryNavLinks = [
+        { name: 'راجع البضاعة', path: '/sales/returns', icon: RotateCcw, description: 'إرجاع واستبدال الفواتير' },
+        { name: 'حركة الأصناف', path: '/reports/items', icon: Activity, description: 'كشف حركة وكميات الأصناف' },
+        { name: 'الموظفين', path: '/employees', icon: Users, description: 'إدارة الرواتب وسجلات العمال' },
     ]
 
     if (currentUser?.role === 'ADMIN') {
-        navLinks.push({ name: 'الإعدادات المتقدمة', path: '/settings' })
-        navLinks.push({ name: 'المستخدمين', path: '/users' })
+        secondaryNavLinks.push({ name: 'الإعدادات المتقدمة', path: '/settings', icon: Settings, description: 'إعدادات النظام والشركة' })
+        secondaryNavLinks.push({ name: 'المستخدمين', path: '/users', icon: UserCheck, description: 'إدارة حسابات وصلاحيات النظام' })
     }
+
+    const allNavLinks = [...primaryNavLinks, ...secondaryNavLinks]
+    const isSecondaryActive = secondaryNavLinks.some(link => isActive(link.path))
 
     const openSearch = () => {
         const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })
@@ -243,58 +269,103 @@ export default function Navbar() {
             <CommandPalette />
 
             <nav className={`sticky top-0 z-40 w-full transition-all duration-300 ${
-                scrolled ? 'bg-white/80 backdrop-blur-xl border-b border-slate-200/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] py-1' : 'bg-transparent py-3'
+                scrolled ? 'bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_4px_20px_rgb(0,0,0,0.03)] py-1.5' : 'bg-white/80 backdrop-blur-md border-b border-slate-200/50 py-2'
             } print:hidden`}>
-                <div className="container mx-auto px-4 max-w-[1400px]">
-                    <div className="flex justify-between items-center h-14 transition-all">
+                <div className="container mx-auto px-2 sm:px-4 max-w-[1440px]">
+                    <div className="flex justify-between items-center h-12 transition-all">
                         
                         {/* Right: Logo & Primary Nav */}
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2 2xl:gap-4 shrink-0">
                             {/* Logo */}
-                            <Link href="/" className="flex items-center gap-3 group">
+                            <Link href="/" className="flex items-center gap-2 group shrink-0">
                                 <img 
                                     src="/malaysi_logo_square.png" 
                                     alt="شعار الشركة" 
-                                    className="h-10 w-10 object-contain drop-shadow-sm group-hover:scale-105 transition-transform" 
+                                    className="h-9 w-9 object-contain drop-shadow-sm group-hover:scale-105 transition-transform" 
                                 />
                                 {settings?.companyName && 
                                  !settings.companyName.includes('المصنع السوداني الماليزي') && 
                                  !settings.companyName.includes('السوداني الماليزي') && (
-                                    <span className="font-black text-lg text-slate-800 tracking-tight hidden lg:block group-hover:text-indigo-600 transition-colors">
+                                    <span className="font-black text-base text-slate-800 tracking-tight hidden 2xl:block group-hover:text-indigo-600 transition-colors">
                                         {settings.companyName}
                                     </span>
                                 )}
                             </Link>
 
                             {/* Desktop Navigation */}
-                            <div className="hidden xl:flex items-center gap-1 bg-slate-100/60 p-1 rounded-full border border-slate-200/50 backdrop-blur-sm shadow-inner">
-                                {navLinks.map((link) => (
+                            <div className="hidden xl:flex items-center gap-0.5 bg-slate-100/80 p-1 rounded-full border border-slate-200/60 backdrop-blur-sm shadow-inner">
+                                {primaryNavLinks.map((link) => (
                                     <Link
                                         key={link.path}
                                         href={link.path}
-                                        className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all duration-300 relative ${
+                                        className={`px-2.5 2xl:px-3 py-1 rounded-full text-xs 2xl:text-sm font-bold transition-all duration-200 whitespace-nowrap ${
                                             isActive(link.path)
                                                 ? 'bg-white text-indigo-600 shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
-                                                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
+                                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
                                         }`}
                                     >
                                         {link.name}
                                     </Link>
                                 ))}
+
+                                {/* "المزيد" Dropdown */}
+                                <div className="relative" ref={moreMenuRef}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowMoreMenu(!showMoreMenu)}
+                                        className={`flex items-center gap-1 px-2.5 2xl:px-3 py-1 rounded-full text-xs 2xl:text-sm font-bold transition-all duration-200 whitespace-nowrap ${
+                                            isSecondaryActive || showMoreMenu
+                                                ? 'bg-white text-indigo-600 shadow-[0_2px_8px_rgba(0,0,0,0.06)] font-black'
+                                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                                        }`}
+                                    >
+                                        <span>المزيد</span>
+                                        <ChevronDown size={13} className={`transition-transform duration-200 ${showMoreMenu ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {showMoreMenu && (
+                                        <div className="absolute right-0 mt-2 w-64 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up z-50 p-2 space-y-1">
+                                            {secondaryNavLinks.map((link) => {
+                                                const Icon = link.icon
+                                                const active = isActive(link.path)
+                                                return (
+                                                    <Link
+                                                        key={link.path}
+                                                        href={link.path}
+                                                        onClick={() => setShowMoreMenu(false)}
+                                                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${
+                                                            active
+                                                                ? 'bg-indigo-50 text-indigo-700 font-black shadow-xs'
+                                                                : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-bold'
+                                                        }`}
+                                                    >
+                                                        <div className={`p-1.5 rounded-lg shrink-0 ${active ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                                            <Icon size={15} />
+                                                        </div>
+                                                        <div className="text-right flex-1">
+                                                            <div className="text-xs font-bold leading-tight">{link.name}</div>
+                                                            {link.description && <div className="text-[10px] text-slate-400 font-normal leading-tight mt-0.5">{link.description}</div>}
+                                                        </div>
+                                                    </Link>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
                         {/* Left: Actions */}
-                        <div className="hidden md:flex items-center gap-3">
+                        <div className="hidden md:flex items-center gap-1.5 2xl:gap-2.5 shrink-0">
                             
                             {/* Exchange Rate Widget */}
                             <div className="relative" ref={exchangePopupRef}>
                                 <button
                                     onClick={() => setShowExchangeModal(!showExchangeModal)}
-                                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-all border border-emerald-200/60 shadow-sm"
+                                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-all border border-emerald-200/60 shadow-xs whitespace-nowrap"
                                     title="تحديث سعر الصرف"
                                 >
-                                    <DollarSign size={16} strokeWidth={2.5} />
+                                    <DollarSign size={14} strokeWidth={2.5} />
                                     <span>{exchangeRate > 0 ? exchangeRate.toLocaleString() : '---'} ج.س</span>
                                 </button>
 
@@ -338,11 +409,11 @@ export default function Navbar() {
                                 <div className="relative" ref={branchPopupRef}>
                                     <button
                                         onClick={() => setShowBranchModal(!showBranchModal)}
-                                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-200/60 shadow-sm animate-fade-in"
+                                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-200/60 shadow-xs animate-fade-in whitespace-nowrap max-w-[160px]"
                                         title="تبديل الفرع (مدير النظام)"
                                     >
-                                        <Rocket size={16} strokeWidth={2.5} className="text-indigo-500" />
-                                        <span>{branches.find(b => b.id === activeBranchId)?.name || 'جاري التحميل...'}</span>
+                                        <Rocket size={14} strokeWidth={2.5} className="text-indigo-500 shrink-0" />
+                                        <span className="truncate">{branches.find(b => b.id === activeBranchId)?.name || 'جاري التحميل...'}</span>
                                     </button>
 
                                     {showBranchModal && (
@@ -405,58 +476,58 @@ export default function Navbar() {
                                     )}
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-slate-700 bg-slate-100/90 rounded-xl border border-slate-200/80 shadow-sm" title="فرعك المخصص">
-                                    <Rocket size={16} strokeWidth={2.5} className="text-indigo-500" />
-                                    <span>{currentUser?.branch?.name || branches.find(b => b.id === activeBranchId)?.name || 'الفرع المخصص'}</span>
+                                <div className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-slate-100/90 rounded-xl border border-slate-200/80 shadow-xs whitespace-nowrap max-w-[160px]" title="فرعك المخصص">
+                                    <Rocket size={14} strokeWidth={2.5} className="text-indigo-500 shrink-0" />
+                                    <span className="truncate">{currentUser?.branch?.name || branches.find(b => b.id === activeBranchId)?.name || 'الفرع المخصص'}</span>
                                 </div>
                             )}
 
-                            <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                            <div className="w-px h-5 bg-slate-200 mx-0.5"></div>
 
                             {/* Search Button */}
                             <button
                                 onClick={openSearch}
-                                className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-500 bg-slate-100/80 hover:bg-slate-200/80 border border-transparent hover:border-slate-300 rounded-full transition-all"
-                                title="بحث سريع"
+                                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-slate-500 bg-slate-100/80 hover:bg-slate-200/80 border border-transparent hover:border-slate-300 rounded-xl transition-all"
+                                title="بحث سريع (Ctrl+K)"
                             >
-                                <Search size={16} strokeWidth={2.5} />
-                                <span className="hidden lg:inline">بحث...</span>
+                                <Search size={14} strokeWidth={2.5} />
+                                <span className="hidden 2xl:inline">بحث...</span>
                             </button>
 
                             {/* Notifications Dropdown */}
-                            <div className="relative">
+                            <div className="relative" ref={notificationsPopupRef}>
                                 <button
                                     onClick={() => {
                                         setShowNotifications(!showNotifications)
                                         if (!showNotifications) markAsRead()
                                     }}
-                                    className="relative p-2.5 text-slate-500 hover:text-indigo-600 bg-slate-100/80 hover:bg-indigo-50 rounded-full transition-all border border-transparent hover:border-indigo-100"
+                                    className="relative p-2 text-slate-500 hover:text-indigo-600 bg-slate-100/80 hover:bg-indigo-50 rounded-xl transition-all border border-transparent hover:border-indigo-100"
                                     title="الإشعارات"
                                 >
-                                    <Bell size={18} strokeWidth={2.5} />
+                                    <Bell size={16} strokeWidth={2.5} />
                                     {unreadCount > 0 && (
-                                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white shadow-sm"></span>
+                                        <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full border-2 border-white shadow-sm"></span>
                                     )}
                                 </button>
 
                                 {showNotifications && (
-                                    <div className="absolute left-0 mt-3 w-[320px] bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-3xl shadow-xl overflow-hidden animate-fade-in-up z-50 origin-top-left flex flex-col">
-                                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                                            <span className="font-black text-slate-800">الإشعارات</span>
+                                    <div className="absolute left-0 mt-3 w-[300px] bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl shadow-xl overflow-hidden animate-fade-in-up z-50 origin-top-left flex flex-col">
+                                        <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                                            <span className="font-black text-slate-800 text-xs">الإشعارات</span>
                                             {unreadCount > 0 && <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{unreadCount} جديد</span>}
                                         </div>
-                                        <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                                        <div className="max-h-72 overflow-y-auto custom-scrollbar">
                                             {notifications.length === 0 ? (
-                                                <div className="p-8 text-center text-slate-400 font-bold text-sm flex flex-col items-center gap-2">
-                                                    <Bell size={24} className="opacity-20" />
+                                                <div className="p-6 text-center text-slate-400 font-bold text-xs flex flex-col items-center gap-2">
+                                                    <Bell size={20} className="opacity-20" />
                                                     لا توجد إشعارات حالياً
                                                 </div>
                                             ) : (
                                                 notifications.map(notification => (
-                                                    <div key={notification.id} className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors ${!notification.isRead ? 'bg-indigo-50/30' : ''}`}>
-                                                        <h4 className={`text-sm ${!notification.isRead ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>{notification.title}</h4>
-                                                        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed font-medium">{notification.message}</p>
-                                                        <span className="text-[10px] text-slate-400 mt-2 block font-bold">{new Date(notification.createdAt).toLocaleDateString('ar-SD')}</span>
+                                                    <div key={notification.id} className={`p-3 border-b border-slate-50 hover:bg-slate-50 transition-colors ${!notification.isRead ? 'bg-indigo-50/30' : ''}`}>
+                                                        <h4 className={`text-xs ${!notification.isRead ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>{notification.title}</h4>
+                                                        <p className="text-[11px] text-slate-500 mt-1 leading-relaxed font-medium">{notification.message}</p>
+                                                        <span className="text-[9px] text-slate-400 mt-1.5 block font-bold">{new Date(notification.createdAt).toLocaleDateString('ar-SD')}</span>
                                                     </div>
                                                 ))
                                             )}
@@ -468,10 +539,10 @@ export default function Navbar() {
                             {/* Logout */}
                             <button
                                 onClick={handleLogout}
-                                className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all"
+                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
                                 title="تسجيل خروج"
                             >
-                                <LogOut size={18} strokeWidth={2.5} />
+                                <LogOut size={16} strokeWidth={2.5} />
                             </button>
                         </div>
 
@@ -479,15 +550,17 @@ export default function Navbar() {
                         <div className="xl:hidden flex items-center gap-2">
                             <button
                                 onClick={openSearch}
-                                className="p-2.5 text-slate-600 bg-slate-100 rounded-full"
+                                className="p-2 text-slate-600 bg-slate-100 rounded-xl"
+                                title="بحث سريع"
                             >
-                                <Search size={18} strokeWidth={2.5} />
+                                <Search size={16} strokeWidth={2.5} />
                             </button>
                             <button
                                 onClick={() => setIsOpen(!isOpen)}
-                                className="p-2.5 text-slate-900 bg-white shadow-sm border border-slate-200 rounded-xl transition-all"
+                                className="p-2 text-slate-900 bg-white shadow-sm border border-slate-200 rounded-xl transition-all"
+                                title="القائمة"
                             >
-                                {isOpen ? <X size={20} /> : <Menu size={20} />}
+                                {isOpen ? <X size={18} /> : <Menu size={18} />}
                             </button>
                         </div>
                     </div>
@@ -522,14 +595,14 @@ export default function Navbar() {
                                 </div>
                             )}
 
-                            {navLinks.map((link) => (
+                            {allNavLinks.map((link) => (
                                 <Link
                                     key={link.path}
                                     href={link.path}
                                     onClick={() => setIsOpen(false)}
-                                    className={`px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                                    className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
                                         isActive(link.path)
-                                            ? 'bg-indigo-50 text-indigo-700'
+                                            ? 'bg-indigo-50 text-indigo-700 font-black'
                                             : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                     }`}
                                 >
@@ -537,15 +610,15 @@ export default function Navbar() {
                                 </Link>
                             ))}
                             <div className="border-t border-slate-100 my-2"></div>
-                            <div className="px-4 py-3 flex items-center justify-between bg-emerald-50 rounded-xl mb-2">
-                                <span className="text-sm font-bold text-emerald-800">سعر الصرف (ج.س)</span>
-                                <span className="text-sm font-black text-emerald-900">{exchangeRate.toLocaleString()}</span>
+                            <div className="px-4 py-2.5 flex items-center justify-between bg-emerald-50 rounded-xl mb-2">
+                                <span className="text-xs font-bold text-emerald-800">سعر الصرف (ج.س)</span>
+                                <span className="text-xs font-black text-emerald-900">{exchangeRate.toLocaleString()}</span>
                             </div>
                             <button
                                 onClick={handleLogout}
-                                className="flex w-full items-center gap-2 px-4 py-3 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors text-sm font-bold"
+                                className="flex w-full items-center gap-2 px-4 py-2.5 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors text-xs font-bold"
                             >
-                                <LogOut size={18} />
+                                <LogOut size={16} />
                                 <span>تسجيل خروج</span>
                             </button>
                         </div>

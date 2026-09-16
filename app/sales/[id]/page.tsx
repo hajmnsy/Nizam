@@ -511,66 +511,66 @@ export default function InvoiceDetails() {
 
             <div className="container mx-auto p-4 max-w-5xl print:max-w-none print:w-full print:p-0">
                 {/* Control Action Bar */}
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 print:hidden flex flex-wrap justify-between items-center gap-4">
-                    <div className="flex items-center gap-2">
-                        <Link href="/sales" className="text-slate-500 hover:text-blue-600 flex items-center gap-1 font-bold text-sm bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-colors">
-                            <ArrowLeft size={16} />
+                <div className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200 mb-6 print:hidden flex flex-wrap justify-between items-center gap-3">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <Link href="/sales" className="text-slate-500 hover:text-blue-600 flex items-center gap-1 font-bold text-xs sm:text-sm bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors">
+                            <ArrowLeft size={15} />
                             رجوع
                         </Link>
 
                         {/* View / Print Mode Selector */}
-                        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 mr-2">
+                        <div className="flex items-center bg-slate-100 p-0.5 sm:p-1 rounded-xl border border-slate-200 gap-1">
                             <button
                                 type="button"
                                 onClick={() => setViewMode('INVOICE')}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
+                                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
                                     viewMode === 'INVOICE'
                                         ? 'bg-blue-600 text-white shadow-md'
                                         : 'text-slate-700 hover:bg-white/80'
                                 }`}
                             >
-                                <FileText size={15} />
-                                فاتورة مبيعات مالية
+                                <FileText size={14} />
+                                فاتورة مبيعات
                             </button>
 
                             <button
                                 type="button"
                                 onClick={() => setViewMode('DELIVERY')}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
+                                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
                                     viewMode === 'DELIVERY'
                                         ? 'bg-amber-600 text-white shadow-md'
                                         : 'text-slate-700 hover:bg-white/80'
                                 }`}
                             >
-                                <PackageCheck size={15} />
-                                إذن استلام وصرف مخزني
+                                <PackageCheck size={14} />
+                                إذن استلام مخزن
                             </button>
 
                             <button
                                 type="button"
                                 onClick={() => setViewMode('QUOTATION')}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
+                                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
                                     viewMode === 'QUOTATION'
                                         ? 'bg-purple-600 text-white shadow-md'
                                         : 'text-slate-700 hover:bg-white/80'
                                 }`}
                             >
-                                <FileSpreadsheet size={15} />
+                                <FileSpreadsheet size={14} />
                                 عرض سعر
                             </button>
                         </div>
 
                         {/* Branch Identity Switcher */}
-                        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 mr-1">
+                        <div className="flex items-center bg-slate-100 p-0.5 sm:p-1 rounded-xl border border-slate-200 gap-1">
                             <button
                                 type="button"
                                 onClick={() => setBranchOverride(isJawdaBranch ? 'MAIN' : 'JAWDA')}
                                 title="التبديل بين هوية الفرع الرئيسي وفرع الجودة"
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 shadow-sm"
+                                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-black transition-all bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 shadow-sm"
                             >
-                                <Building2 size={15} className="text-amber-600" />
-                                <span>الفرع: {isJawdaBranch ? 'فرع الجودة (مركز الجودة)' : 'الفرع الرئيسي'}</span>
-                                <span className="text-[10px] text-blue-600 font-bold mr-1 underline">(تبديل)</span>
+                                <Building2 size={14} className="text-amber-600" />
+                                <span>الفرع: {isJawdaBranch ? 'فرع الجودة' : 'الفرع الرئيسي'}</span>
+                                <span className="text-[10px] text-blue-600 font-bold mr-0.5 underline">(تبديل)</span>
                             </button>
                         </div>
                     </div>
