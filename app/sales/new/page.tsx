@@ -4,10 +4,13 @@ import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import { ProformaInvoice } from '@/components/ProformaInvoice'
-import { ArrowLeft, Plus, Trash2, Search, Minus, FileText, Printer, Save, Calendar } from 'lucide-react'
+import {
+    ArrowLeft, Plus, Trash2, Search, Minus, FileText,
+    Calendar, User, Eye, EyeOff, X, Check, CreditCard,
+    Building2, RefreshCw, ShoppingCart, UserCheck, AlertTriangle
+} from 'lucide-react'
 import Link from 'next/link'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface Category {
@@ -42,6 +45,16 @@ interface CartItem {
     sellingPricePerTonUSD?: number
 }
 
+interface BankTransferRow {
+    id: number
+    bankName: string
+    customBankName: string
+    bankRef: string
+    amount: string
+    sender?: string
+    recipient?: string
+}
+
 export default function NewSale() {
     const router = useRouter()
     const [products, setProducts] = useState<Product[]>([])
@@ -49,6 +62,10 @@ export default function NewSale() {
     const [cart, setCart] = useState<CartItem[]>([])
     const [customer, setCustomer] = useState('')
     const [loading, setLoading] = useState(false)
+    const [showMargins, setShowMargins] = useState(false)
+    const [customerMenuOpen, setCustomerMenuOpen] = useState(false)
+    const customerDropdownRef = useRef<HTMLDivElement>(null)
+
     const getTodayLocal = () => {
         const d = new Date()
         const offset = d.getTimezoneOffset()
@@ -82,33 +99,40 @@ export default function NewSale() {
                 setActiveBranchId(userData.branchId)
                 setDispatchBranchId(userData.branchId.toString())
             }
-            if (exchangeRateData) {
-                if (exchangeRateData.rate > 0) setExchangeRate(exchangeRateData.rate)
+            if (exchangeRateData && exchangeRateData.rate > 0) {
+                setExchangeRate(exchangeRateData.rate)
             }
 
-            // Filter out specific categories and remove duplicates by name
             if (Array.isArray(categoriesData)) {
                 const hiddenCategories = ['قطاعات', 'مسطحات', 'مواسير', 'سيخ']
                 let visibleCategories = categoriesData.filter((cat: Category) => !hiddenCategories.includes(cat.name))
 
-                const uniqueMap = new Map();
+                const uniqueMap = new Map()
                 visibleCategories.forEach(cat => {
                     if (!uniqueMap.has(cat.name)) {
-                        uniqueMap.set(cat.name, cat);
+                        uniqueMap.set(cat.name, cat)
                     }
-                });
-                visibleCategories = Array.from(uniqueMap.values());
-
+                })
+                visibleCategories = Array.from(uniqueMap.values())
                 setCategories(visibleCategories)
-                if (visibleCategories.length > 0) {
-                    setActiveCategory(visibleCategories[0].name)
-                }
             } else {
                 setCategories([])
             }
         }).catch(console.error)
     }, [])
 
+    // Click outside to close customer dropdown
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
+                setCustomerMenuOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
+    // Multi-term fast search & intelligent sorting
     const filteredProducts = useMemo(() => {
         let filtered = products
 
@@ -116,31 +140,39 @@ export default function NewSale() {
             filtered = filtered.filter(p => p.category?.name === activeCategory)
         }
 
-        if (searchTerm) {
-            filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        if (searchTerm.trim()) {
+            const terms = searchTerm.toLowerCase().trim().split(/\s+/)
+            filtered = filtered.filter(p => {
+                const nameLower = p.name.toLowerCase()
+                const typeLower = (p.type || '').toLowerCase()
+                const catLower = (p.category?.name || '').toLowerCase()
+                const thicknessStr = p.thickness ? `${p.thickness}` : ''
+                return terms.every(term =>
+                    nameLower.includes(term) ||
+                    typeLower.includes(term) ||
+                    catLower.includes(term) ||
+                    thicknessStr.includes(term)
+                )
+            })
         }
 
         return filtered.sort((a, b) => {
             const getDimensionsMultiplier = (name: string) => {
-                const numbers = name.match(/\d+(\.\d+)?/g);
-                if (!numbers || numbers.length === 0) return 0;
-                return numbers.reduce((acc, val) => acc * parseFloat(val), 1);
-            };
-
-            const dimA = getDimensionsMultiplier(a.name);
-            const dimB = getDimensionsMultiplier(b.name);
-
-            if (dimA !== dimB) {
-                return dimB - dimA;
+                const numbers = name.match(/\d+(\.\d+)?/g)
+                if (!numbers || numbers.length === 0) return 0
+                return numbers.reduce((acc, val) => acc * parseFloat(val), 1)
             }
 
-            const thickA = a.thickness || 0;
-            const thickB = b.thickness || 0;
-            if (thickA !== thickB) {
-                return thickB - thickA;
-            }
+            const dimA = getDimensionsMultiplier(a.name)
+            const dimB = getDimensionsMultiplier(b.name)
 
-            return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' });
+            if (dimA !== dimB) return dimB - dimA
+
+            const thickA = a.thickness || 0
+            const thickB = b.thickness || 0
+            if (thickA !== thickB) return thickB - thickA
+
+            return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: 'base' })
         })
     }, [products, activeCategory, searchTerm])
 
@@ -172,13 +204,24 @@ export default function NewSale() {
     }
 
     const updateQuantity = (id: number, qty: number) => {
-        if (qty < 1) return
+        if (qty < 0) return
+        if (qty === 0) {
+            setCart(prev => prev.map(item => item.productId === id ? { ...item, quantity: 0 } : item))
+            return
+        }
         setCart(prev => prev.map(item => item.productId === id ? { ...item, quantity: qty } : item))
     }
 
     const updatePrice = (id: number, price: number) => {
         if (price < 0) return
         setCart(prev => prev.map(item => item.productId === id ? { ...item, price: price } : item))
+    }
+
+    const clearCart = () => {
+        if (cart.length === 0) return
+        if (confirm('هل أنت متأكد من تفريغ سلة المشتريات بالكامل؟')) {
+            setCart([])
+        }
     }
 
     const POPULAR_BANKS = [
@@ -198,22 +241,13 @@ export default function NewSale() {
 
     const [discount, setDiscount] = useState<string>('')
     const [paidAmountInput, setPaidAmountInput] = useState<string>('')
-    const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK' | 'CHEQUE' | 'MULTIPLE'>('CASH')
+    const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK' | 'CREDIT' | 'CHEQUE' | 'MULTIPLE'>('CASH')
     const [splitCash, setSplitCash] = useState<string>('')
     const [splitBank, setSplitBank] = useState<string>('')
     const [splitCheque, setSplitCheque] = useState<string>('')
 
     const [currency, setCurrency] = useState<'SDG' | 'USD' | 'AED'>('SDG')
     const [currencyRate, setCurrencyRate] = useState<string>('1')
-    interface BankTransferRow {
-        id: number
-        bankName: string
-        customBankName: string
-        bankRef: string
-        amount: string
-        sender?: string
-        recipient?: string
-    }
 
     const [bankTransfers, setBankTransfers] = useState<BankTransferRow[]>([
         { id: 1, bankName: 'بنك الخرطوم (بنكك)', customBankName: '', bankRef: '', amount: '', sender: '', recipient: '' }
@@ -236,71 +270,104 @@ export default function NewSale() {
     }
 
     const totalBankTransfers = bankTransfers.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
-    const [bankName, setBankName] = useState<string>('بنك الخرطوم (بنكك)')
-    const [customBankName, setCustomBankName] = useState<string>('')
-    const [bankRef, setBankRef] = useState<string>('')
     const [chequeNumber, setChequeNumber] = useState<string>('')
     const [chequeBank, setChequeBank] = useState<string>('')
     const [chequeSender, setChequeSender] = useState<string>('')
     const [chequeRecipient, setChequeRecipient] = useState<string>('')
 
-    const totalWeight = cart.reduce((sum, item) => sum + (item.weight * item.quantity), 0)
+    const totalWeight = cart.reduce((sum, item) => sum + (item.weight * (item.quantity || 0)), 0)
     const totalWeightKg = totalWeight
     const totalWeightTons = totalWeightKg > 0 ? (totalWeightKg / 1000) : 0
-    const selectedCustomer = useMemo(() => {
-        if (!selectedCustomerId) return null;
-        return registeredCustomers.find(c => c.id === parseInt(selectedCustomerId)) || null;
-    }, [registeredCustomers, selectedCustomerId]);
 
-    // Round subtotal explicitly at the item level summation to prevent carrying floating points
-    const subtotal = cart.reduce((sum, item) => sum + Math.round(item.price * item.quantity), 0)
-    const finalTotal = Math.round(subtotal - (parseFloat(discount) || 0))
+    const selectedCustomer = useMemo(() => {
+        if (!selectedCustomerId) return null
+        return registeredCustomers.find(c => c.id === parseInt(selectedCustomerId)) || null
+    }, [registeredCustomers, selectedCustomerId])
+
+    // Filtered registered customers for autocomplete combobox
+    const filteredCustomers = useMemo(() => {
+        if (!customer.trim()) return registeredCustomers.slice(0, 8)
+        const q = customer.toLowerCase().trim()
+        return registeredCustomers.filter(c =>
+            c.name.toLowerCase().includes(q) ||
+            (c.phone && c.phone.includes(q)) ||
+            (c.company && c.company.toLowerCase().includes(q))
+        ).slice(0, 10)
+    }, [registeredCustomers, customer])
+
+    // Round subtotal explicitly
+    const subtotal = cart.reduce((sum, item) => sum + Math.round(item.price * (item.quantity || 0)), 0)
+    const finalTotal = Math.max(0, Math.round(subtotal - (parseFloat(discount) || 0)))
+
+    // Calculated remaining amount
+    const remainingAmount = useMemo(() => {
+        if (paymentMethod === 'CASH') return 0
+        if (paymentMethod === 'BANK') {
+            const sumTransfers = bankTransfers.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
+            if (sumTransfers > 0) return Math.max(0, finalTotal - sumTransfers)
+            return 0
+        }
+        if (paymentMethod === 'CHEQUE') return 0
+        if (paymentMethod === 'CREDIT') {
+            const paid = parseFloat(paidAmountInput) || 0
+            return Math.max(0, finalTotal - paid)
+        }
+        if (paymentMethod === 'MULTIPLE') {
+            const sum = (parseFloat(splitCash) || 0) + (parseFloat(splitBank) || 0) + (parseFloat(splitCheque) || 0)
+            return Math.max(0, finalTotal - sum)
+        }
+        return 0
+    }, [paymentMethod, finalTotal, paidAmountInput, splitCash, splitBank, splitCheque, bankTransfers])
 
     const handleSubmit = async (status: 'PAID' | 'QUOTATION' | 'CREDIT' = 'PAID') => {
-        if (cart.length === 0) return alert('الرجاء إضافة منتجات للفاتورة')
+        if (cart.length === 0) return alert('الرجاء إضافة منتجات للسلة أولاً')
         setLoading(true)
 
-        let finalStatus = status;
-        let finalPaid = finalTotal;
+        let finalStatus = status
+        let finalPaid = finalTotal
 
-        if (status === 'CREDIT') {
-            finalPaid = parseFloat(paidAmountInput) || 0;
-            if (finalPaid >= finalTotal) {
-                finalStatus = 'PAID';
+        if (status === 'CREDIT' || paymentMethod === 'CREDIT') {
+            finalPaid = parseFloat(paidAmountInput) || 0
+            if (finalPaid >= finalTotal && finalTotal > 0) {
+                finalStatus = 'PAID'
+            } else {
+                finalStatus = 'CREDIT'
             }
         } else if (status === 'QUOTATION') {
-            finalPaid = 0;
+            finalPaid = 0
+            finalStatus = 'QUOTATION'
         } else if (paymentMethod === 'MULTIPLE') {
-            const sumSplit = (parseFloat(splitCash) || 0) + (parseFloat(splitBank) || 0) + (parseFloat(splitCheque) || 0);
-            finalPaid = sumSplit;
+            const sumSplit = (parseFloat(splitCash) || 0) + (parseFloat(splitBank) || 0) + (parseFloat(splitCheque) || 0)
+            finalPaid = sumSplit
             if (finalPaid < finalTotal) {
-                finalStatus = 'CREDIT';
+                finalStatus = 'CREDIT'
             }
         }
 
-        let calcCash = 0;
-        let calcBank = 0;
-        let calcCheque = 0;
+        let calcCash = 0
+        let calcBank = 0
+        let calcCheque = 0
 
-        if (paymentMethod === 'CASH') calcCash = finalPaid;
+        if (paymentMethod === 'CASH') calcCash = finalPaid
         else if (paymentMethod === 'BANK') {
-            const sumTransfers = bankTransfers.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+            const sumTransfers = bankTransfers.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
             if (sumTransfers > 0) {
-                calcBank = sumTransfers;
+                calcBank = sumTransfers
                 if (calcBank < finalTotal && status !== 'QUOTATION') {
-                    finalPaid = calcBank;
-                    finalStatus = 'CREDIT';
+                    finalPaid = calcBank
+                    finalStatus = 'CREDIT'
                 }
             } else {
-                calcBank = finalPaid;
+                calcBank = finalPaid
             }
         }
-        else if (paymentMethod === 'CHEQUE') calcCheque = finalPaid;
+        else if (paymentMethod === 'CHEQUE') calcCheque = finalPaid
+        else if (paymentMethod === 'CREDIT') calcCash = finalPaid
         else if (paymentMethod === 'MULTIPLE') {
-            calcCash = parseFloat(splitCash) || 0;
-            const sumTransfers = bankTransfers.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-            calcBank = (parseFloat(splitBank) || 0) > 0 ? (parseFloat(splitBank) || 0) : sumTransfers;
-            calcCheque = parseFloat(splitCheque) || 0;
+            calcCash = parseFloat(splitCash) || 0
+            const sumTransfers = bankTransfers.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
+            calcBank = (parseFloat(splitBank) || 0) > 0 ? (parseFloat(splitBank) || 0) : sumTransfers
+            calcCheque = parseFloat(splitCheque) || 0
         }
 
         const activeTransfers = bankTransfers.map(t => ({
@@ -309,21 +376,21 @@ export default function NewSale() {
             amount: (parseFloat(t.amount) || 0) > 0 ? parseFloat(t.amount) : (bankTransfers.length === 1 ? calcBank : 0),
             sender: t.sender?.trim() || '',
             recipient: t.recipient?.trim() || ''
-        })).filter(t => t.ref || t.amount > 0 || bankTransfers.length === 1);
+        })).filter(t => t.ref || t.amount > 0 || bankTransfers.length === 1)
 
-        let finalBankName = null;
-        let finalBankRef = null;
-        let finalBankSender = activeTransfers.find(t => t.sender)?.sender || null;
-        let finalBankRecipient = activeTransfers.find(t => t.recipient)?.recipient || null;
+        let finalBankName = null
+        let finalBankRef = null
+        let finalBankSender = activeTransfers.find(t => t.sender)?.sender || null
+        let finalBankRecipient = activeTransfers.find(t => t.recipient)?.recipient || null
 
         if (paymentMethod === 'BANK' || (paymentMethod === 'MULTIPLE' && calcBank > 0)) {
             if (activeTransfers.length === 1) {
-                finalBankName = activeTransfers[0].bank;
-                finalBankRef = activeTransfers[0].ref || null;
+                finalBankName = activeTransfers[0].bank
+                finalBankRef = activeTransfers[0].ref || null
             } else if (activeTransfers.length > 1) {
-                const names = Array.from(new Set(activeTransfers.map(t => t.bank.replace(/\s*\(.*?\)/g, ''))));
-                finalBankName = names.join(' + ') + ` (${activeTransfers.length} إشعارات)`;
-                finalBankRef = activeTransfers.map(t => `${t.bank}: ${t.ref || 'بدون إشعار'} [${t.amount.toLocaleString()} ج.س]`).join(' | ');
+                const names = Array.from(new Set(activeTransfers.map(t => t.bank.replace(/\s*\(.*?\)/g, ''))))
+                finalBankName = names.join(' + ') + ` (${activeTransfers.length} إشعارات)`
+                finalBankRef = activeTransfers.map(t => `${t.bank}: ${t.ref || 'بدون إشعار'} [${t.amount.toLocaleString()} ج.س]`).join(' | ')
             }
         }
 
@@ -382,181 +449,318 @@ export default function NewSale() {
 
     return (
         <>
-            <main className="h-screen bg-slate-50 flex flex-col print:hidden overflow-hidden">
+            <main className="h-screen bg-slate-100 flex flex-col print:hidden overflow-hidden select-none">
                 <Navbar />
-                
-                <div className="flex-1 flex flex-col p-3 overflow-hidden max-w-7xl mx-auto w-full">
-                    {/* Top Control Bar */}
-                    <div className="bg-white rounded-xl border shadow-sm p-3 mb-3 flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
+
+                <div className="flex-1 flex flex-col p-2 sm:p-3 overflow-hidden max-w-[1720px] mx-auto w-full gap-2 min-h-0">
+                    {/* Top Bar: Controls, Customer Selector & Date */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-xs px-3 py-2 flex flex-wrap justify-between items-center gap-2 shrink-0">
                         <div className="flex items-center gap-2">
-                            <Link href="/sales" className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="رجوع">
+                            <Link href="/sales" className="text-slate-600 hover:text-blue-600 hover:bg-slate-100 p-1.5 rounded-lg transition-colors" title="رجوع للمبيعات">
                                 <ArrowLeft size={20} />
                             </Link>
-                            <h1 className="text-xl font-bold text-slate-800">نقطة البيع (POS)</h1>
+                            <h1 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-1.5">
+                                <span>نقطة البيع السريعة (POS)</span>
+                            </h1>
                         </div>
-                        
-                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                            {registeredCustomers.length > 0 && (
-                                <select
-                                    value={selectedCustomerId}
-                                    onChange={(e) => {
-                                        const custId = e.target.value;
-                                        setSelectedCustomerId(custId);
-                                        if (custId) {
-                                            const found = registeredCustomers.find(c => c.id === parseInt(custId));
-                                            if (found) setCustomer(found.name);
-                                        }
-                                    }}
-                                    className="h-10 bg-emerald-50 border border-emerald-300 rounded-lg px-2 text-xs font-bold text-emerald-900 outline-none focus:ring-2 focus:ring-emerald-500 max-w-[220px]"
-                                >
-                                    <option value="">👤 اختيار عميل مسجل...</option>
-                                    {registeredCustomers.map(c => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.name} {c.company ? `(${c.company})` : ''} {c.remainingBalance > 0 ? `[له مودع: ${c.remainingBalance.toLocaleString()}]` : c.remainingBalance < 0 ? `[عليه: ${Math.abs(c.remainingBalance).toLocaleString()}]` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
 
-                            <Input
-                                placeholder="اسم العميل (اختياري)"
-                                value={customer}
-                                onChange={(e) => {
-                                    setCustomer(e.target.value);
-                                    if (selectedCustomerId) {
-                                        const found = registeredCustomers.find(c => c.id === parseInt(selectedCustomerId));
-                                        if (found && found.name !== e.target.value) {
-                                            setSelectedCustomerId('');
-                                        }
-                                    }
-                                }}
-                                className="h-10 bg-gray-50 min-w-[170px]"
-                            />
-                            <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 h-10 min-w-[170px]">
-                                <Calendar size={16} className="text-gray-500" />
-                                <span className="text-sm font-bold text-gray-500">التاريخ:</span>
+                        {/* Customer Search & Date */}
+                        <div className="flex flex-wrap items-center gap-2 flex-1 justify-end">
+                            {/* Autocomplete Customer Input */}
+                            <div className="relative min-w-[240px] max-w-sm flex-1" ref={customerDropdownRef}>
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="text"
+                                        placeholder="🔍 اسم العميل أو رقمه أو مسجل..."
+                                        value={customer}
+                                        onFocus={() => setCustomerMenuOpen(true)}
+                                        onChange={(e) => {
+                                            setCustomer(e.target.value)
+                                            setCustomerMenuOpen(true)
+                                            if (selectedCustomerId) {
+                                                const found = registeredCustomers.find(c => c.id === parseInt(selectedCustomerId))
+                                                if (found && found.name !== e.target.value) {
+                                                    setSelectedCustomerId('')
+                                                }
+                                            }
+                                        }}
+                                        className={`w-full h-9 text-xs font-bold pl-8 pr-3 rounded-lg border transition-all outline-none ${
+                                            selectedCustomerId
+                                                ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-black'
+                                                : 'bg-slate-50 border-slate-300 text-slate-800 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-400'
+                                        }`}
+                                    />
+                                    {customer ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setCustomer('')
+                                                setSelectedCustomerId('')
+                                            }}
+                                            className="absolute left-2 text-slate-400 hover:text-red-500 p-0.5"
+                                            title="مسح"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    ) : (
+                                        <User size={14} className="absolute left-2.5 text-slate-400 pointer-events-none" />
+                                    )}
+                                </div>
+
+                                {/* Customer Autocomplete Dropdown */}
+                                {customerMenuOpen && (
+                                    <div className="absolute top-full mt-1 right-0 left-0 bg-white border border-slate-300 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto divide-y divide-slate-100">
+                                        <div className="p-1.5 bg-slate-50 flex items-center justify-between text-[11px] text-slate-500 font-bold border-b">
+                                            <span>العملاء المسجلون ({registeredCustomers.length})</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setCustomer('عميل نقدي')
+                                                    setSelectedCustomerId('')
+                                                    setCustomerMenuOpen(false)
+                                                }}
+                                                className="text-blue-600 hover:underline text-[10px]"
+                                            >
+                                                عميل نقدي فوري
+                                            </button>
+                                        </div>
+                                        {filteredCustomers.length === 0 ? (
+                                            <div className="p-3 text-center text-xs text-slate-400">
+                                                لا يوجد عميل بهذا الاسم — سيتم حفظ الاسم كعميل يدوي
+                                            </div>
+                                        ) : (
+                                            filteredCustomers.map(c => (
+                                                <button
+                                                    key={c.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setCustomer(c.name)
+                                                        setSelectedCustomerId(c.id.toString())
+                                                        setCustomerMenuOpen(false)
+                                                    }}
+                                                    className={`w-full text-right p-2 text-xs hover:bg-blue-50 transition-colors flex items-center justify-between ${
+                                                        selectedCustomerId === c.id.toString() ? 'bg-emerald-50 font-black text-emerald-900' : 'text-slate-800'
+                                                    }`}
+                                                >
+                                                    <div>
+                                                        <div className="font-bold flex items-center gap-1.5">
+                                                            <span>{c.name}</span>
+                                                            {c.company && <span className="text-[10px] text-slate-500">({c.company})</span>}
+                                                        </div>
+                                                        {c.phone && <div className="text-[10px] text-slate-400 font-mono">{c.phone}</div>}
+                                                    </div>
+                                                    {c.remainingBalance > 0 ? (
+                                                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                                                            له: {c.remainingBalance.toLocaleString()} ج.س
+                                                        </span>
+                                                    ) : c.remainingBalance < 0 ? (
+                                                        <span className="text-[10px] font-bold text-red-700 bg-red-100 px-1.5 py-0.5 rounded">
+                                                            عليه: {Math.abs(c.remainingBalance).toLocaleString()} ج.س
+                                                        </span>
+                                                    ) : null}
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Date Picker */}
+                            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-2 h-9">
+                                <Calendar size={14} className="text-slate-500 shrink-0" />
                                 <input
                                     type="date"
                                     value={createdAt}
                                     onChange={(e) => setCreatedAt(e.target.value)}
-                                    className="bg-transparent text-sm font-bold text-slate-800 outline-none w-full"
+                                    className="bg-transparent text-xs font-bold text-slate-800 outline-none w-28 font-mono"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
-                        {/* LEFT SIDE: Product Selection */}
-                        <div className="lg:col-span-7 flex flex-col gap-3 min-h-0 h-full">
-                            
-                            {/* Categories Grid (Wraps inside to prevent horizontal scrolling) */}
-                            <Card className="p-2 shrink-0 border-blue-100">
-                                <div className="flex flex-wrap gap-1.5">
+                    {/* Main Layout Grid */}
+                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0 overflow-hidden">
+                        {/* LEFT COLUMN: Products Catalog & Search (lg:col-span-7) */}
+                        <div className="lg:col-span-7 flex flex-col gap-2 min-h-0 h-full">
+                            {/* Search Bar & Fast Filters */}
+                            <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-col gap-2 shrink-0">
+                                <div className="flex items-center gap-2">
+                                    <div className="relative flex-1">
+                                        <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="ابحث بالاسم، المقاس (مثال: 40*40 أو 80*40)، السماكة (1.5)، أو التصنيف..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full h-9 pr-9 pl-8 text-xs font-bold bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-blue-500 rounded-lg outline-none transition-all"
+                                        />
+                                        {searchTerm && (
+                                            <button
+                                                onClick={() => setSearchTerm('')}
+                                                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Profit Margins Toggle */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowMargins(!showMargins)}
+                                        className={`h-9 px-2.5 rounded-lg text-xs font-bold border flex items-center gap-1.5 transition-all shrink-0 ${
+                                            showMargins
+                                                ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm'
+                                                : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'
+                                        }`}
+                                        title={showMargins ? 'إخفاء تفاصيل وهوامش الربح لجعل الجدول مضغوطاً' : 'عرض هوامش وأرباح القطع بناءً على التكلفة وسعر الصرف'}
+                                    >
+                                        {showMargins ? <EyeOff size={14} /> : <Eye size={14} />}
+                                        <span className="hidden sm:inline">الهوامش</span>
+                                    </button>
+                                </div>
+
+                                {/* Categories Pills */}
+                                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveCategory('')}
+                                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all shrink-0 border ${
+                                            activeCategory === ''
+                                                ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
+                                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                        }`}
+                                    >
+                                        الكل ({products.length})
+                                    </button>
                                     {categories.map(cat => (
                                         <button
                                             key={cat.id}
+                                            type="button"
                                             onClick={() => setActiveCategory(cat.name)}
-                                            className={`px-3 py-1.5 rounded-md text-sm font-bold transition-all border ${activeCategory === cat.name
-                                                ? 'bg-blue-600 text-white border-blue-700 shadow-md transform scale-[1.02]'
-                                                : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                                                }`}
+                                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all shrink-0 border ${
+                                                activeCategory === cat.name
+                                                    ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
+                                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                            }`}
                                         >
                                             {cat.name}
                                         </button>
                                     ))}
                                 </div>
-                            </Card>
+                            </div>
 
-                            {/* Search Box Removed per User Request */}
-
-                            {/* Products Grid */}
-                            <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col min-h-0">
+                            {/* Products Table (Scrollable Container) */}
+                            <div className="flex-1 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs flex flex-col min-h-0">
                                 <div className="flex-1 overflow-y-auto w-full">
                                     {filteredProducts.length === 0 ? (
-                                        <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
-                                            <Search size={48} className="mb-2" />
-                                            <p>لا توجد منتجات في هذا القسم</p>
+                                        <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8">
+                                            <Search size={40} className="mb-2 text-slate-300" />
+                                            <p className="text-sm font-bold">لا توجد منتجات مطابقة للبحث</p>
                                         </div>
                                     ) : (
-                                        <table className="w-full text-right text-sm">
-                                            <thead className="bg-slate-100 border-b text-slate-600 font-bold sticky top-0 z-10 shadow-sm">
+                                        <table className="w-full text-right text-xs">
+                                            <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 z-10 border-b border-slate-200 shadow-2xs">
                                                 <tr>
-                                                    <th className="p-2">المنتج</th>
-                                                    <th className="p-2">النوع</th>
-                                                    <th className="p-2">السماكة</th>
-                                                    <th className="p-2 text-center w-16">المتوفر</th>
-                                                    <th className="p-2">السعر</th>
-                                                    <th className="p-2 w-14"></th>
+                                                    <th className="p-2">المنتج والمواصفات</th>
+                                                    <th className="p-2 w-20 text-center">السماكة</th>
+                                                    <th className="p-2 w-16 text-center">المتوفر</th>
+                                                    <th className="p-2 w-28 text-left">السعر</th>
+                                                    <th className="p-2 w-12 text-center">إضافة</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-gray-100">
+                                            <tbody className="divide-y divide-slate-100">
                                                 {filteredProducts.map(product => {
-                                                    const itemWeight = product.weightPerUnit || 0;
-                                                    const itemPPU = product.purchasePriceUSD || 0;
-                                                    const itemTransport = product.transportCostUSD || 15;
-                                                    const sellingPricePerTonUSD = product.category?.sellingPricePerTonUSD || 0;
+                                                    const itemWeight = product.weightPerUnit || 0
+                                                    const itemPPU = product.purchasePriceUSD || 0
+                                                    const itemTransport = product.transportCostUSD || 15
+                                                    const sellingPricePerTonUSD = product.category?.sellingPricePerTonUSD || 0
 
-                                                    const unitCostSDG = (itemPPU + ((itemWeight / 1000) * itemTransport)) * exchangeRate;
-                                                    const netProfit = product.price - unitCostSDG;
-                                                    const finalProfit = product.price - (unitCostSDG * 1.15);
-                                                    const priceByWeight = (itemWeight / 1000) * sellingPricePerTonUSD * exchangeRate;
+                                                    const unitCostSDG = (itemPPU + ((itemWeight / 1000) * itemTransport)) * exchangeRate
+                                                    const netProfit = product.price - unitCostSDG
+                                                    const finalProfit = product.price - (unitCostSDG * 1.15)
+                                                    const priceByWeight = (itemWeight / 1000) * sellingPricePerTonUSD * exchangeRate
+                                                    const inCartItem = cart.find(c => c.productId === product.id)
 
                                                     return (
-                                                        <tr key={product.id} className="hover:bg-blue-50 transition-colors">
+                                                        <tr
+                                                            key={product.id}
+                                                            onClick={() => addToCart(product)}
+                                                            className={`cursor-pointer transition-colors ${
+                                                                inCartItem ? 'bg-blue-50/50 hover:bg-blue-100/60' : 'hover:bg-slate-50'
+                                                            }`}
+                                                        >
                                                             <td className="p-2">
-                                                                <div className="font-bold text-slate-800">{product.name}</div>
-                                                                {exchangeRate > 0 && (itemPPU > 0 || (sellingPricePerTonUSD > 0 && itemWeight > 0)) && (
-                                                                    <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px]">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="font-black text-slate-900">{product.name}</span>
+                                                                    {product.type && (
+                                                                        <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                                                            {product.type}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Optional Profit Margins & Cost Breakdown */}
+                                                                {showMargins && exchangeRate > 0 && (itemPPU > 0 || (sellingPricePerTonUSD > 0 && itemWeight > 0)) && (
+                                                                    <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px]" onClick={e => e.stopPropagation()}>
                                                                         {itemPPU > 0 && (
                                                                             <>
-                                                                                <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200 whitespace-nowrap" title="صافي الربح للقطعة الحالية">
+                                                                                <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200 whitespace-nowrap">
                                                                                     صافي الربح: {Math.round(netProfit).toLocaleString()} ج.س
                                                                                 </span>
-                                                                                <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold border border-blue-200 whitespace-nowrap" title="الربح بعد خصم 15% مصاريف وهامش مستهدف">
-                                                                                    الربح النهائي: {Math.round(finalProfit).toLocaleString()} ج.س
+                                                                                <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold border border-blue-200 whitespace-nowrap">
+                                                                                    النهائي (-15%): {Math.round(finalProfit).toLocaleString()} ج.س
                                                                                 </span>
                                                                             </>
                                                                         )}
                                                                         {sellingPricePerTonUSD > 0 && itemWeight > 0 && (
-                                                                            <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold border border-purple-200 whitespace-nowrap" title="السعر المقترح بناءً على وزن القطعة وسعر الطن بالدولار لهذا التصنيف">
-                                                                                السعر بالوزن: {Math.round(priceByWeight).toLocaleString()} ج.س
+                                                                            <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold border border-purple-200 whitespace-nowrap">
+                                                                                بالوزن: {Math.round(priceByWeight).toLocaleString()} ج.س
                                                                             </span>
                                                                         )}
                                                                     </div>
                                                                 )}
                                                             </td>
-                                                            <td className="p-2 text-gray-500 text-xs font-medium max-w-[80px] break-words">{product.type || '-'}</td>
-                                                            <td className="p-2">
+
+                                                            <td className="p-2 text-center">
                                                                 {product.thickness ? (
-                                                                    <span className="text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 font-bold whitespace-nowrap text-xs">
+                                                                    <span className="text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 font-bold font-mono">
                                                                         {product.thickness} مم
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="text-gray-400">-</span>
+                                                                    <span className="text-slate-300">-</span>
                                                                 )}
                                                             </td>
+
                                                             <td className="p-2 text-center">
-                                                                <span className={`px-1.5 py-0.5 rounded text-xs font-bold inline-block w-full ${product.quantity > 0 ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                                                                <span className={`px-1.5 py-0.5 rounded text-[11px] font-black font-mono inline-block ${
+                                                                    product.quantity > 0
+                                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                        : 'bg-red-50 text-red-600 border border-red-200'
+                                                                }`}>
                                                                     {product.quantity}
                                                                 </span>
                                                             </td>
-                                                            <td className="p-2">
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-bold text-slate-800 leading-tight">{product.price.toLocaleString()}</span>
-                                                                    {exchangeRate > 0 && product.price > 0 && (
-                                                                        <span className="text-[10px] font-black text-emerald-600 tracking-wider">
-                                                                            ${(product.price / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                        </span>
-                                                                    )}
+
+                                                            <td className="p-2 text-left">
+                                                                <div className="font-black font-mono text-slate-900 leading-tight">
+                                                                    {product.price.toLocaleString()} <span className="text-[10px] text-slate-500 font-sans">ج.س</span>
                                                                 </div>
+                                                                {exchangeRate > 0 && product.price > 0 && (
+                                                                    <div className="text-[10px] font-bold text-emerald-600 font-mono">
+                                                                        ${(product.price / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                    </div>
+                                                                )}
                                                             </td>
-                                                            <td className="p-1 px-2 text-center">
+
+                                                            <td className="p-1 text-center" onClick={e => e.stopPropagation()}>
                                                                 <button
+                                                                    type="button"
                                                                     onClick={() => addToCart(product)}
-                                                                    className="bg-slate-100 text-blue-600 hover:bg-blue-600 hover:text-white p-1.5 rounded-lg transition-colors w-full flex justify-center items-center shadow-sm border border-gray-200"
+                                                                    className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 transition-all flex items-center justify-center mx-auto shadow-2xs active:scale-95"
                                                                     title="إضافة للسلة"
                                                                 >
-                                                                    <Plus size={18} />
+                                                                    <Plus size={16} />
                                                                 </button>
                                                             </td>
                                                         </tr>
@@ -569,640 +773,546 @@ export default function NewSale() {
                             </div>
                         </div>
 
-                        {/* RIGHT SIDE: Cart */}
-                        <div className="lg:col-span-5 flex flex-col h-full bg-white border-2 border-blue-200 rounded-xl shadow-lg overflow-hidden min-h-0">
-                            
-                            {/* Cart Header */}
-                            <div className="bg-blue-50 p-3 border-b border-blue-100 shrink-0 space-y-2">
-                                <h2 className="font-bold text-blue-900 flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        سلة المشتريات
+                        {/* RIGHT COLUMN: Cart & Checkout (lg:col-span-5) */}
+                        <div className="lg:col-span-5 flex flex-col h-full bg-white border-2 border-blue-200 rounded-xl shadow-md overflow-hidden min-h-0">
+                            {/* 1. Cart Header (Fixed Top) */}
+                            <div className="bg-blue-50/90 px-3 py-2 border-b border-blue-100 shrink-0 space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5">
+                                        <ShoppingCart size={18} className="text-blue-700" />
+                                        <h2 className="font-black text-sm text-blue-950">سلة المشتريات</h2>
+                                        <span className="bg-blue-600 text-white px-2 py-0.2 rounded-full text-xs font-mono font-bold">
+                                            {cart.length}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
+
+                                    <div className="flex items-center gap-1.5">
                                         {totalWeightKg > 0 && (
-                                            <span className="bg-slate-800 text-white px-2.5 py-0.5 rounded-full text-xs font-mono font-bold flex items-center gap-1 shadow-sm" title="إجمالي وزن أصناف السلة">
+                                            <span className="bg-slate-800 text-white px-2 py-0.5 rounded-md text-[11px] font-mono font-bold flex items-center gap-1 shadow-2xs">
                                                 <span>⚖️ {totalWeightTons >= 1 ? `${totalWeightTons.toFixed(2)} طن` : `${totalWeightKg.toLocaleString()} كجم`}</span>
-                                                <span className="text-[10px] text-slate-300">({totalWeightKg.toLocaleString()} كجم)</span>
                                             </span>
                                         )}
-                                        <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs font-mono">{cart.length} أصناف</span>
+                                        {cart.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={clearCart}
+                                                className="text-red-500 hover:text-red-700 text-xs font-bold hover:bg-red-50 p-1 rounded transition-colors"
+                                                title="تفريغ السلة"
+                                            >
+                                                <Trash2 size={15} />
+                                            </button>
+                                        )}
                                     </div>
-                                </h2>
+                                </div>
 
-                                {/* Dispatch / Delivery Branch Selector */}
+                                {/* Delivery Branch Selector */}
                                 {branches.length > 0 && (
-                                    <div className="bg-white p-2 rounded-xl border border-blue-200/80 shadow-sm flex flex-col gap-1">
-                                        <label className="text-[11px] font-black text-slate-700 flex items-center gap-1">
-                                            <span>📍 فرع وموقع تسليم/صرف البضاعة للزبون:</span>
-                                        </label>
+                                    <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-blue-200/80 shadow-2xs text-xs">
+                                        <span className="text-slate-600 font-bold shrink-0 text-[11px]">📍 موقع التسليم:</span>
                                         <select
                                             value={dispatchBranchId}
                                             onChange={(e) => setDispatchBranchId(e.target.value)}
-                                            className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg p-1.5 focus:ring-2 focus:ring-blue-500 outline-none text-slate-800"
+                                            className="w-full text-xs font-black bg-transparent outline-none text-blue-950 cursor-pointer"
                                         >
                                             {branches.map(b => (
                                                 <option key={b.id} value={b.id}>
-                                                    {b.id === activeBranchId ? `📍 ${b.name} (الفرع الحالي)` : `🏢 تسليم من مخازن ${b.name}`}
+                                                    {b.id === activeBranchId ? `${b.name} (الفرع الحالي)` : `مخازن ${b.name}`}
                                                 </option>
                                             ))}
                                         </select>
                                     </div>
                                 )}
 
-                                {/* Customer Account Notice (Deposit or Debt) */}
+                                {/* Customer Deposit / Debt Alert */}
                                 {selectedCustomer && (
-                                    <div className="pt-1">
+                                    <div>
                                         {selectedCustomer.remainingBalance > 0 ? (
-                                            <div className="bg-emerald-50 border border-emerald-300 p-2 rounded-xl flex flex-wrap items-center justify-between gap-2 shadow-xs">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-base">💰</span>
-                                                    <div>
-                                                        <div className="text-xs font-black text-emerald-950">
-                                                            رصيد العميل المودع: <span className="font-mono text-emerald-700 font-black">{selectedCustomer.remainingBalance.toLocaleString()} ج.س</span>
-                                                        </div>
-                                                        <div className="text-[10px] text-emerald-700 font-medium">
-                                                            يمكنك خصم قيمة الفاتورة من رصيده المودع سابقاً
-                                                        </div>
-                                                    </div>
+                                            <div className="bg-emerald-50 border border-emerald-300 px-2 py-1 rounded-lg flex items-center justify-between text-xs text-emerald-950">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span>💰</span>
+                                                    <span className="font-bold">رصيد مودع: <strong className="font-mono text-emerald-700">{selectedCustomer.remainingBalance.toLocaleString()}</strong> ج.س</span>
                                                 </div>
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        const deduct = Math.min(finalTotal, selectedCustomer.remainingBalance);
-                                                        setPaidAmountInput(deduct.toString());
+                                                        const deduct = Math.min(finalTotal, selectedCustomer.remainingBalance)
+                                                        setPaidAmountInput(deduct.toString())
                                                     }}
-                                                    className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black shadow transition-all whitespace-nowrap"
+                                                    className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold shadow-2xs"
                                                 >
-                                                    خصم من الرصيد ({Math.min(finalTotal, selectedCustomer.remainingBalance).toLocaleString()} ج.س)
+                                                    خصم من الرصيد
                                                 </button>
                                             </div>
                                         ) : selectedCustomer.remainingBalance < 0 ? (
-                                            <div className="bg-amber-50 border border-amber-300 p-2 rounded-xl flex items-center gap-2 shadow-xs text-amber-950">
-                                                <span className="text-base">⚠️</span>
-                                                <div>
-                                                    <div className="text-xs font-black text-amber-900">
-                                                        تنبيه مديونية: العميل مدين بمبلغ سابق: <span className="font-mono text-red-600 font-black">{Math.abs(selectedCustomer.remainingBalance).toLocaleString()} ج.س</span>
-                                                    </div>
-                                                    <div className="text-[10px] text-amber-700">
-                                                        يرجى تحصيل المتبقي السابق أو أخذ موافقة الإدارة قبل اعتماد بيع آجل إضافي.
-                                                    </div>
-                                                </div>
+                                            <div className="bg-amber-50 border border-amber-300 px-2 py-1 rounded-lg flex items-center gap-1.5 text-xs text-amber-950">
+                                                <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+                                                <span className="font-bold">تنبيه مديونية: العميل مدين بمبلغ: <strong className="font-mono text-red-600">{Math.abs(selectedCustomer.remainingBalance).toLocaleString()}</strong> ج.س</span>
                                             </div>
                                         ) : null}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Cart Items & Checkout Container (Fully Scrollable) */}
-                            <div className="flex-1 overflow-y-auto bg-gray-50/50 flex flex-col">
-                                
-                                {/* Items List */}
-                                <div className="p-2 flex-1">
-                                    {cart.length === 0 ? (
-                                        <div className="h-full flex items-center justify-center text-gray-400 text-sm min-h-[150px]">
-                                            قم بإضافة منتجات للسلة
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {cart.map(item => {
-                                                const discountVal = parseFloat(discount) || 0;
-                                                const safeSubtotal = subtotal > 0 ? subtotal : 1;
-                                                const discountRatio = subtotal > 0 && discountVal > 0 ? discountVal / safeSubtotal : 0;
-                                                const itemQty = item.quantity || 1; 
-                                                const itemOriginalTotal = Math.round((item.price || 0) * (item.quantity === 0 ? 0 : item.quantity));
-                                                const itemDiscount = Math.round(itemOriginalTotal * discountRatio);
-                                                const itemDiscountedTotal = itemOriginalTotal - itemDiscount;
-                                                const itemWeight = item.weight || 0;
-                                                const itemPPU = item.purchasePriceUSD || 0;
-                                                const itemTransport = item.transportCostUSD || 15;
-                                                const origProd = products.find(p => p.id === item.productId);
-                                                const isOverStock = origProd && item.quantity > origProd.quantity;
-                                                const itemLineWeightKg = itemWeight * itemQty;
-                                                const itemLineWeightTons = itemLineWeightKg / 1000;
+                            {/* 2. ONLY Cart Items Scroll (flex-1 min-h-0) */}
+                            <div className="flex-1 overflow-y-auto min-h-0 p-2 bg-slate-50/60 divide-y divide-slate-100">
+                                {cart.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+                                        <ShoppingCart size={36} className="mb-2 text-slate-300" />
+                                        <p className="text-xs font-bold">سلة المشتريات فارغة</p>
+                                        <p className="text-[11px] text-slate-400 mt-1">اضغط على أي صنف من القائمة لإضافته مباشرة</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {cart.map(item => {
+                                            const discountVal = parseFloat(discount) || 0
+                                            const safeSubtotal = subtotal > 0 ? subtotal : 1
+                                            const discountRatio = subtotal > 0 && discountVal > 0 ? discountVal / safeSubtotal : 0
+                                            const itemQty = item.quantity || 0
+                                            const itemOriginalTotal = Math.round((item.price || 0) * itemQty)
+                                            const itemDiscount = Math.round(itemOriginalTotal * discountRatio)
+                                            const itemDiscountedTotal = itemOriginalTotal - itemDiscount
+                                            const origProd = products.find(p => p.id === item.productId)
+                                            const isOverStock = origProd && item.quantity > origProd.quantity
 
-                                                return (
-                                                    <div key={item.productId} className="bg-white p-3 rounded-lg border shadow-sm flex flex-col gap-2">
-                                                        <div className="flex justify-between items-start">
-                                                            <div className="flex flex-col">
-                                                                <div className="flex items-center gap-2 flex-wrap">
-                                                                    <span className="font-bold text-sm">{item.name}</span>
-                                                                    {itemLineWeightKg > 0 && (
-                                                                        <span className="text-[10px] text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded font-mono font-bold whitespace-nowrap" title="وزن البضاعة لهذا الصنف">
-                                                                            ⚖️ {itemLineWeightTons >= 1 ? `${itemLineWeightTons.toFixed(2)} طن ` : ''}({itemLineWeightKg.toLocaleString()} كجم)
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                {item.thickness && <span className="text-xs text-gray-500 mb-1">سمك: {item.thickness}مم</span>}
-                                                                {isOverStock && (
-                                                                    <div className="bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 my-1">
-                                                                        <span>⚠️ الكمية ({item.quantity}) تتجاوز المخزون المتوفر ({origProd.quantity} فقط)!</span>
-                                                                    </div>
-                                                                )}
-                                                                {discountRatio > 0 && (
-                                                                    <span className="text-xs text-green-600 font-bold mb-1">السعر بعد الخصم: {(itemDiscountedTotal / itemQty).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                                                                )}
-                                                                {exchangeRate > 0 && itemPPU > 0 && (
-                                                                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                                                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200 whitespace-nowrap">
-                                                                            صافي الربح: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * itemTransport)) * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
-                                                                        </span>
-                                                                        <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold border border-blue-200 whitespace-nowrap" title="الربح بعد خصم 15% مصاريف وهامش مستهدف">
-                                                                            الربح النهائي: {(((itemDiscountedTotal / itemQty) - ((itemPPU + ((itemWeight / 1000) * itemTransport)) * 1.15 * exchangeRate)) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
-                                                                        </span>
-                                                                        {(item.sellingPricePerTonUSD || 0) > 0 && (
-                                                                            <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold border border-purple-200 whitespace-nowrap" title="السعر المقترح بناءً على وزن القطعة وسعر الطن بالدولار لهذا التصنيف">
-                                                                                السعر بالوزن: {(((itemWeight / 1000) * (item.sellingPricePerTonUSD || 0) * exchangeRate) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ج.س
-                                                                            </span>
-                                                                        )}
-                                                                        <span className="text-[10px] text-emerald-600 font-bold whitespace-nowrap">
-                                                                            (${((((itemDiscountedTotal / itemQty) / exchangeRate) - (itemPPU + ((itemWeight / 1000) * itemTransport))) * (item.quantity === 0 ? 0 : item.quantity)).toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })})
-                                                                        </span>
-                                                                    </div>
+                                            return (
+                                                <div key={item.productId} className="bg-white border border-slate-200 rounded-xl p-2 shadow-2xs hover:border-blue-300 transition-all">
+                                                    <div className="flex justify-between items-start gap-1">
+                                                        <div>
+                                                            <div className="font-black text-xs text-slate-900 flex items-center gap-1">
+                                                                <span>{item.name}</span>
+                                                                {item.thickness && (
+                                                                    <span className="text-[10px] text-blue-600 bg-blue-50 px-1 rounded font-mono">
+                                                                        {item.thickness}مم
+                                                                    </span>
                                                                 )}
                                                             </div>
-                                                            <button onClick={() => removeFromCart(item.productId)} className="text-red-400 hover:text-red-600 p-1">
-                                                                <Trash2 size={16} />
-                                                            </button>
+                                                            {isOverStock && (
+                                                                <span className="text-[10px] text-red-600 font-bold block">
+                                                                    ⚠️ الكمية تتجاوز المتوفر بالمستودع ({origProd?.quantity})
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                        <div className="flex flex-wrap items-center justify-between gap-2 mt-1 border-t pt-2 border-gray-100">
-                                                            <div className="flex items-center border rounded shrink-0">
-                                                                <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} className="px-3 py-1.5 hover:bg-gray-100">
-                                                                    <Minus size={14} />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeFromCart(item.productId)}
+                                                            className="text-slate-300 hover:text-red-500 p-1 transition-colors"
+                                                            title="حذف من السلة"
+                                                        >
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Stepper, Quick +5/+10 & Price */}
+                                                    <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-1.5 border-t border-slate-100">
+                                                        <div className="flex items-center gap-1">
+                                                            {/* - qty + */}
+                                                            <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden bg-white">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => updateQuantity(item.productId, Math.max(1, item.quantity - 1))}
+                                                                    className="px-2.5 py-1 hover:bg-slate-100 text-slate-600 transition-colors"
+                                                                >
+                                                                    <Minus size={12} />
                                                                 </button>
                                                                 <input
                                                                     type="number"
                                                                     min="1"
                                                                     value={item.quantity === 0 ? '' : item.quantity}
                                                                     onChange={(e) => {
-                                                                        const val = e.target.value;
-                                                                        if (val === '') updateQuantity(item.productId, 0);
-                                                                        else updateQuantity(item.productId, parseInt(val) || 1);
+                                                                        const val = e.target.value
+                                                                        if (val === '') updateQuantity(item.productId, 0)
+                                                                        else updateQuantity(item.productId, parseInt(val) || 1)
                                                                     }}
                                                                     onBlur={(e) => {
-                                                                        if (!e.target.value || parseInt(e.target.value) < 1) updateQuantity(item.productId, 1);
+                                                                        if (!e.target.value || parseInt(e.target.value) < 1) updateQuantity(item.productId, 1)
                                                                     }}
-                                                                    className="w-14 text-center text-sm font-bold border-x py-1.5 outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                    className="w-12 text-center text-xs font-black border-x border-slate-200 py-1 outline-none font-mono"
                                                                 />
-                                                                <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} className="px-3 py-1.5 hover:bg-gray-100 text-blue-600">
-                                                                    <Plus size={14} />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                                                                    className="px-2.5 py-1 hover:bg-slate-100 text-blue-600 font-bold transition-colors"
+                                                                >
+                                                                    <Plus size={12} />
                                                                 </button>
                                                             </div>
-                                                            <div className="flex flex-col items-end gap-1 shrink-0">
-                                                                <div className="flex items-center gap-1 border border-slate-200 rounded px-2 py-1 bg-gray-50/80">
-                                                                    <span className="text-xs text-gray-500 font-bold">السعر:</span>
-                                                                    <input
-                                                                        type="number"
-                                                                        min="0"
-                                                                        value={item.price}
-                                                                        onChange={(e) => updatePrice(item.productId, parseFloat(e.target.value) || 0)}
-                                                                        className="w-20 text-left text-sm font-bold bg-transparent outline-none text-blue-700 font-mono"
-                                                                    />
-                                                                </div>
-                                                                <div className="flex flex-col items-end">
-                                                                    {discountRatio > 0 && (
-                                                                        <span className="text-[10px] text-gray-400 line-through">{itemOriginalTotal.toLocaleString()}</span>
-                                                                    )}
-                                                                    <span className="font-bold text-blue-600 text-sm">
-                                                                        {itemDiscountedTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+
+                                                            {/* Quick +5 & +10 */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => updateQuantity(item.productId, item.quantity + 5)}
+                                                                className="px-1.5 py-1 text-[11px] font-bold bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-700 rounded border border-slate-200 transition-colors"
+                                                                title="زيادة 5 قطع"
+                                                            >
+                                                                +5
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => updateQuantity(item.productId, item.quantity + 10)}
+                                                                className="px-1.5 py-1 text-[11px] font-bold bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-700 rounded border border-slate-200 transition-colors"
+                                                                title="زيادة 10 قطع"
+                                                            >
+                                                                +10
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Unit price edit & line total */}
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex items-center gap-1 border border-slate-200 rounded px-1.5 py-0.5 bg-slate-50">
+                                                                <span className="text-[10px] text-slate-400 font-bold">السعر:</span>
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={item.price}
+                                                                    onChange={(e) => updatePrice(item.productId, parseFloat(e.target.value) || 0)}
+                                                                    className="w-16 text-left text-xs font-black bg-transparent outline-none text-blue-800 font-mono"
+                                                                />
+                                                            </div>
+
+                                                            <div className="text-right min-w-[70px]">
+                                                                {discountRatio > 0 && (
+                                                                    <span className="text-[10px] text-slate-400 line-through block leading-none font-mono">
+                                                                        {itemOriginalTotal.toLocaleString()}
                                                                     </span>
-                                                                </div>
+                                                                )}
+                                                                <span className="font-black text-xs text-blue-900 font-mono">
+                                                                    {itemDiscountedTotal.toLocaleString()} ج.س
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                );
-                                            })}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 3. Checkout Panel (FIXED AT BOTTOM, NEVER SCROLLS AWAY!) */}
+                            <div className="shrink-0 bg-white border-t-2 border-slate-200 p-2.5 sm:p-3 flex flex-col gap-2 shadow-[0_-8px_20px_rgba(0,0,0,0.06)]">
+                                {/* Discount & Partial Paid Row */}
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-600 block mb-0.5">خصم إضافي:</label>
+                                        <input
+                                            type="number"
+                                            placeholder="0"
+                                            value={discount}
+                                            onChange={e => setDiscount(e.target.value)}
+                                            className="h-8 w-full text-xs font-bold bg-slate-50 border border-slate-300 rounded-lg px-2 outline-none focus:bg-white focus:border-blue-500 font-mono"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-600 block mb-0.5">المدفوع الآن:</label>
+                                        <input
+                                            type="number"
+                                            placeholder={paymentMethod === 'CREDIT' ? '0' : finalTotal.toString()}
+                                            value={paymentMethod === 'CREDIT' ? paidAmountInput : (paymentMethod === 'CASH' || paymentMethod === 'BANK' || paymentMethod === 'CHEQUE' ? finalTotal.toString() : paidAmountInput)}
+                                            disabled={paymentMethod === 'CASH' || paymentMethod === 'CHEQUE'}
+                                            onChange={(e) => setPaidAmountInput(e.target.value)}
+                                            className="h-8 w-full text-xs font-bold bg-slate-50 border border-slate-300 rounded-lg px-2 outline-none focus:bg-white focus:border-blue-500 font-mono disabled:bg-slate-100 disabled:text-slate-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-600 block mb-0.5">المتبقي (آجل):</label>
+                                        <div className={`h-8 flex items-center px-2 rounded-lg font-black text-xs font-mono overflow-hidden whitespace-nowrap border ${
+                                            remainingAmount > 0 ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                        }`}>
+                                            {remainingAmount.toLocaleString()} ج.س
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Currency & Exchange Rate Bar */}
+                                <div className="flex flex-wrap items-center justify-between gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-xs">
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[10px] font-black text-slate-600">العملة:</span>
+                                        {( ['SDG', 'USD', 'AED'] as const).map(curr => (
+                                            <button
+                                                key={curr}
+                                                type="button"
+                                                onClick={() => {
+                                                    setCurrency(curr)
+                                                    if (curr === 'USD' && exchangeRate > 0) setCurrencyRate(exchangeRate.toString())
+                                                    else if (curr === 'SDG') setCurrencyRate('1')
+                                                }}
+                                                className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${
+                                                    currency === curr
+                                                        ? 'bg-indigo-600 text-white shadow-2xs'
+                                                        : 'text-slate-600 hover:bg-slate-200'
+                                                }`}
+                                            >
+                                                {curr === 'SDG' ? 'جنيه' : curr === 'USD' ? 'دولار $' : 'درهم'}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {currency !== 'SDG' && (
+                                        <div className="flex items-center gap-1 font-mono text-[11px]">
+                                            <span className="text-slate-500 text-[10px]">سعر الصرف:</span>
+                                            <input
+                                                type="number"
+                                                value={currencyRate}
+                                                onChange={(e) => setCurrencyRate(e.target.value)}
+                                                className="w-16 text-center text-xs font-bold border border-slate-300 rounded px-1 py-0.5 bg-white"
+                                            />
+                                            <span className="font-black text-indigo-700">
+                                                = {((finalTotal / (parseFloat(currencyRate) || 1))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency === 'USD' ? '$' : 'د.إ'}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Dynamic Checkout Section (Pinned at end of scrollable content) */}
-                                <div className="mt-auto shrink-0 bg-white border-t border-gray-200 p-4 flex flex-col gap-4 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
-                                    
-                                    {/* Comfortable Inputs Row */}
-                                    <div className="flex gap-3">
-                                        <div className="flex-1">
-                                            <div className="text-xs font-bold text-gray-500 mb-1">خصم إضافي:</div>
-                                            <Input
-                                                type="number"
-                                                placeholder="0"
-                                                value={discount}
-                                                onChange={e => setDiscount(e.target.value)}
-                                                className="h-10 w-full text-base font-bold bg-white"
+                                {/* Payment Method Pills */}
+                                <div className="grid grid-cols-5 gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('CASH')}
+                                        className={`py-1.5 px-1 rounded-lg text-xs font-black transition-all ${
+                                            paymentMethod === 'CASH'
+                                                ? 'bg-emerald-600 text-white shadow-xs'
+                                                : 'text-slate-700 hover:bg-slate-200'
+                                        }`}
+                                    >
+                                        كاش
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('BANK')}
+                                        className={`py-1.5 px-1 rounded-lg text-xs font-black transition-all ${
+                                            paymentMethod === 'BANK'
+                                                ? 'bg-blue-600 text-white shadow-xs'
+                                                : 'text-slate-700 hover:bg-slate-200'
+                                        }`}
+                                    >
+                                        بنكك / تحويل
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('CREDIT')}
+                                        className={`py-1.5 px-1 rounded-lg text-xs font-black transition-all ${
+                                            paymentMethod === 'CREDIT'
+                                                ? 'bg-amber-500 text-white shadow-xs'
+                                                : 'text-slate-700 hover:bg-slate-200'
+                                        }`}
+                                    >
+                                        آجل
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('CHEQUE')}
+                                        className={`py-1.5 px-1 rounded-lg text-xs font-black transition-all ${
+                                            paymentMethod === 'CHEQUE'
+                                                ? 'bg-purple-600 text-white shadow-xs'
+                                                : 'text-slate-700 hover:bg-slate-200'
+                                        }`}
+                                    >
+                                        شيك
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('MULTIPLE')}
+                                        className={`py-1.5 px-1 rounded-lg text-xs font-black transition-all ${
+                                            paymentMethod === 'MULTIPLE'
+                                                ? 'bg-slate-800 text-white shadow-xs'
+                                                : 'text-slate-700 hover:bg-slate-200'
+                                        }`}
+                                    >
+                                        مجزأ
+                                    </button>
+                                </div>
+
+                                {/* Bank Details Panel (when BANK is selected) */}
+                                {(paymentMethod === 'BANK' || (paymentMethod === 'MULTIPLE' && (parseFloat(splitBank) || 0) > 0)) && (
+                                    <div className="bg-blue-50/90 border border-blue-200 p-2 rounded-xl space-y-1.5">
+                                        <div className="flex justify-between items-center text-xs font-black text-blue-950">
+                                            <span>💳 إشعار التحويل البنكي (بنكك):</span>
+                                            <button
+                                                type="button"
+                                                onClick={addBankTransfer}
+                                                className="text-[10px] font-bold text-blue-700 bg-white border border-blue-300 px-2 py-0.5 rounded shadow-2xs hover:bg-blue-100"
+                                            >
+                                                + إشعار إضافي
+                                            </button>
+                                        </div>
+
+                                        {bankTransfers.map((t, idx) => (
+                                            <div key={t.id} className="grid grid-cols-12 gap-1.5 items-center bg-white p-1.5 rounded-lg border border-blue-200 text-xs">
+                                                <div className="col-span-5">
+                                                    <select
+                                                        value={t.bankName}
+                                                        onChange={(e) => updateBankTransfer(t.id, 'bankName', e.target.value)}
+                                                        className="w-full text-[11px] font-bold p-1 bg-slate-50 border border-slate-200 rounded outline-none"
+                                                    >
+                                                        {POPULAR_BANKS.map(b => (
+                                                            <option key={b} value={b}>{b}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="col-span-4">
+                                                    <input
+                                                        type="text"
+                                                        value={t.bankRef}
+                                                        onChange={(e) => updateBankTransfer(t.id, 'bankRef', e.target.value)}
+                                                        placeholder="رقم الإشعار..."
+                                                        className="w-full text-[11px] font-bold p-1 bg-slate-50 border border-slate-200 rounded outline-none font-mono"
+                                                    />
+                                                </div>
+                                                <div className="col-span-3 flex items-center gap-1">
+                                                    <input
+                                                        type="number"
+                                                        value={t.amount}
+                                                        onChange={(e) => updateBankTransfer(t.id, 'amount', e.target.value)}
+                                                        placeholder={bankTransfers.length === 1 ? `${finalTotal}` : 'مبلغ...'}
+                                                        className="w-full text-[11px] font-bold p-1 bg-slate-50 border border-slate-200 rounded outline-none font-mono"
+                                                    />
+                                                    {bankTransfers.length > 1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeBankTransfer(t.id)}
+                                                            className="text-red-400 hover:text-red-600 p-0.5"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Cheque Details Panel */}
+                                {(paymentMethod === 'CHEQUE' || (paymentMethod === 'MULTIPLE' && (parseFloat(splitCheque) || 0) > 0)) && (
+                                    <div className="bg-purple-50/90 border border-purple-200 p-2 rounded-xl space-y-1.5 text-xs">
+                                        <span className="font-black text-purple-900 block text-[11px]">تفاصيل الشيك:</span>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            <input
+                                                type="text"
+                                                value={chequeNumber}
+                                                onChange={(e) => setChequeNumber(e.target.value)}
+                                                placeholder="رقم الشيك..."
+                                                className="p-1 bg-white border border-purple-200 rounded text-xs font-mono outline-none"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={chequeBank}
+                                                onChange={(e) => setChequeBank(e.target.value)}
+                                                placeholder="اسم بنك الشيك..."
+                                                className="p-1 bg-white border border-purple-200 rounded text-xs outline-none"
                                             />
                                         </div>
-                                        {paymentMethod !== 'MULTIPLE' && (
-                                            <div className="flex-1">
-                                                <div className="text-xs font-bold text-gray-500 mb-1">المدفوع (للقسط):</div>
-                                                <Input
-                                                    type="number"
-                                                    placeholder={finalTotal.toString()}
-                                                    value={paidAmountInput}
-                                                    onChange={(e) => setPaidAmountInput(e.target.value)}
-                                                    className="h-10 w-full bg-amber-50 text-base font-bold text-blue-900 border-amber-200"
-                                                />
-                                            </div>
-                                        )}
-                                        <div className="flex-1">
-                                            <div className="text-xs font-bold text-gray-500 mb-1">المتبقي:</div>
-                                            <div className="h-10 flex items-center px-3 border border-red-200 rounded-lg bg-red-50 text-red-600 font-bold text-base overflow-hidden whitespace-nowrap">
-                                                {paymentMethod === 'MULTIPLE' 
-                                                    ? Math.max(0, finalTotal - ((parseFloat(splitCash) || 0) + (parseFloat(splitBank) || 0) + (parseFloat(splitCheque) || 0))).toLocaleString()
-                                                    : (paidAmountInput === '' ? 0 : Math.max(0, finalTotal - parseFloat(paidAmountInput || '0')).toLocaleString())
-                                                }
-                                            </div>
-                                        </div>
                                     </div>
+                                )}
 
-                                    {/* Currency Selector */}
-                                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2">
-                                        <div className="flex flex-wrap justify-between items-center gap-2">
-                                            <label className="text-xs font-black text-slate-700">عملة الفاتورة والتحصيل:</label>
-                                            <div className="flex gap-1 bg-white p-1 rounded-lg border border-slate-200">
-                                                {(['SDG', 'USD', 'AED'] as const).map(curr => (
-                                                    <button
-                                                        key={curr}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setCurrency(curr)
-                                                            if (curr === 'USD' && exchangeRate > 0) {
-                                                                setCurrencyRate(exchangeRate.toString())
-                                                            } else if (curr === 'SDG') {
-                                                                setCurrencyRate('1')
-                                                            }
-                                                        }}
-                                                        className={`px-3 py-1 rounded text-xs font-black transition-all ${
-                                                            currency === curr
-                                                                ? 'bg-indigo-600 text-white shadow-sm'
-                                                                : 'text-slate-600 hover:bg-slate-100'
-                                                        }`}
-                                                    >
-                                                        {curr === 'SDG' ? 'جنيه (SDG)' : curr === 'USD' ? 'دولار ($ USD)' : 'درهم (AED)'}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {currency !== 'SDG' && (
-                                            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200">
-                                                <span className="text-[11px] font-bold text-slate-600 whitespace-nowrap">سعر الصرف مقابل الجنيه:</span>
+                                {/* Split Payment Controls */}
+                                {paymentMethod === 'MULTIPLE' && (
+                                    <div className="bg-slate-50 border border-slate-200 p-2 rounded-xl space-y-1 text-xs">
+                                        <span className="font-black text-slate-800 block text-[11px]">توزيع مبالغ الدفع المجزأ:</span>
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            <div>
+                                                <label className="text-[10px] text-slate-500 block">كاش</label>
                                                 <input
                                                     type="number"
-                                                    step="any"
-                                                    value={currencyRate}
-                                                    onChange={(e) => setCurrencyRate(e.target.value)}
-                                                    className="w-24 text-xs font-bold p-1 bg-white border border-slate-300 rounded-lg outline-none font-mono text-center"
+                                                    value={splitCash}
+                                                    onChange={(e) => setSplitCash(e.target.value)}
+                                                    placeholder="0"
+                                                    className="w-full p-1 bg-white border border-slate-200 rounded text-xs font-mono outline-none"
                                                 />
-                                                <span className="text-xs font-mono font-black text-indigo-700">
-                                                    القيمة بالعملة: {((finalTotal / (parseFloat(currencyRate) || 1))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency === 'USD' ? '$' : 'د.إ'}
-                                                </span>
                                             </div>
-                                        )}
-                                    </div>
-
-                                    {/* Payment Methods Selector Pills */}
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-black text-slate-700 block">وسيلة وطريقة الدفع:</label>
-                                        <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentMethod('CASH')}
-                                                className={`py-2 px-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 ${
-                                                    paymentMethod === 'CASH'
-                                                        ? 'bg-emerald-600 text-white shadow-md'
-                                                        : 'text-slate-700 hover:bg-slate-200'
-                                                }`}
-                                            >
-                                                <span>كاش</span>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentMethod('BANK')}
-                                                className={`py-2 px-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 ${
-                                                    paymentMethod === 'BANK'
-                                                        ? 'bg-blue-600 text-white shadow-md'
-                                                        : 'text-slate-700 hover:bg-slate-200'
-                                                }`}
-                                            >
-                                                <span>تحويل بنكي</span>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentMethod('CHEQUE')}
-                                                className={`py-2 px-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 ${
-                                                    paymentMethod === 'CHEQUE'
-                                                        ? 'bg-purple-600 text-white shadow-md'
-                                                        : 'text-slate-700 hover:bg-slate-200'
-                                                }`}
-                                            >
-                                                <span>شيك</span>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentMethod('MULTIPLE')}
-                                                className={`py-2 px-1 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 ${
-                                                    paymentMethod === 'MULTIPLE'
-                                                        ? 'bg-amber-600 text-white shadow-md'
-                                                        : 'text-slate-700 hover:bg-slate-200'
-                                                }`}
-                                            >
-                                                <span>مجزأ</span>
-                                            </button>
+                                            <div>
+                                                <label className="text-[10px] text-slate-500 block">بنكك</label>
+                                                <input
+                                                    type="number"
+                                                    value={splitBank}
+                                                    onChange={(e) => setSplitBank(e.target.value)}
+                                                    placeholder="0"
+                                                    className="w-full p-1 bg-white border border-slate-200 rounded text-xs font-mono outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-slate-500 block">شيك</label>
+                                                <input
+                                                    type="number"
+                                                    value={splitCheque}
+                                                    onChange={(e) => setSplitCheque(e.target.value)}
+                                                    placeholder="0"
+                                                    className="w-full p-1 bg-white border border-slate-200 rounded text-xs font-mono outline-none"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
+                                )}
 
-                                    {/* Bank Transfer Details */}
-                                    {(paymentMethod === 'BANK' || (paymentMethod === 'MULTIPLE' && (parseFloat(splitBank) || 0) > 0)) && (
-                                        <div className="bg-blue-50/80 border-2 border-blue-200 p-3.5 rounded-xl space-y-3 animate-fade-in">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-xs font-black text-blue-950 flex items-center gap-1.5">
-                                                    💳 تفاصيل التحويلات البنكية (بنكك، فوري، أوكاش، إلخ):
+                                {/* Big Total Strip */}
+                                <div className="flex justify-between items-center bg-slate-900 text-white px-3 py-2 rounded-xl shadow-sm border-b-2 border-blue-500">
+                                    <div>
+                                        <span className="text-[10px] font-bold text-slate-400 block leading-tight">الإجمالي الصافي:</span>
+                                        <div className="flex items-baseline gap-1.5">
+                                            <span className="font-black text-2xl font-mono">{finalTotal.toLocaleString()}</span>
+                                            <span className="text-xs text-slate-400 font-sans">ج.س</span>
+                                            {exchangeRate > 0 && finalTotal > 0 && currency === 'SDG' && (
+                                                <span className="text-xs text-emerald-400 font-bold font-mono ml-2">
+                                                    (${((finalTotal / exchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                                                 </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={addBankTransfer}
-                                                    className="text-[11px] font-black text-blue-700 hover:text-blue-900 bg-white border border-blue-300 hover:bg-blue-100/50 px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm transition-all"
-                                                >
-                                                    <Plus size={13} />
-                                                    + إضافة إشعار آخر
-                                                </button>
-                                            </div>
-
-                                            {bankTransfers.length > 1 && (
-                                                <div className="text-[11px] font-bold text-blue-900 bg-blue-100/80 p-2 rounded-lg flex justify-between items-center border border-blue-200">
-                                                    <span>عدد الإشعارات: {bankTransfers.length}</span>
-                                                    <span>مجموع مبالغ الإشعارات: <strong className="font-mono text-xs text-blue-950">{totalBankTransfers.toLocaleString()} ج.س</strong></span>
-                                                </div>
                                             )}
-
-                                            <div className="space-y-2.5">
-                                                {bankTransfers.map((transfer, index) => (
-                                                    <div key={transfer.id} className="bg-white border border-blue-200 p-2.5 rounded-lg space-y-2 relative shadow-xs">
-                                                        <div className="flex justify-between items-center text-[11px] font-bold text-slate-700 border-b border-slate-100 pb-1">
-                                                            <span className="text-blue-900 font-black">إشعار تحويل #{index + 1}</span>
-                                                            {bankTransfers.length > 1 && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removeBankTransfer(transfer.id)}
-                                                                    className="text-red-500 hover:text-red-700 p-0.5 rounded hover:bg-red-50"
-                                                                    title="حذف هذا الإشعار"
-                                                                >
-                                                                    <Trash2 size={13} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-
-                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                                            <div>
-                                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">البنك / التطبيق</label>
-                                                                <select
-                                                                    value={transfer.bankName}
-                                                                    onChange={(e) => updateBankTransfer(transfer.id, 'bankName', e.target.value)}
-                                                                    className="w-full text-xs font-bold p-1.5 bg-slate-50 border border-slate-300 rounded-md outline-none focus:border-blue-500"
-                                                                >
-                                                                    {POPULAR_BANKS.map(b => (
-                                                                        <option key={b} value={b}>{b}</option>
-                                                                    ))}
-                                                                </select>
-                                                            </div>
-
-                                                            <div>
-                                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">رقم الإشعار / المرجع</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={transfer.bankRef}
-                                                                    onChange={(e) => updateBankTransfer(transfer.id, 'bankRef', e.target.value)}
-                                                                    placeholder="رقم الإشعار..."
-                                                                    className="w-full text-xs font-bold p-1.5 bg-slate-50 border border-slate-300 rounded-md outline-none focus:border-blue-500 font-mono"
-                                                                />
-                                                            </div>
-
-                                                            <div>
-                                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">مبلغ الإشعار (ج.س)</label>
-                                                                <input
-                                                                    type="number"
-                                                                    value={transfer.amount}
-                                                                    onChange={(e) => updateBankTransfer(transfer.id, 'amount', e.target.value)}
-                                                                    placeholder={bankTransfers.length === 1 ? `${finalTotal}` : "المبلغ..."}
-                                                                    className="w-full text-xs font-bold p-1.5 bg-slate-50 border border-slate-300 rounded-md outline-none focus:border-blue-500 font-mono"
-                                                                />
-                                                            </div>
-                                                        </div>
-
-                                                        {transfer.bankName === 'أخرى (تحديد يدوي)' && (
-                                                            <div>
-                                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">اكتب اسم البنك</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={transfer.customBankName}
-                                                                    onChange={(e) => updateBankTransfer(transfer.id, 'customBankName', e.target.value)}
-                                                                    placeholder="اسم البنك..."
-                                                                    className="w-full text-xs font-bold p-1.5 bg-white border border-slate-300 rounded-md outline-none"
-                                                                />
-                                                            </div>
-                                                        )}
-
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-200/60">
-                                                            <div>
-                                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">اسم الشخص المرسل (المحول منه)</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={transfer.sender || ''}
-                                                                    onChange={(e) => updateBankTransfer(transfer.id, 'sender', e.target.value)}
-                                                                    placeholder="اختياري: المحول منه..."
-                                                                    className="w-full text-xs font-bold p-1.5 bg-white border border-slate-300 rounded-md outline-none focus:border-blue-500"
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label className="text-[10px] font-bold text-slate-600 block mb-0.5">اسم المستلم للمبلغ (المحول لحسابه)</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={transfer.recipient || ''}
-                                                                    onChange={(e) => updateBankTransfer(transfer.id, 'recipient', e.target.value)}
-                                                                    placeholder="اختياري: المستلم أو المورد..."
-                                                                    className="w-full text-xs font-bold p-1.5 bg-white border border-slate-300 rounded-md outline-none focus:border-blue-500"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
                                         </div>
-                                    )}
+                                    </div>
 
-                                    {/* Cheque Details */}
-                                    {(paymentMethod === 'CHEQUE' || (paymentMethod === 'MULTIPLE' && (parseFloat(splitCheque) || 0) > 0)) && (
-                                        <div className="bg-purple-50/70 border border-purple-200 p-3 rounded-xl space-y-2.5 animate-fade-in">
-                                            <span className="text-xs font-black text-purple-900 block">تفاصيل الشيك المصرفي:</span>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">رقم الشيك</label>
-                                                    <input
-                                                        type="text"
-                                                        value={chequeNumber}
-                                                        onChange={(e) => setChequeNumber(e.target.value)}
-                                                        placeholder="رقم الشيك..."
-                                                        className="w-full text-xs font-bold p-2 bg-white border border-purple-300 rounded-lg outline-none font-mono"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">اسم بنك الشيك</label>
-                                                    <input
-                                                        type="text"
-                                                        value={chequeBank}
-                                                        onChange={(e) => setChequeBank(e.target.value)}
-                                                        placeholder="اسم البنك المصدر للشيك..."
-                                                        className="w-full text-xs font-bold p-2 bg-white border border-purple-300 rounded-lg outline-none"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">اسم الساحب / كاتب الشيك</label>
-                                                    <input
-                                                        type="text"
-                                                        value={chequeSender}
-                                                        onChange={(e) => setChequeSender(e.target.value)}
-                                                        placeholder="اختياري: صاحب الشيك..."
-                                                        className="w-full text-xs font-bold p-2 bg-white border border-purple-300 rounded-lg outline-none"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">اسم المستفيد / المحرر لأمره (المستلم)</label>
-                                                    <input
-                                                        type="text"
-                                                        value={chequeRecipient}
-                                                        onChange={(e) => setChequeRecipient(e.target.value)}
-                                                        placeholder="اختياري: لأمر من (نحن أو مورد)..."
-                                                        className="w-full text-xs font-bold p-2 bg-white border border-purple-300 rounded-lg outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Split Payment Controls */}
-                                    {paymentMethod === 'MULTIPLE' && (
-                                        <div className="bg-amber-50/80 border border-amber-200/80 p-3 rounded-xl space-y-2.5 animate-fade-in">
-                                            <span className="text-xs font-black text-amber-900 block">توزيع مبالغ الدفع المجزأ:</span>
-                                            <div className="grid grid-cols-3 gap-2">
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">مبلغ الكاش</label>
-                                                    <input
-                                                        type="number"
-                                                        value={splitCash}
-                                                        onChange={(e) => setSplitCash(e.target.value)}
-                                                        placeholder="0"
-                                                        className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">تحويل بنكي</label>
-                                                    <input
-                                                        type="number"
-                                                        value={splitBank}
-                                                        onChange={(e) => setSplitBank(e.target.value)}
-                                                        placeholder="0"
-                                                        className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">مبلغ الشيك</label>
-                                                    <input
-                                                        type="number"
-                                                        value={splitCheque}
-                                                        onChange={(e) => setSplitCheque(e.target.value)}
-                                                        placeholder="0"
-                                                        className="w-full text-xs font-bold p-2 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 font-mono"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="flex justify-between items-center text-xs font-bold text-slate-800 bg-white p-2 rounded-lg border border-amber-200">
-                                                <span>مجموع المدفوع:</span>
-                                                <span className="font-mono text-indigo-700 font-black">
-                                                    {((parseFloat(splitCash) || 0) + (parseFloat(splitBank) || 0) + (parseFloat(splitCheque) || 0)).toLocaleString()} / {finalTotal.toLocaleString()} ج.س
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Big Total Box */}
-                                    <div className="flex justify-between items-center bg-slate-900 text-white p-4 rounded-xl shadow-lg border-b-4 border-blue-500">
-                                        <div>
-                                            <span className="font-bold block text-sm opacity-80 mb-1">
-                                                الإجمالي النهائي {currency !== 'SDG' ? `(${currency})` : ''}
+                                    {parseFloat(discount) > 0 && (
+                                        <div className="text-left text-xs">
+                                            <span className="text-slate-400 line-through block font-mono text-[11px]">{subtotal.toLocaleString()}</span>
+                                            <span className="text-emerald-400 font-bold bg-emerald-950/80 px-1.5 py-0.5 rounded text-[10px]">
+                                                توفير: {parseFloat(discount).toLocaleString()}
                                             </span>
-                                            <div className="flex items-end gap-2">
-                                                {currency === 'SDG' ? (
-                                                    <>
-                                                        <span className="font-black text-3xl leading-none">{finalTotal.toLocaleString()}</span>
-                                                        <span className="font-medium text-gray-400 mb-1 text-sm">ج.س</span>
-                                                        {exchangeRate > 0 && finalTotal > 0 && (
-                                                            <span className="text-sm text-emerald-400 font-bold ml-2 mb-0.5">
-                                                                (${((finalTotal / exchangeRate)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                                                            </span>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <span className="font-black text-3xl leading-none">
-                                                            {((finalTotal / (parseFloat(currencyRate) || 1))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                        </span>
-                                                        <span className="font-medium text-emerald-400 mb-1 text-sm">
-                                                            {currency === 'USD' ? '$ USD' : 'AED د.إ'}
-                                                        </span>
-                                                        <span className="text-xs text-gray-400 font-bold ml-2 mb-0.5">
-                                                            (يعادل: {finalTotal.toLocaleString()} ج.س)
-                                                        </span>
-                                                    </>
-                                                )}
-                                            </div>
-                                            {totalWeightKg > 0 && (
-                                                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-300 font-bold">
-                                                    <span>⚖️ وزن البضاعة الإجمالي:</span>
-                                                    <span className="text-white font-black font-mono">
-                                                        {totalWeightTons >= 1 ? `${totalWeightTons.toFixed(2)} طن ` : ''}({totalWeightKg.toLocaleString()} كجم)
-                                                    </span>
-                                                </div>
-                                            )}
                                         </div>
-                                        {(parseFloat(discount) > 0) && (
-                                            <div className="text-right">
-                                                <span className="block text-xs text-red-300 line-through mb-1">{subtotal.toLocaleString()}</span>
-                                                <span className="text-sm text-green-400 font-bold bg-green-400/20 px-2 py-1 rounded-md">توفير: {parseFloat(discount).toLocaleString()}</span>
-                                            </div>
+                                    )}
+                                </div>
+
+                                {/* Fast 1-Click Action Buttons */}
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        onClick={() => handleSubmit(paymentMethod === 'CREDIT' ? 'CREDIT' : 'PAID')}
+                                        disabled={loading || cart.length === 0}
+                                        className={`flex-1 h-11 text-sm font-black transition-all shadow-md active:scale-98 ${
+                                            paymentMethod === 'CASH'
+                                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                                : paymentMethod === 'BANK'
+                                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                : paymentMethod === 'CREDIT'
+                                                ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                                                : paymentMethod === 'CHEQUE'
+                                                ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                                                : 'bg-slate-800 hover:bg-slate-900 text-white'
+                                        }`}
+                                    >
+                                        {loading ? 'جاري الحفظ...' : (
+                                            paymentMethod === 'CASH'
+                                                ? '✓ سداد نقدي كاش (خالص)'
+                                                : paymentMethod === 'BANK'
+                                                ? '💳 سداد تحويل بنكي (خالص)'
+                                                : paymentMethod === 'CREDIT'
+                                                ? '⏳ اعتماد بيع آجل (متبقي)'
+                                                : paymentMethod === 'CHEQUE'
+                                                ? '📝 اعتماد سداد بشيك'
+                                                : '✓ اعتماد السداد المجزأ'
                                         )}
-                                    </div>
-
-                                    {/* Big Buttons Row */}
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <Button
-                                            onClick={() => handleSubmit('PAID')}
-                                            className="h-12 text-base bg-emerald-600 hover:bg-emerald-700 shadow-sm"
-                                            disabled={loading}
-                                        >
-                                            <span className="font-bold text-white">{loading ? '...' : 'دفع كاش (خالص)'}</span>
-                                        </Button>
-
-                                        <Button
-                                            onClick={() => handleSubmit('CREDIT')}
-                                            className="h-12 text-base bg-amber-500 hover:bg-amber-600 shadow-sm"
-                                            disabled={loading}
-                                        >
-                                            <span className="font-bold text-white">{loading ? '...' : 'دفع آجل (متبقي)'}</span>
-                                        </Button>
-                                    </div>
+                                    </Button>
 
                                     <Button
                                         onClick={() => handleSubmit('QUOTATION')}
+                                        disabled={loading || cart.length === 0}
                                         variant="outline"
-                                        className="w-full h-10 text-sm font-bold bg-gray-50 text-blue-700 border-gray-200 hover:bg-blue-50 hover:border-blue-300 shadow-sm transition-colors"
-                                        disabled={loading}
+                                        className="h-11 px-3 text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-100 shrink-0 flex items-center gap-1 shadow-2xs"
+                                        title="حفظ كعرض سعر مسودة دون خصم من المخزون"
                                     >
-                                        <div className="flex items-center justify-center gap-2">
-                                            <FileText size={16} />
-                                            <span>حفظ عرض سعر / مسودة</span>
-                                        </div>
+                                        <FileText size={15} />
+                                        <span className="hidden sm:inline">عرض سعر</span>
                                     </Button>
                                 </div>
                             </div>
