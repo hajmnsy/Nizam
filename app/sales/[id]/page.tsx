@@ -569,7 +569,7 @@ export default function InvoiceDetails() {
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all bg-white text-slate-800 hover:bg-slate-50 border border-slate-200 shadow-sm"
                             >
                                 <Building2 size={15} className="text-amber-600" />
-                                <span>الفرع: {isJawdaBranch ? 'فرع الجودة (مركز الجودة)' : 'الفرع الرئيسي (المصنع السوداني الماليزي)'}</span>
+                                <span>الفرع: {isJawdaBranch ? 'فرع الجودة (مركز الجودة)' : 'الفرع الرئيسي'}</span>
                                 <span className="text-[10px] text-blue-600 font-bold mr-1 underline">(تبديل)</span>
                             </button>
                         </div>
@@ -823,31 +823,12 @@ export default function InvoiceDetails() {
                                     </span>
                                 </div>
                             ) : (
-                                <div className="relative w-full max-w-[260px] py-2 px-3 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white border-2 border-slate-900 rounded-xl flex flex-col items-center justify-center select-none shadow-md print:shadow-none print:py-1.5 print:px-2 print:bg-slate-950 print:border-slate-900 mx-auto">
-                                    {/* Corner steel rivets */}
-                                    <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
-                                    <div className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
-                                    <div className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
-                                    <div className="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full bg-amber-400 print:bg-amber-300"></div>
-
-                                    <div className="flex items-center gap-1 mb-0.5">
-                                        <svg className="w-4 h-4 print:w-3.5 print:h-3.5 text-amber-400 print:text-amber-300" viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.8L19.5 8 12 11.2 4.5 8 12 4.8zM4 9.6l7 3.7v7.1-7-3.5V9.6zm9 10.8v-7.1l7-3.7v7.3l-7 3.5z"/>
-                                        </svg>
-                                        <span className="text-[11px] sm:text-xs font-black tracking-wider text-amber-400 print:text-amber-300 font-sans">
-                                            SMS STEEL
-                                        </span>
-                                    </div>
-
-                                    <span className="text-xs sm:text-sm font-black text-white tracking-tight leading-tight text-center">
-                                        الـمـصـنـع الـسـودانـي الـمـالـيـزي
-                                    </span>
-                                    <span className="text-[8.5px] font-bold text-slate-200 tracking-wider mt-0.5 text-center">
-                                        للـحـديـد والـصـلـب ومـواد الـبـنـاء
-                                    </span>
-                                    <span className="text-[7px] font-mono tracking-wider text-slate-400 uppercase mt-0.5 text-center">
-                                        Sudanese Malaysian Steel Factory
-                                    </span>
+                                <div className="flex flex-col items-center justify-center select-none mx-auto py-1">
+                                    <img 
+                                        src="/malaysi_logo_square.png" 
+                                        alt="شعار الماليزي" 
+                                        className="h-20 sm:h-24 w-auto object-contain print:h-16 drop-shadow-md transition-transform" 
+                                    />
                                 </div>
                             )}
                         </div>

@@ -77,16 +77,26 @@ export default function Home() {
                     <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none translate-y-1/3 -translate-x-1/4"></div>
 
                     <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                        <div className="space-y-3">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-                                    <span>🟢 {currentUser?.branch?.name || 'الفرع الرئيسي'}</span>
-                                </span>
-                                <span className="text-slate-300 text-xs font-bold flex items-center gap-1.5 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
-                                    <Calendar size={14} className="text-slate-400" />
-                                    <span>{todayDateFormatted}</span>
-                                </span>
+                        <div className="flex items-center gap-4">
+                            <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white p-1 shadow-lg shadow-black/40 border border-slate-700 flex items-center justify-center shrink-0">
+                                <img 
+                                    src="/malaysi_logo_square.png" 
+                                    alt="شعار الشركة" 
+                                    className="w-full h-full object-contain rounded-xl"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                                        <span>🟢 {currentUser?.branch?.name?.replace('المصنع السوداني الماليزي', 'الفرع الرئيسي') || 'الفرع الرئيسي'}</span>
+                                    </span>
+                                    <span className="text-slate-300 text-xs font-bold flex items-center gap-1.5 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
+                                        <Calendar size={14} className="text-slate-400" />
+                                        <span>{todayDateFormatted}</span>
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-400 font-medium">نظام الإدارة التنفيذي والمخزون والمبيعات</p>
                             </div>
                         </div>
 

@@ -25,18 +25,26 @@ export const ProformaInvoice = React.forwardRef<HTMLDivElement, ProformaInvoiceP
                 </div>
 
                 {/* Center: Logo */}
-                <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-5/12">
-                    <div className="relative w-full py-3 px-4 bg-slate-50 border-4 border-double border-slate-900 rounded-lg flex items-center justify-center select-none">
-                        {/* Corner industrial rivets */}
-                        <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
-                        <div className="absolute top-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
-                        <div className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
-                        <div className="absolute bottom-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
-                        
-                        <span className="text-xl font-black text-slate-950 tracking-[0.15em] font-sans">
-                            {isJawda ? 'مـركـز الـجـودة للـحـديـد' : 'الـمـصـنـع الـسـودانـي الـمـالـيـزي'}
-                        </span>
-                    </div>
+                <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-5/12 flex items-center justify-center">
+                    {isJawda ? (
+                        <div className="relative w-full py-3 px-4 bg-slate-50 border-4 border-double border-slate-900 rounded-lg flex items-center justify-center select-none">
+                            {/* Corner industrial rivets */}
+                            <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                            <div className="absolute top-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                            <div className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                            <div className="absolute bottom-1.5 left-1.5 w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                            
+                            <span className="text-xl font-black text-slate-950 tracking-[0.15em] font-sans">
+                                مـركـز الـجـودة للـحـديـد
+                            </span>
+                        </div>
+                    ) : (
+                        <img 
+                            src="/malaysi_logo_square.png" 
+                            alt="شعار الشركة" 
+                            className="h-20 w-auto object-contain mx-auto" 
+                        />
+                    )}
                 </div>
 
                 {/* Left: Invoice Info */}

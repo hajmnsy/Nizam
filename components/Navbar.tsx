@@ -252,14 +252,14 @@ export default function Navbar() {
                         <div className="flex items-center gap-6">
                             {/* Logo */}
                             <Link href="/" className="flex items-center gap-3 group">
-                                {settings?.logoUrl ? (
-                                    <img src={settings.logoUrl} alt="Logo" className="h-9 w-auto object-contain group-hover:scale-105 transition-transform" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                                ) : (
-                                    <div className="h-9 w-9 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-200 group-hover:shadow-blue-300 transition-all">
-                                        <Rocket className="text-white" size={18} strokeWidth={2.5} />
-                                    </div>
-                                )}
-                                {settings?.companyName && (
+                                <img 
+                                    src="/malaysi_logo_square.png" 
+                                    alt="شعار الشركة" 
+                                    className="h-10 w-10 object-contain rounded-full border border-slate-200 bg-white shadow-sm group-hover:scale-105 transition-transform" 
+                                />
+                                {settings?.companyName && 
+                                 !settings.companyName.includes('المصنع السوداني الماليزي') && 
+                                 !settings.companyName.includes('السوداني الماليزي') && (
                                     <span className="font-black text-lg text-slate-800 tracking-tight hidden lg:block group-hover:text-indigo-600 transition-colors">
                                         {settings.companyName}
                                     </span>
