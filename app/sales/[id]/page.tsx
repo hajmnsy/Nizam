@@ -1056,39 +1056,39 @@ ${invoiceUrl}
                             </table>
                         )}
 
-                        {/* Mode B: WAREHOUSE DELIVERY NOTE (Keeps Quantity in Words for storekeeper security) */}
+                        {/* Mode B: WAREHOUSE DELIVERY NOTE (4 Columns: العدد بالأرقام، العدد بالحروف، الصنف، السماكة والنوع) */}
                         {viewMode === 'DELIVERY' && (
                             <table className="w-full text-right border-collapse border border-slate-800">
                                 <thead>
                                     <tr className="bg-slate-900 text-white text-xs print:text-[10px]">
-                                        <th className="py-2.5 px-2 w-[6%] text-center font-black border border-slate-700 print:py-1 print:px-1">م</th>
-                                        <th className="py-2.5 px-3 w-[36%] text-right font-black border border-slate-700 print:py-1 print:px-1.5">بيان الصنف والمواصفات</th>
-                                        <th className="py-2.5 px-2 w-[12%] text-center font-black border border-slate-700 print:py-1 print:px-1">السماكة</th>
-                                        <th className="py-2.5 px-2 w-[12%] text-center font-black border border-slate-700 print:py-1 print:px-1">النوع</th>
-                                        <th className="py-2.5 px-2 w-[12%] text-center font-black border border-slate-700 print:py-1 print:px-1">الكمية رقماً</th>
-                                        <th className="py-2.5 px-2 w-[22%] text-center font-black border border-slate-700 print:py-1 print:px-1">الكمية كتابة بالأحرف</th>
+                                        <th className="py-2.5 px-2 w-[14%] text-center font-black border border-slate-700 print:py-1 print:px-1">العدد بالأرقام</th>
+                                        <th className="py-2.5 px-2 w-[28%] text-center font-black border border-slate-700 print:py-1 print:px-1">العدد بالحروف</th>
+                                        <th className="py-2.5 px-3 w-[38%] text-right font-black border border-slate-700 print:py-1 print:px-1.5">الصنف</th>
+                                        <th className="py-2.5 px-2 w-[20%] text-center font-black border border-slate-700 print:py-1 print:px-1">السماكة والنوع</th>
                                     </tr>
                                 </thead>
                                 <tbody className="text-xs divide-y divide-slate-300 print:text-[10px]">
                                     {sale.items.map((item, index) => (
                                         <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                                            <td className="py-2 px-2 text-center font-bold text-slate-600 border border-slate-300 print:py-0.5 print:px-1">
-                                                {index + 1}
-                                            </td>
-                                            <td className="py-2 px-3 font-black text-slate-900 border border-slate-300 text-sm leading-tight print:py-0.5 print:px-1.5 print:text-xs">
-                                                {item.product.name}
-                                            </td>
-                                            <td className="py-2 px-2 text-center font-bold font-mono text-slate-800 border border-slate-300 text-sm print:py-0.5 print:px-1 print:text-xs">
-                                                {item.product.thickness ? `${item.product.thickness} مم` : '-'}
-                                            </td>
-                                            <td className="py-2 px-2 text-center font-bold text-slate-700 border border-slate-300 print:py-0.5 print:px-1">
-                                                {item.product.type || '-'}
-                                            </td>
-                                            <td className="py-2 px-2 text-center font-black font-mono text-slate-950 text-base border border-slate-300 print:py-0.5 print:px-1 print:text-xs">
+                                            <td className="py-2 px-2 text-center font-black font-mono text-slate-950 text-base border border-slate-300 print:py-0.5 print:px-1 print:text-sm">
                                                 {item.quantity}
                                             </td>
                                             <td className="py-2 px-2 text-center font-black text-slate-900 border border-slate-300 text-xs leading-snug print:py-0.5 print:px-1 print:text-[9.5px]">
                                                 {numberToArabicWords(item.quantity)}
+                                            </td>
+                                            <td className="py-2 px-3 font-black text-slate-900 border border-slate-300 text-sm leading-tight print:py-0.5 print:px-1.5 print:text-xs">
+                                                {item.product.name}
+                                            </td>
+                                            <td className="py-2 px-2 text-center font-bold text-slate-800 border border-slate-300 text-xs print:py-0.5 print:px-1 print:text-[9.5px]">
+                                                {item.product.thickness && item.product.type ? (
+                                                    <span><span className="font-mono">{item.product.thickness} مم</span> {item.product.type}</span>
+                                                ) : item.product.thickness ? (
+                                                    <span className="font-mono">{item.product.thickness} مم</span>
+                                                ) : item.product.type ? (
+                                                    <span>{item.product.type}</span>
+                                                ) : (
+                                                    <span className="text-slate-400">-</span>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
