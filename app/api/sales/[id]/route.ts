@@ -116,6 +116,23 @@ export async function PUT(
         }
 
 
+        // Scenario 0: Delivery status update or correction
+        if (json.deliveryStatus !== undefined || status === 'DELIVERED') {
+            const targetDeliveryStatus = json.deliveryStatus || (status === 'DELIVERED' ? 'DELIVERED' : 'PENDING')
+            const updatedSale = await prisma.sale.update({
+                where: { id },
+                data: {
+                    deliveryStatus: targetDeliveryStatus,
+                    deliveredAt: targetDeliveryStatus === 'DELIVERED'
+                        ? (json.deliveredAt ? new Date(json.deliveredAt) : new Date())
+                        : null,
+                    ...(json.deliveredBy !== undefined && { deliveredBy: json.deliveredBy?.trim() || null }),
+                    ...(json.deliveryNotes !== undefined && { deliveryNotes: json.deliveryNotes?.trim() || null })
+                }
+            })
+            return NextResponse.json(updatedSale)
+        }
+
         // Existing Scenario 1: Just converting QUOTATION to PAID without editing items
         if (status === 'PAID' && !items) {
             const sale = await prisma.sale.findUnique({

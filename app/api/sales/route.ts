@@ -123,6 +123,10 @@ export async function POST(request: Request) {
                     chequeBank: json.chequeBank?.trim() || null,
                     chequeSender: json.chequeSender?.trim() || null,
                     chequeRecipient: json.chequeRecipient?.trim() || null,
+                    deliveryStatus: json.deliveryStatus || 'PENDING',
+                    deliveredAt: json.deliveryStatus === 'DELIVERED' ? (json.deliveredAt ? new Date(json.deliveredAt) : new Date()) : null,
+                    deliveredBy: json.deliveredBy?.trim() || null,
+                    deliveryNotes: json.deliveryNotes?.trim() || null,
                     createdAt: finalCreatedAt,
                     branchId,
                     dispatchBranchId: dispatchBranchId || branchId,
@@ -203,6 +207,7 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
+    const deliveryStatus = searchParams.get('deliveryStatus')
     const dateParam = searchParams.get('date') // Expected format: YYYY-MM-DD
     const startDateParam = searchParams.get('startDate')
     const endDateParam = searchParams.get('endDate')
@@ -223,6 +228,10 @@ export async function GET(request: Request) {
 
         if (status && status !== 'ALL') {
             whereClause.status = status
+        }
+
+        if (deliveryStatus && deliveryStatus !== 'ALL') {
+            whereClause.deliveryStatus = deliveryStatus
         }
 
         if (startDateParam && endDateParam) {

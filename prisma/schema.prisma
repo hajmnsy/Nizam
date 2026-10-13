@@ -66,6 +66,10 @@ model Sale {
   chequeBank      String?
   chequeSender    String?
   chequeRecipient String?
+  deliveryStatus  String     @default("PENDING")
+  deliveredAt     DateTime?
+  deliveredBy     String?
+  deliveryNotes   String?    @db.Text
   createdAt       DateTime   @default(now())
   items           SaleItem[]
   payments        Payment[]

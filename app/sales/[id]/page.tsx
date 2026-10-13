@@ -12,6 +12,7 @@ import {
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import DeliveryCorrectionModal from '@/components/DeliveryCorrectionModal'
 
 function numberToArabicWords(number: number): string {
     if (number === 0) return 'صفر';
@@ -142,6 +143,10 @@ interface Sale {
     chequeAmount?: number
     createdAt: string
     status: string
+    deliveryStatus?: string | null
+    deliveredAt?: string | null
+    deliveredBy?: string | null
+    deliveryNotes?: string | null
     branchId?: number
     branch?: {
         id: number
@@ -221,6 +226,7 @@ export default function InvoiceDetails() {
     const [viewMode, setViewMode] = useState<InvoiceViewMode>('INVOICE')
     const [branchOverride, setBranchOverride] = useState<'AUTO' | 'MAIN' | 'JAWDA'>('AUTO')
     const [deleting, setDeleting] = useState(false)
+    const [showDeliveryModal, setShowDeliveryModal] = useState(false)
     const componentRef = useRef<HTMLDivElement>(null)
 
     const handlePrint = () => {
@@ -617,6 +623,22 @@ ${invoiceUrl}
                             </Button>
                         )}
 
+                        {/* Delivery Status Correction Button */}
+                        {sale.status !== 'QUOTATION' && (
+                            <Button
+                                onClick={() => setShowDeliveryModal(true)}
+                                className={`text-xs font-black flex items-center gap-1.5 shadow-sm transition-all ${
+                                    sale.deliveryStatus === 'DELIVERED'
+                                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                                        : 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-black ring-2 ring-amber-400/60'
+                                }`}
+                                title="تصحيح أو تأكيد استلام البضاعة من المخزن"
+                            >
+                                <PackageCheck size={15} />
+                                <span>{sale.deliveryStatus === 'DELIVERED' ? 'تم الاستلام (تصحيح)' : 'تصحيح / تأكيد الاستلام'}</span>
+                            </Button>
+                        )}
+
                         <Link href={`/sales/${sale.id}/edit`}>
                             <Button variant="outline" className="flex items-center gap-1.5 border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs">
                                 <Edit size={15} />
@@ -656,6 +678,67 @@ ${invoiceUrl}
                         </Button>
                     </div>
                 </div>
+
+                {/* Delivery Tracking & Correction Banner (Screen Only) */}
+                {sale.status !== 'QUOTATION' && (
+                    <div className={`mb-4 p-3.5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 print:hidden shadow-xs transition-all ${
+                        sale.deliveryStatus === 'DELIVERED'
+                            ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950'
+                            : 'bg-amber-50/90 border-amber-300 text-amber-950'
+                    }`}>
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2.5 rounded-xl shadow-xs ${
+                                sale.deliveryStatus === 'DELIVERED' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'
+                            }`}>
+                                {sale.deliveryStatus === 'DELIVERED' ? <PackageCheck size={22} /> : <Clock size={22} className="animate-pulse" />}
+                            </div>
+                            <div>
+                                <div className="font-black text-sm flex items-center gap-2 flex-wrap">
+                                    <span>حالة استلام وصرف البضاعة:</span>
+                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-black border ${
+                                        sale.deliveryStatus === 'DELIVERED'
+                                            ? 'bg-emerald-200 text-emerald-900 border-emerald-300'
+                                            : 'bg-amber-200 text-amber-950 border-amber-300'
+                                    }`}>
+                                        {sale.deliveryStatus === 'DELIVERED' ? 'تم الاستلام والصرف من المخزن' : 'لم يأتِ صاحب البضاعة بعد للاستلام (بانتظار الصرف)'}
+                                    </span>
+                                </div>
+                                <div className="text-xs text-slate-600 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                                    {sale.deliveryStatus === 'DELIVERED' ? (
+                                        <>
+                                            {sale.deliveredAt && (
+                                                <span className="font-mono">
+                                                    📅 تاريخ ووقت الاستلام: {new Date(sale.deliveredAt).toLocaleDateString('ar-SD')} {new Date(sale.deliveredAt).toLocaleTimeString('ar-SD', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            )}
+                                            {sale.deliveredBy && (
+                                                <span>👤 المستلم/السائق: <strong>{sale.deliveredBy}</strong></span>
+                                            )}
+                                            {sale.deliveryNotes && (
+                                                <span>📝 ملاحظات: {sale.deliveryNotes}</span>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <span>⏳ البضاعة محجوزة ومجهزة بالمخزن بانتظار حضور العميل أو ممثله لاستلامها.</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <Button
+                            size="sm"
+                            onClick={() => setShowDeliveryModal(true)}
+                            className={`text-xs font-black shrink-0 px-4 py-2 rounded-xl shadow-xs ${
+                                sale.deliveryStatus === 'DELIVERED'
+                                    ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            }`}
+                        >
+                            <PackageCheck size={15} className="ml-1" />
+                            <span>{sale.deliveryStatus === 'DELIVERED' ? 'تصحيح / تعديل بيانات الاستلام' : 'تأكيد وصرف الاستلام الآن'}</span>
+                        </Button>
+                    </div>
+                )}
 
                 {/* Status Notice Banners (Screen Only) */}
                 {sale.status === 'CREDIT' && (
@@ -906,18 +989,45 @@ ${invoiceUrl}
                                     </span>
                                 </div>
 
-                                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200 print:text-[8.5px] print:pt-0.5">
-                                    <span className="font-bold text-slate-600">الحالة:</span>
-                                    <span className={`font-black text-[10px] px-1.5 py-0.5 rounded print:text-[8px] print:px-1 print:py-0 ${
-                                        sale.status === 'PAID'
-                                            ? 'text-emerald-700 bg-emerald-100 border border-emerald-300 print:bg-emerald-600 print:text-white'
-                                            : sale.status === 'CREDIT'
-                                            ? 'text-red-700 bg-red-100 border border-red-300 print:bg-red-600 print:text-white'
-                                            : 'text-amber-700 bg-amber-100 border border-amber-300 print:bg-amber-600 print:text-white'
-                                    }`}>
-                                        {sale.status === 'PAID' ? 'خالص السداد' : sale.status === 'CREDIT' ? 'آجل / غير خالص' : 'مسودة'}
-                                    </span>
-                                </div>
+                                {viewMode === 'DELIVERY' ? (
+                                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200 print:text-[8.5px] print:pt-0.5">
+                                        <span className="font-bold text-slate-600">حالة الاستلام:</span>
+                                        <span className={`font-black text-[10px] px-1.5 py-0.5 rounded print:text-[8px] print:px-1 print:py-0 ${
+                                            sale.deliveryStatus === 'DELIVERED'
+                                                ? 'text-emerald-700 bg-emerald-100 border border-emerald-300 print:bg-emerald-600 print:text-white'
+                                                : 'text-amber-800 bg-amber-100 border border-amber-300 print:bg-amber-600 print:text-white'
+                                        }`}>
+                                            {sale.deliveryStatus === 'DELIVERED' ? 'تم الاستلام والصرف' : 'بانتظار الاستلام'}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200 print:text-[8.5px] print:pt-0.5">
+                                            <span className="font-bold text-slate-600">الحالة المالية:</span>
+                                            <span className={`font-black text-[10px] px-1.5 py-0.5 rounded print:text-[8px] print:px-1 print:py-0 ${
+                                                sale.status === 'PAID'
+                                                    ? 'text-emerald-700 bg-emerald-100 border border-emerald-300 print:bg-emerald-600 print:text-white'
+                                                    : sale.status === 'CREDIT'
+                                                    ? 'text-red-700 bg-red-100 border border-red-300 print:bg-red-600 print:text-white'
+                                                    : 'text-amber-700 bg-amber-100 border border-amber-300 print:bg-amber-600 print:text-white'
+                                            }`}>
+                                                {sale.status === 'PAID' ? 'خالص السداد' : sale.status === 'CREDIT' ? 'آجل / غير خالص' : 'مسودة'}
+                                            </span>
+                                        </div>
+                                        {sale.status !== 'QUOTATION' && (
+                                            <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200 print:text-[8.5px] print:pt-0.5">
+                                                <span className="font-bold text-slate-600">الاستلام:</span>
+                                                <span className={`font-black text-[10px] px-1.5 py-0.5 rounded print:text-[8px] print:px-1 print:py-0 ${
+                                                    sale.deliveryStatus === 'DELIVERED'
+                                                        ? 'text-emerald-700 bg-emerald-100 border border-emerald-300 print:bg-emerald-600 print:text-white'
+                                                        : 'text-amber-800 bg-amber-100 border border-amber-300 print:bg-amber-600 print:text-white'
+                                                }`}>
+                                                    {sale.deliveryStatus === 'DELIVERED' ? 'تم الاستلام' : 'لم يستلم بعد'}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
 
                                 {totalWeightKg > 0 && (
                                     <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200 print:text-[8.5px] print:pt-0.5">
@@ -1645,6 +1755,16 @@ ${invoiceUrl}
                     </Card>
                 </div>
             )}
+
+            {/* Delivery Correction Modal */}
+            <DeliveryCorrectionModal
+                isOpen={showDeliveryModal}
+                sale={sale}
+                onClose={() => setShowDeliveryModal(false)}
+                onSuccess={(updated) => {
+                    setSale(prev => prev ? { ...prev, ...updated } : prev)
+                }}
+            />
         </main>
     )
 }

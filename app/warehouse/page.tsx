@@ -8,16 +8,19 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 
 export default async function WarehouseDashboard() {
-    const paidOrders = await prisma.sale.findMany({
-        where: { status: 'PAID' },
+    const pendingDeliveries = await prisma.sale.findMany({
+        where: { 
+            status: { in: ['PAID', 'CREDIT'] },
+            deliveryStatus: 'PENDING'
+        },
         orderBy: { createdAt: 'asc' }, // Oldest first for FIFO
         include: { items: true }
     })
 
     const deliveredToday = await prisma.sale.count({
         where: {
-            status: 'DELIVERED',
-            createdAt: {
+            deliveryStatus: 'DELIVERED',
+            deliveredAt: {
                 gte: new Date(new Date().setHours(0, 0, 0, 0))
             }
         }
@@ -36,13 +39,13 @@ export default async function WarehouseDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {paidOrders.length === 0 ? (
+                    {pendingDeliveries.length === 0 ? (
                         <div className="col-span-full text-center py-12 text-gray-500">
                             <Clock size={48} className="mx-auto mb-4 opacity-50" />
                             <p className="text-xl">لا توجد طلبات معلقة حالياً</p>
                         </div>
                     ) : (
-                        paidOrders.map(order => (
+                        pendingDeliveries.map(order => (
                             <Card key={order.id} className="border-t-4 border-yellow-500">
                                 <div className="flex justify-between items-start mb-4">
                                     <div>

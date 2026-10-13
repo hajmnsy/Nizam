@@ -7,11 +7,18 @@ import Input from '@/components/ui/Input'
 import {
     ArrowLeft, Plus, Trash2, Search, Minus, FileText,
     Calendar, User, Eye, EyeOff, X, Check, CreditCard,
-    Building2, RefreshCw, ShoppingCart, UserCheck, AlertTriangle
+    Building2, RefreshCw, ShoppingCart, UserCheck, AlertTriangle,
+    Wifi, WifiOff, UploadCloud, Printer, CheckCircle
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import {
+    cacheCatalogData,
+    getCachedCatalog,
+    enqueueOfflineSale,
+    getOfflineSalesQueue
+} from '@/lib/offlineStorage'
 
 interface Category {
     id: number
@@ -83,29 +90,78 @@ export default function NewSale() {
     const [registeredCustomers, setRegisteredCustomers] = useState<any[]>([])
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('')
 
+    // Offline Mode States
+    const [isOnline, setIsOnline] = useState<boolean>(true)
+    const [offlineQueueCount, setOfflineQueueCount] = useState<number>(0)
+    const [offlineSavedSale, setOfflineSavedSale] = useState<any | null>(null)
+    const [showOfflineSuccessModal, setShowOfflineSuccessModal] = useState<boolean>(false)
+
     useEffect(() => {
+        setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true)
+        setOfflineQueueCount(getOfflineSalesQueue().length)
+
+        const handleOnline = () => setIsOnline(true)
+        const handleOffline = () => setIsOnline(false)
+        const handleQueue = () => setOfflineQueueCount(getOfflineSalesQueue().length)
+
+        window.addEventListener('online', handleOnline)
+        window.addEventListener('offline', handleOffline)
+        window.addEventListener('jawda_offline_queue_updated', handleQueue)
+
         Promise.all([
-            fetch('/api/products', { cache: 'no-store' }).then(res => res.json()),
-            fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()),
-            fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json()),
-            fetch('/api/branches', { cache: 'no-store' }).then(res => res.json()),
-            fetch('/api/customers', { cache: 'no-store' }).then(res => res.json()),
-            fetch('/api/auth/me', { cache: 'no-store' }).then(res => res.json())
+            fetch('/api/products', { cache: 'no-store' }).then(res => res.json()).catch(() => null),
+            fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()).catch(() => null),
+            fetch('/api/exchange-rate', { cache: 'no-store' }).then(res => res.json()).catch(() => null),
+            fetch('/api/branches', { cache: 'no-store' }).then(res => res.json()).catch(() => null),
+            fetch('/api/customers', { cache: 'no-store' }).then(res => res.json()).catch(() => null),
+            fetch('/api/auth/me', { cache: 'no-store' }).then(res => res.json()).catch(() => null)
         ]).then(([productsData, categoriesData, exchangeRateData, branchesData, customersData, userData]) => {
-            setProducts(Array.isArray(productsData) ? productsData : [])
+            if (Array.isArray(productsData) && productsData.length > 0) {
+                setProducts(productsData)
+                // Cache locally for offline use
+                cacheCatalogData({
+                    products: productsData,
+                    categories: Array.isArray(categoriesData) ? categoriesData : [],
+                    customers: Array.isArray(customersData) ? customersData : [],
+                    branches: Array.isArray(branchesData) ? branchesData : [],
+                    exchangeRate: exchangeRateData?.rate || 0
+                })
+            } else {
+                // Fallback to offline cache
+                const cached = getCachedCatalog()
+                if (cached.products.length > 0) {
+                    setProducts(cached.products)
+                }
+            }
+
             if (Array.isArray(branchesData)) setBranches(branchesData)
+            else {
+                const cached = getCachedCatalog()
+                if (cached.branches.length > 0) setBranches(cached.branches)
+            }
+
             if (Array.isArray(customersData)) setRegisteredCustomers(customersData)
+            else {
+                const cached = getCachedCatalog()
+                if (cached.customers.length > 0) setRegisteredCustomers(cached.customers)
+            }
+
             if (userData && userData.branchId) {
                 setActiveBranchId(userData.branchId)
                 setDispatchBranchId(userData.branchId.toString())
             }
+
             if (exchangeRateData && exchangeRateData.rate > 0) {
                 setExchangeRate(exchangeRateData.rate)
+            } else {
+                const cached = getCachedCatalog()
+                if (cached.exchangeRate > 0) setExchangeRate(cached.exchangeRate)
             }
 
-            if (Array.isArray(categoriesData)) {
+            const activeCategoriesData = Array.isArray(categoriesData) ? categoriesData : getCachedCatalog().categories
+            if (Array.isArray(activeCategoriesData)) {
                 const hiddenCategories = ['قطاعات', 'مسطحات', 'مواسير', 'سيخ']
-                let visibleCategories = categoriesData.filter((cat: Category) => !hiddenCategories.includes(cat.name))
+                let visibleCategories = activeCategoriesData.filter((cat: Category) => !hiddenCategories.includes(cat.name))
 
                 const uniqueMap = new Map()
                 visibleCategories.forEach(cat => {
@@ -118,7 +174,21 @@ export default function NewSale() {
             } else {
                 setCategories([])
             }
-        }).catch(console.error)
+        }).catch(err => {
+            console.error('Network fetch failed, loading from offline cache', err)
+            const cached = getCachedCatalog()
+            if (cached.products.length > 0) setProducts(cached.products)
+            if (cached.categories.length > 0) setCategories(cached.categories)
+            if (cached.customers.length > 0) setRegisteredCustomers(cached.customers)
+            if (cached.branches.length > 0) setBranches(cached.branches)
+            if (cached.exchangeRate > 0) setExchangeRate(cached.exchangeRate)
+        })
+
+        return () => {
+            window.removeEventListener('online', handleOnline)
+            window.removeEventListener('offline', handleOffline)
+            window.removeEventListener('jawda_offline_queue_updated', handleQueue)
+        }
     }, [])
 
     // Click outside to close customer dropdown
@@ -394,35 +464,69 @@ export default function NewSale() {
             }
         }
 
+        const submitPayload = {
+            customer: customer || (status === 'QUOTATION' ? 'عرض سعر' : 'عميل نقدي'),
+            customerId: selectedCustomerId ? parseInt(selectedCustomerId) : null,
+            items: cart,
+            status: finalStatus,
+            deliveryStatus: 'PENDING',
+            discount: parseFloat(discount) || 0,
+            paidAmount: finalPaid,
+            paymentMethod: paymentMethod,
+            cashAmount: calcCash,
+            bankAmount: calcBank,
+            chequeAmount: calcCheque,
+            currency: currency,
+            currencyRate: parseFloat(currencyRate) || 1,
+            bankName: finalBankName,
+            bankRef: finalBankRef,
+            bankTransfers: JSON.stringify(activeTransfers),
+            bankSender: finalBankSender,
+            bankRecipient: finalBankRecipient,
+            chequeNumber: chequeNumber?.trim() || null,
+            chequeBank: chequeBank?.trim() || null,
+            chequeSender: chequeSender?.trim() || null,
+            chequeRecipient: chequeRecipient?.trim() || null,
+            createdAt: createdAt,
+            dispatchBranchId: dispatchBranchId || null
+        }
+
+        const handleOfflineSave = () => {
+            const queued = enqueueOfflineSale(submitPayload)
+            setOfflineSavedSale(queued)
+            setShowOfflineSuccessModal(true)
+
+            // Locally deduct stock in products state
+            setProducts(prev => prev.map(p => {
+                const cartItem = cart.find(c => c.productId === p.id)
+                if (cartItem) {
+                    return { ...p, quantity: Math.max(0, p.quantity - cartItem.quantity) }
+                }
+                return p
+            }))
+
+            // Reset cart and customer for next transaction
+            setCart([])
+            setCustomer('')
+            setSelectedCustomerId('')
+            setDiscount('')
+            setBankTransfers([{ id: 1, bankName: 'بنك الخرطوم (بنكك)', customBankName: '', bankRef: '', amount: '', sender: '', recipient: '' }])
+            setPaidAmountInput('')
+            setOfflineQueueCount(getOfflineSalesQueue().length)
+        }
+
+        // Check if offline before making request
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            handleOfflineSave()
+            setLoading(false)
+            return
+        }
+
         try {
             const res = await fetch('/api/sales', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    customer: customer || (status === 'QUOTATION' ? 'عرض سعر' : 'عميل نقدي'),
-                    customerId: selectedCustomerId ? parseInt(selectedCustomerId) : null,
-                    items: cart,
-                    status: finalStatus,
-                    discount: parseFloat(discount) || 0,
-                    paidAmount: finalPaid,
-                    paymentMethod: paymentMethod,
-                    cashAmount: calcCash,
-                    bankAmount: calcBank,
-                    chequeAmount: calcCheque,
-                    currency: currency,
-                    currencyRate: parseFloat(currencyRate) || 1,
-                    bankName: finalBankName,
-                    bankRef: finalBankRef,
-                    bankTransfers: JSON.stringify(activeTransfers),
-                    bankSender: finalBankSender,
-                    bankRecipient: finalBankRecipient,
-                    chequeNumber: chequeNumber?.trim() || null,
-                    chequeBank: chequeBank?.trim() || null,
-                    chequeSender: chequeSender?.trim() || null,
-                    chequeRecipient: chequeRecipient?.trim() || null,
-                    createdAt: createdAt,
-                    dispatchBranchId: dispatchBranchId || null
-                })
+                body: JSON.stringify(submitPayload)
             })
 
             if (res.ok) {
@@ -440,8 +544,9 @@ export default function NewSale() {
                 console.error('Save error details:', errorData)
             }
         } catch (error) {
-            console.error(error)
-            alert('حدث خطأ أثناء الحفظ: خطأ في الاتصال')
+            console.warn('Network error during sale creation, switching to offline local save:', error)
+            // Automatic graceful fallback to offline queue!
+            handleOfflineSave()
         } finally {
             setLoading(false)
         }
@@ -462,6 +567,27 @@ export default function NewSale() {
                             <h1 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-1.5">
                                 <span>نقطة البيع السريعة (POS)</span>
                             </h1>
+
+                            {/* Network & Offline Status Indicator */}
+                            <div className="flex items-center gap-1.5 mr-2">
+                                {isOnline ? (
+                                    <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                                        <Wifi size={12} className="text-emerald-600" />
+                                        <span>متصل</span>
+                                    </span>
+                                ) : (
+                                    <span className="text-[11px] font-black text-amber-950 bg-amber-400 border border-amber-500 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs animate-pulse">
+                                        <WifiOff size={12} />
+                                        <span>أوفلاين (حفظ محلي)</span>
+                                    </span>
+                                )}
+                                {offlineQueueCount > 0 && (
+                                    <span className="text-[10px] font-bold text-blue-800 bg-blue-100 border border-blue-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                        <UploadCloud size={11} className="text-blue-600" />
+                                        <span>{offlineQueueCount} معلقة</span>
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {/* Customer Search & Date */}
@@ -1320,6 +1446,118 @@ export default function NewSale() {
                     </div>
                 </div>
             </main>
+
+            {/* Offline Success Dialog Modal */}
+            {showOfflineSuccessModal && offlineSavedSale && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 print:hidden animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col p-5 sm:p-6 space-y-4 border border-slate-200 animate-slide-up">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-emerald-100 text-emerald-700 rounded-2xl shrink-0">
+                                <CheckCircle size={32} />
+                            </div>
+                            <div>
+                                <h3 className="text-base sm:text-lg font-black text-slate-900">تم حفظ الفاتورة بنجاح محلياً!</h3>
+                                <p className="text-xs text-slate-500 font-bold">تم الحفظ في ذاكرة الجهاز (وضع عدم الاتصال / أوفلاين)</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs">
+                            <div className="flex justify-between font-bold">
+                                <span className="text-slate-600">رقم الفاتورة المؤقت:</span>
+                                <span className="font-mono text-blue-700 font-black">{offlineSavedSale.localId}</span>
+                            </div>
+                            <div className="flex justify-between font-bold">
+                                <span className="text-slate-600">العميل:</span>
+                                <span className="text-slate-900 font-bold">{offlineSavedSale.customer}</span>
+                            </div>
+                            <div className="flex justify-between font-bold">
+                                <span className="text-slate-600">إجمالي الفاتورة:</span>
+                                <span className="text-slate-900 font-mono font-black">{offlineSavedSale.total.toLocaleString()} ج.س</span>
+                            </div>
+                            <div className="flex justify-between font-bold">
+                                <span className="text-slate-600">عدد الأصناف:</span>
+                                <span className="text-slate-900 font-mono font-bold">{offlineSavedSale.itemsCount} قطعة</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-amber-50 border border-amber-200 text-amber-950 p-3 rounded-xl text-xs font-bold flex items-start gap-2">
+                            <UploadCloud size={18} className="text-amber-700 shrink-0 mt-0.5" />
+                            <span>سيقوم النظام تلقائياً برفع هذه الفاتورة ومزامنتها مع الخادم وتحديث المخزون الرئيسي فور عودة الإنترنت.</span>
+                        </div>
+
+                        <div className="flex flex-col gap-2 pt-1">
+                            <Button
+                                onClick={() => window.print()}
+                                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-2.5 flex items-center justify-center gap-2 shadow-xs"
+                            >
+                                <Printer size={16} />
+                                <span>🖨️ طباعة إيصال استلام محلي فوري</span>
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setShowOfflineSuccessModal(false)
+                                    setOfflineSavedSale(null)
+                                }}
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5"
+                            >
+                                <span>➕ مواصلة وإصدار فاتورة جديدة</span>
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Offline Invoice Printable Container (Screen Hidden, Print Only) */}
+            {offlineSavedSale && (
+                <div className="hidden print:block p-8 font-sans max-w-2xl mx-auto text-slate-900" dir="rtl">
+                    <div className="border-b-2 border-slate-900 pb-4 mb-4 text-center">
+                        <h1 className="text-2xl font-black">مصنع الجودة للمنتجات الحديدية</h1>
+                        <p className="text-sm font-bold text-slate-600">إذن استلام محلي (أوفلاين - حفظ مؤقت)</p>
+                        <div className="flex justify-between items-center text-xs mt-3 font-bold border-t pt-2">
+                            <span>رقم الإذن: <strong className="font-mono text-sm">{offlineSavedSale.localId}</strong></span>
+                            <span>التاريخ: {new Date(offlineSavedSale.createdAt).toLocaleDateString('ar-SD')}</span>
+                            <span>الوقت: {new Date(offlineSavedSale.createdAt).toLocaleTimeString('ar-SD')}</span>
+                        </div>
+                    </div>
+
+                    <div className="mb-4 text-sm font-bold">
+                        <p><strong>العميل:</strong> {offlineSavedSale.customer}</p>
+                    </div>
+
+                    <table className="w-full text-right border-collapse border border-slate-300 text-sm mb-4">
+                        <thead>
+                            <tr className="bg-slate-100 border-b border-slate-300">
+                                <th className="p-2 border border-slate-300">#</th>
+                                <th className="p-2 border border-slate-300">الصنف</th>
+                                <th className="p-2 border border-slate-300">الكمية</th>
+                                <th className="p-2 border border-slate-300">السعر</th>
+                                <th className="p-2 border border-slate-300">الإجمالي</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(offlineSavedSale.payload?.items || []).map((it: any, idx: number) => (
+                                <tr key={idx} className="border-b border-slate-200">
+                                    <td className="p-2 border border-slate-300 font-mono">{idx + 1}</td>
+                                    <td className="p-2 border border-slate-300 font-bold">{it.name || `صنف #${it.productId}`}</td>
+                                    <td className="p-2 border border-slate-300 font-bold font-mono">{it.quantity}</td>
+                                    <td className="p-2 border border-slate-300 font-mono">{Number(it.price).toLocaleString()}</td>
+                                    <td className="p-2 border border-slate-300 font-mono font-bold">{(it.quantity * it.price).toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot>
+                            <tr className="bg-slate-50 font-black border-t-2 border-slate-400">
+                                <td colSpan={4} className="p-2 text-left">الإجمالي الصافي:</td>
+                                <td className="p-2 font-mono">{offlineSavedSale.total.toLocaleString()} ج.س</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div className="border-t border-slate-300 pt-3 text-xs text-slate-500 text-center">
+                        ⚠️ هذا الإيصال تم حفظه محلياً في وضع عدم الاتصال بالإنترنت وسيتم اعتماده آلياً في السيرفر فور عودة الاتصال.
+                    </div>
+                </div>
+            )}
         </>
     )
 }

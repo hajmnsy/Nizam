@@ -13,6 +13,8 @@ export const metadata: Metadata = {
     description: 'نظام إدارة المخازن والمبيعات والمنصرفات لمصنع الجودة',
 }
 
+import OfflineSyncBanner from '@/components/OfflineSyncBanner'
+
 export default function RootLayout({
     children,
 }: {
@@ -21,6 +23,7 @@ export default function RootLayout({
     return (
         <html lang="ar" dir="rtl" className={cairo.variable}>
             <body className={`${cairo.className} bg-slate-50 text-slate-900 antialiased selection:bg-indigo-500 selection:text-white`}>
+                <OfflineSyncBanner />
                 {children}
             </body>
         </html>

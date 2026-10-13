@@ -3,9 +3,10 @@
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { Plus, Eye, FileText, CheckCircle, Clock, ChevronRight, ChevronLeft, CreditCard, X, Loader2, Printer, Edit, Search, Download, DollarSign, Wallet, AlertCircle, Building2, Calendar, RefreshCw } from 'lucide-react'
+import { Plus, Eye, FileText, CheckCircle, Clock, ChevronRight, ChevronLeft, CreditCard, X, Loader2, Printer, Edit, Search, Download, DollarSign, Wallet, AlertCircle, Building2, Calendar, RefreshCw, PackageCheck, Truck, RotateCcw } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState, useMemo } from 'react'
+import DeliveryCorrectionModal from '@/components/DeliveryCorrectionModal'
 
 interface Sale {
     id: number
@@ -15,6 +16,10 @@ interface Sale {
     paidAmount?: number
     remainingAmount?: number
     status: string
+    deliveryStatus?: string
+    deliveredAt?: string
+    deliveredBy?: string
+    deliveryNotes?: string
     createdAt: string
     paymentMethod?: string
     bankName?: string
@@ -71,6 +76,11 @@ export default function SalesList() {
     const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
     const [paymentAmount, setPaymentAmount] = useState<string>('')
     const [submittingPayment, setSubmittingPayment] = useState(false)
+
+    // Delivery Status Tracking & Correction State
+    const [deliveryTab, setDeliveryTab] = useState<'ALL' | 'PENDING' | 'DELIVERED'>('ALL')
+    const [deliveryModalOpen, setDeliveryModalOpen] = useState(false)
+    const [selectedDeliverySale, setSelectedDeliverySale] = useState<Sale | null>(null)
 
     const changeDateByDays = (days: number) => {
         const base = date || getTodayLocal()
@@ -162,18 +172,39 @@ export default function SalesList() {
         refreshSales()
     }, [tab, date, startDate, endDate, customerFilter, selectedBranchId])
 
-    // Client-side Instant Filter (by invoice #, customer name, item name, bank ref)
+    // Delivery KPI Metrics across current active query
+    const deliveryKPI = useMemo(() => {
+        let pending = 0
+        let delivered = 0
+        sales.forEach(s => {
+            if (s.status !== 'QUOTATION') {
+                if (s.deliveryStatus === 'DELIVERED') delivered++
+                else pending++
+            }
+        })
+        return { pending, delivered }
+    }, [sales])
+
+    // Client-side Instant Filter (by invoice #, customer name, item name, bank ref, delivery status)
     const filteredSales = useMemo(() => {
-        if (!searchTerm.trim()) return sales
-        const term = searchTerm.trim().toLowerCase()
         return sales.filter(s => {
+            // Delivery Tab Filter
+            if (deliveryTab === 'PENDING') {
+                if (s.status === 'QUOTATION' || s.deliveryStatus === 'DELIVERED') return false
+            } else if (deliveryTab === 'DELIVERED') {
+                if (s.deliveryStatus !== 'DELIVERED') return false
+            }
+
+            if (!searchTerm.trim()) return true
+            const term = searchTerm.trim().toLowerCase()
             const invMatch = (s.invoiceNumber?.toString() || '').includes(term) || s.id.toString().includes(term)
             const custMatch = (s.customer || '').toLowerCase().includes(term)
             const itemMatch = s.items?.some((it: any) => (it.product?.name || '').toLowerCase().includes(term))
             const bankRefMatch = ((s as any).bankRef || '').toLowerCase().includes(term)
-            return invMatch || custMatch || itemMatch || bankRefMatch
+            const deliveryByMatch = (s.deliveredBy || '').toLowerCase().includes(term)
+            return invMatch || custMatch || itemMatch || bankRefMatch || deliveryByMatch
         })
-    }, [sales, searchTerm])
+    }, [sales, searchTerm, deliveryTab])
 
     // Live KPI Metrics
     const kpi = useMemo(() => {
@@ -207,30 +238,49 @@ export default function SalesList() {
             alert('لا توجد بيانات متاحة للتصدير')
             return
         }
-        const headers = ['رقم الفاتورة', 'العميل', 'الفرع', 'التاريخ', 'الوقت', 'الإجمالي (ج.س)', 'المدفوع', 'المتبقي', 'طريقة الدفع', 'المرجع البنكي', 'الحالة', 'الأصناف']
-        const rows = filteredSales.map(s => [
-            s.invoiceNumber || s.id,
-            s.customer || 'عميل نقدي',
-            (s as any).branch?.name || '',
-            new Date(s.createdAt).toLocaleDateString('ar-SD'),
-            new Date(s.createdAt).toLocaleTimeString('ar-SD'),
-            s.total,
-            s.paidAmount || 0,
-            s.remainingAmount || 0,
-            (s as any).paymentMethod === 'BANK' ? `بنك (${(s as any).bankName || ''})` : (s as any).paymentMethod === 'CHEQUE' ? 'شيك' : (s as any).paymentMethod === 'MULTIPLE' ? 'مجزأ' : 'نقدي',
-            (s as any).bankRef || '',
-            s.status === 'PAID' ? 'مسددة' : s.status === 'CREDIT' ? 'آجلة' : 'عرض سعر',
-            s.items?.map((it: any) => `${it.quantity}x ${it.product?.name || ''}`).join(' - ')
-        ])
-        const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.map(c => `"${String(c || '').replace(/"/g, '""')}"`).join(','))].join('\n')
+        const headers = ['رقم الفاتورة', 'العميل', 'الفرع', 'التاريخ', 'الوقت', 'الإجمالي (ج.س)', 'المدفوع', 'المتبقي', 'طريقة الدفع', 'المرجع البنكي', 'الحالة المالية', 'حالة الاستلام والصرف', 'اسم المستلم', 'ملاحظات الاستلام', 'الأصناف']
+        const csvRows = [headers.join(',')]
+
+        filteredSales.forEach(sale => {
+            const dateStr = new Date(sale.createdAt).toLocaleDateString('ar-SD')
+            const timeStr = new Date(sale.createdAt).toLocaleTimeString('ar-SD', { hour: '2-digit', minute: '2-digit' })
+            const branchName = (sale as any).branch?.name || 'الفرع الرئيسي'
+            const paymentMethodStr = (sale as any).paymentMethod === 'BANK' ? 'تحويل بنكي' : (sale as any).paymentMethod === 'CHEQUE' ? 'شيك' : (sale as any).paymentMethod === 'MULTIPLE' ? 'دفع مجزأ' : 'نقدي'
+            const financialStatusStr = sale.status === 'PAID' ? 'مسددة' : sale.status === 'CREDIT' ? 'آجلة' : 'عرض سعر'
+            const deliveryStatusStr = sale.status === 'QUOTATION' ? '-' : (sale.deliveryStatus === 'DELIVERED' ? 'تم الاستلام والصرف' : 'بانتظار الاستلام')
+            const deliveredByStr = sale.deliveredBy || '-'
+            const deliveryNotesStr = sale.deliveryNotes || '-'
+            const itemsStr = (sale.items || []).map((it: any) => `${it.quantity}x ${it.product?.name || 'صنف'}`).join(' | ')
+
+            const row = [
+                `"${sale.invoiceNumber || sale.id}"`,
+                `"${(sale.customer || 'عميل نقدي').replace(/"/g, '""')}"`,
+                `"${branchName.replace(/"/g, '""')}"`,
+                `"${dateStr}"`,
+                `"${timeStr}"`,
+                `"${sale.total}"`,
+                `"${sale.paidAmount || (sale.status === 'PAID' ? sale.total : 0)}"`,
+                `"${sale.remainingAmount || 0}"`,
+                `"${paymentMethodStr}"`,
+                `"${((sale as any).bankRef || '').replace(/"/g, '""')}"`,
+                `"${financialStatusStr}"`,
+                `"${deliveryStatusStr}"`,
+                `"${deliveredByStr.replace(/"/g, '""')}"`,
+                `"${deliveryNotesStr.replace(/"/g, '""')}"`,
+                `"${itemsStr.replace(/"/g, '""')}"`
+            ]
+            csvRows.push(row.join(','))
+        })
+
+        const csvContent = '\uFEFF' + csvRows.join('\n')
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
         const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.setAttribute('download', `كشف_المبيعات_${date || startDate || 'شامل'}.csv`)
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `sales_report_${date || 'all'}.csv`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
     }
 
     const handleQuickPayment = async () => {
@@ -534,6 +584,62 @@ export default function SalesList() {
                             <span className="bg-white/20 px-1.5 py-0.2 rounded-full text-[10px]">{kpi.totalCount}</span>
                         </button>
                     </div>
+
+                    {/* Delivery Status Sub-Tabs */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                        <div className="flex items-center gap-1.5 overflow-x-auto">
+                            <span className="text-xs font-black text-slate-700 ml-1 flex items-center gap-1 shrink-0">
+                                <PackageCheck size={15} className="text-blue-600" />
+                                <span>حالة استلام البضاعة:</span>
+                            </span>
+                            <button
+                                onClick={() => setDeliveryTab('ALL')}
+                                className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap ${
+                                    deliveryTab === 'ALL'
+                                        ? 'bg-slate-800 text-white shadow-xs'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                            >
+                                <span>الكل</span>
+                            </button>
+                            <button
+                                onClick={() => setDeliveryTab('PENDING')}
+                                className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                                    deliveryTab === 'PENDING'
+                                        ? 'bg-amber-500 text-slate-950 shadow-sm ring-2 ring-amber-400/50'
+                                        : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-300'
+                                }`}
+                                title="الفواتير التي لم يأتِ أصحابها لاستلام بضاعتهم بعد"
+                            >
+                                <Clock size={13} className="text-amber-800 animate-pulse" />
+                                <span>لم يأتِ صاحبه بعد للاستلام</span>
+                                <span className="bg-amber-200 text-amber-950 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold">
+                                    {deliveryKPI.pending}
+                                </span>
+                            </button>
+                            <button
+                                onClick={() => setDeliveryTab('DELIVERED')}
+                                className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                                    deliveryTab === 'DELIVERED'
+                                        ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-500/50'
+                                        : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                                }`}
+                                title="الفواتير التي تم تسليم وصرف بضاعتها بالكامل"
+                            >
+                                <CheckCircle size={13} className="text-emerald-700" />
+                                <span>تم الاستلام والصرف</span>
+                                <span className="bg-emerald-200 text-emerald-950 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold">
+                                    {deliveryKPI.delivered}
+                                </span>
+                            </button>
+                        </div>
+
+                        {deliveryTab === 'PENDING' && (
+                            <div className="text-[11px] text-amber-800 font-bold bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
+                                ⏳ يتم الآن عرض الفواتير التي لم يحضر أصحابها لاستلام البضاعة بعد
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {customerFilter && (
@@ -568,13 +674,14 @@ export default function SalesList() {
                                     <th className="p-3.5 sm:p-4">الإجمالي وطريقة الدفع</th>
                                     <th className="p-3.5 sm:p-4">تفاصيل الأصناف</th>
                                     <th className="p-3.5 sm:p-4">حالة السداد</th>
+                                    <th className="p-3.5 sm:p-4">حالة استلام البضاعة</th>
                                     <th className="p-3.5 sm:p-4 text-center">إجراءات</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={8} className="p-12 text-center text-slate-400">
+                                        <td colSpan={9} className="p-12 text-center text-slate-400">
                                             <div className="flex flex-col items-center justify-center gap-2">
                                                 <Loader2 size={28} className="animate-spin text-blue-600" />
                                                 <span className="font-bold text-xs">جاري تحميل سجل المبيعات...</span>
@@ -583,7 +690,7 @@ export default function SalesList() {
                                     </tr>
                                 ) : filteredSales.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} className="p-12 text-center text-slate-400">
+                                        <td colSpan={9} className="p-12 text-center text-slate-400">
                                             <div className="flex flex-col items-center justify-center gap-2">
                                                 <FileText size={42} className="opacity-40" />
                                                 <span className="font-bold text-sm text-slate-600">لا توجد فواتير مطابقة للبحث أو الفلتر المختار</span>
@@ -702,8 +809,79 @@ export default function SalesList() {
                                                 )}
                                             </td>
 
+                                            {/* Delivery Status & Correction Cell */}
+                                            <td className="p-3.5 sm:p-4">
+                                                {sale.status === 'QUOTATION' ? (
+                                                    <span className="text-slate-400 text-xs font-mono">-</span>
+                                                ) : sale.deliveryStatus === 'DELIVERED' ? (
+                                                    <div className="flex flex-col gap-1 items-start">
+                                                        <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1">
+                                                            <PackageCheck size={13} className="text-emerald-600" />
+                                                            <span>تم الاستلام والصرف</span>
+                                                        </span>
+                                                        {sale.deliveredAt && (
+                                                            <span className="text-[10px] text-slate-500 font-mono">
+                                                                {new Date(sale.deliveredAt).toLocaleDateString('ar-SD')} {new Date(sale.deliveredAt).toLocaleTimeString('ar-SD', { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        )}
+                                                        {sale.deliveredBy && (
+                                                            <span className="text-[10px] text-slate-700 font-bold bg-slate-100 px-1.5 py-0.5 rounded">
+                                                                المستلم: {sale.deliveredBy}
+                                                            </span>
+                                                        )}
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedDeliverySale(sale)
+                                                                setDeliveryModalOpen(true)
+                                                            }}
+                                                            className="text-[10px] text-blue-600 hover:text-blue-800 hover:underline font-black mt-0.5 flex items-center gap-0.5"
+                                                            title="تصحيح أو تعديل بيانات الاستلام"
+                                                        >
+                                                            <RotateCcw size={10} />
+                                                            <span>تصحيح الاستلام</span>
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col gap-1 items-start">
+                                                        <span className="bg-amber-50 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1">
+                                                            <Clock size={13} className="text-amber-600 animate-pulse" />
+                                                            <span>لم يأتِ صاحبه بعد</span>
+                                                        </span>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedDeliverySale(sale)
+                                                                setDeliveryModalOpen(true)
+                                                            }}
+                                                            className="text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-black px-2.5 py-1 rounded-md shadow-xs mt-1 flex items-center gap-1 transition-all"
+                                                            title="تأكيد أو تصحيح استلام البضاعة"
+                                                        >
+                                                            <CheckCircle size={12} />
+                                                            <span>تأكيد الاستلام</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </td>
+
                                             <td className="p-3.5 sm:p-4">
                                                 <div className="flex items-center gap-1.5 justify-center">
+                                                    {/* Quick Delivery Correction Button */}
+                                                    {sale.status !== 'QUOTATION' && (
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                setSelectedDeliverySale(sale)
+                                                                setDeliveryModalOpen(true)
+                                                            }}
+                                                            className={`p-1.5 text-xs border ${
+                                                                sale.deliveryStatus === 'DELIVERED'
+                                                                    ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'
+                                                                    : 'border-amber-300 text-amber-800 hover:bg-amber-50'
+                                                            }`}
+                                                            title="تصحيح / تحديث حالة الاستلام"
+                                                        >
+                                                            <PackageCheck size={15} />
+                                                        </Button>
+                                                    )}
                                                     {sale.status === 'CREDIT' && (
                                                         <Button 
                                                             variant="outline" 
@@ -835,6 +1013,19 @@ export default function SalesList() {
                     </div>
                 </div>
             )}
+
+            {/* Delivery Correction Modal */}
+            <DeliveryCorrectionModal
+                isOpen={deliveryModalOpen}
+                sale={selectedDeliverySale}
+                onClose={() => {
+                    setDeliveryModalOpen(false)
+                    setSelectedDeliverySale(null)
+                }}
+                onSuccess={(updated) => {
+                    setSales(prev => prev.map(s => s.id === updated.id ? { ...s, ...updated } : s))
+                }}
+            />
         </main>
     )
 }

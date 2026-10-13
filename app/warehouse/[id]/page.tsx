@@ -24,6 +24,8 @@ interface Sale {
     customer: string
     createdAt: string
     status: string
+    deliveryStatus?: string
+    deliveredAt?: string
     items: SaleItem[]
 }
 
@@ -47,10 +49,10 @@ export default function WarehouseOrderDetails() {
 
         setProcessing(true)
         try {
-            const res = await fetch(`/api/sales/${params.id}`, {
+            const res = await fetch(`/api/sales/${params.id}/delivery`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'DELIVERED' })
+                body: JSON.stringify({ deliveryStatus: 'DELIVERED' })
             })
 
             if (res.ok) {
@@ -89,9 +91,9 @@ export default function WarehouseOrderDetails() {
                                     <PackageIcon className="text-blue-600" />
                                     تجهيز طلب #{order.id}
                                 </h1>
-                                <span className={`px-3 py-1 rounded text-sm font-bold ${order.status === 'PAID' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                                <span className={`px-3 py-1 rounded text-sm font-bold ${order.deliveryStatus === 'DELIVERED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                                     }`}>
-                                    {order.status === 'PAID' ? 'بانتظار التسليم' : 'تم التسليم'}
+                                    {order.deliveryStatus === 'DELIVERED' ? 'تم التسليم والصرف' : 'بانتظار التسليم'}
                                 </span>
                             </div>
 
@@ -137,7 +139,7 @@ export default function WarehouseOrderDetails() {
                             <Button
                                 onClick={handleDeliver}
                                 className="w-full bg-green-600 hover:bg-green-700 py-6 text-lg shadow-lg shadow-green-200"
-                                disabled={processing || order.status === 'DELIVERED'}
+                                disabled={processing || order.deliveryStatus === 'DELIVERED'}
                             >
                                 {processing ? 'جاري التحديث...' : (
                                     <span className="flex items-center gap-2 justify-center">
