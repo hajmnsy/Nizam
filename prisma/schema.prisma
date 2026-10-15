@@ -83,15 +83,16 @@ model Sale {
 }
 
 model SaleItem {
-  id               Int     @id @default(autoincrement())
-  saleId           Int
-  productId        Int
-  quantity         Int
-  price            Float
-  dispatchBranchId Int?
-  dispatchBranch   Branch? @relation("SaleItemDispatchBranch", fields: [dispatchBranchId], references: [id])
-  product          Product @relation(fields: [productId], references: [id])
-  sale             Sale    @relation(fields: [saleId], references: [id])
+  id                Int     @id @default(autoincrement())
+  saleId            Int
+  productId         Int
+  quantity          Int
+  deliveredQuantity Int     @default(0)
+  price             Float
+  dispatchBranchId  Int?
+  dispatchBranch    Branch? @relation("SaleItemDispatchBranch", fields: [dispatchBranchId], references: [id])
+  product           Product @relation(fields: [productId], references: [id])
+  sale              Sale    @relation(fields: [saleId], references: [id])
 }
 
 model Payment {

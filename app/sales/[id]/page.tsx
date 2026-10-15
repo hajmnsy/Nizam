@@ -7,7 +7,7 @@ import Input from '@/components/ui/Input'
 import {
     ArrowLeft, Clock, Printer, Edit, CheckCircle, Phone,
     AlertCircle, X, Trash2, FileText, PackageCheck, FileSpreadsheet,
-    MapPin, Building2, Calendar, User, CreditCard, ShieldCheck
+    MapPin, Building2, Calendar, User, CreditCard, ShieldCheck, Layers
 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
@@ -99,6 +99,7 @@ function tafqeetCurrency(amount: number, currency: string = 'SDG'): string {
 interface SaleItem {
     id: number
     quantity: number
+    deliveredQuantity?: number | null
     price: number
     product: {
         name: string
@@ -684,13 +685,25 @@ ${invoiceUrl}
                     <div className={`mb-4 p-3.5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 print:hidden shadow-xs transition-all ${
                         sale.deliveryStatus === 'DELIVERED'
                             ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950'
+                            : sale.deliveryStatus === 'PARTIAL'
+                            ? 'bg-blue-50/90 border-blue-300 text-blue-950'
                             : 'bg-amber-50/90 border-amber-300 text-amber-950'
                     }`}>
                         <div className="flex items-center gap-3">
                             <div className={`p-2.5 rounded-xl shadow-xs ${
-                                sale.deliveryStatus === 'DELIVERED' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-slate-950'
+                                sale.deliveryStatus === 'DELIVERED'
+                                    ? 'bg-emerald-600 text-white'
+                                    : sale.deliveryStatus === 'PARTIAL'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-amber-500 text-slate-950'
                             }`}>
-                                {sale.deliveryStatus === 'DELIVERED' ? <PackageCheck size={22} /> : <Clock size={22} className="animate-pulse" />}
+                                {sale.deliveryStatus === 'DELIVERED' ? (
+                                    <PackageCheck size={22} />
+                                ) : sale.deliveryStatus === 'PARTIAL' ? (
+                                    <Layers size={22} />
+                                ) : (
+                                    <Clock size={22} className="animate-pulse" />
+                                )}
                             </div>
                             <div>
                                 <div className="font-black text-sm flex items-center gap-2 flex-wrap">
@@ -698,17 +711,23 @@ ${invoiceUrl}
                                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-black border ${
                                         sale.deliveryStatus === 'DELIVERED'
                                             ? 'bg-emerald-200 text-emerald-900 border-emerald-300'
+                                            : sale.deliveryStatus === 'PARTIAL'
+                                            ? 'bg-blue-200 text-blue-900 border-blue-300'
                                             : 'bg-amber-200 text-amber-950 border-amber-300'
                                     }`}>
-                                        {sale.deliveryStatus === 'DELIVERED' ? 'تم الاستلام والصرف من المخزن' : 'لم يأتِ صاحب البضاعة بعد للاستلام (بانتظار الصرف)'}
+                                        {sale.deliveryStatus === 'DELIVERED'
+                                            ? 'تم الاستلام والصرف بالكامل من المخزن'
+                                            : sale.deliveryStatus === 'PARTIAL'
+                                            ? 'استلام جزئي (تم استلام جزء وباقي جزء بالمخزن)'
+                                            : 'لم يأتِ صاحب البضاعة بعد للاستلام (بانتظار الصرف)'}
                                     </span>
                                 </div>
                                 <div className="text-xs text-slate-600 mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                                    {sale.deliveryStatus === 'DELIVERED' ? (
+                                    {sale.deliveryStatus === 'DELIVERED' || sale.deliveryStatus === 'PARTIAL' ? (
                                         <>
                                             {sale.deliveredAt && (
                                                 <span className="font-mono">
-                                                    📅 تاريخ ووقت الاستلام: {new Date(sale.deliveredAt).toLocaleDateString('ar-SD')} {new Date(sale.deliveredAt).toLocaleTimeString('ar-SD', { hour: '2-digit', minute: '2-digit' })}
+                                                    📅 آخر تسليم: {new Date(sale.deliveredAt).toLocaleDateString('ar-SD')} {new Date(sale.deliveredAt).toLocaleTimeString('ar-SD', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             )}
                                             {sale.deliveredBy && (
@@ -731,11 +750,19 @@ ${invoiceUrl}
                             className={`text-xs font-black shrink-0 px-4 py-2 rounded-xl shadow-xs ${
                                 sale.deliveryStatus === 'DELIVERED'
                                     ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                                    : sale.deliveryStatus === 'PARTIAL'
+                                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
                                     : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                             }`}
                         >
                             <PackageCheck size={15} className="ml-1" />
-                            <span>{sale.deliveryStatus === 'DELIVERED' ? 'تصحيح / تعديل بيانات الاستلام' : 'تأكيد وصرف الاستلام الآن'}</span>
+                            <span>
+                                {sale.deliveryStatus === 'DELIVERED'
+                                    ? 'تصحيح / تعديل بيانات الاستلام'
+                                    : sale.deliveryStatus === 'PARTIAL'
+                                    ? 'صرف باقي البضاعة / تصحيح'
+                                    : 'تأكيد وصرف الاستلام الآن'}
+                            </span>
                         </Button>
                     </div>
                 )}
@@ -1181,7 +1208,12 @@ ${invoiceUrl}
                                     {sale.items.map((item, index) => (
                                         <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
                                             <td className="py-2 px-2 text-center font-black font-mono text-slate-950 text-base border border-slate-300 print:py-0.5 print:px-1 print:text-sm">
-                                                {item.quantity}
+                                                <div>{item.quantity}</div>
+                                                {Boolean(item.deliveredQuantity && item.deliveredQuantity > 0 && item.deliveredQuantity < item.quantity) && (
+                                                    <div className="text-[10px] text-blue-700 font-sans font-bold print:text-[8px] leading-tight mt-0.5">
+                                                        (مستلم {item.deliveredQuantity} / باقي {item.quantity - (item.deliveredQuantity || 0)})
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="py-2 px-2 text-center font-black text-slate-900 border border-slate-300 text-xs leading-snug print:py-0.5 print:px-1 print:text-[9.5px]">
                                                 {numberToArabicWords(item.quantity)}

@@ -3,7 +3,7 @@
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { Plus, Eye, FileText, CheckCircle, Clock, ChevronRight, ChevronLeft, CreditCard, X, Loader2, Printer, Edit, Search, Download, DollarSign, Wallet, AlertCircle, Building2, Calendar, RefreshCw, PackageCheck, Truck, RotateCcw } from 'lucide-react'
+import { Plus, Eye, FileText, CheckCircle, Clock, ChevronRight, ChevronLeft, CreditCard, X, Loader2, Printer, Edit, Search, Download, DollarSign, Wallet, AlertCircle, Building2, Calendar, RefreshCw, PackageCheck, Truck, RotateCcw, Layers } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState, useMemo } from 'react'
 import DeliveryCorrectionModal from '@/components/DeliveryCorrectionModal'
@@ -78,7 +78,7 @@ export default function SalesList() {
     const [submittingPayment, setSubmittingPayment] = useState(false)
 
     // Delivery Status Tracking & Correction State
-    const [deliveryTab, setDeliveryTab] = useState<'ALL' | 'PENDING' | 'DELIVERED'>('ALL')
+    const [deliveryTab, setDeliveryTab] = useState<'ALL' | 'PENDING' | 'PARTIAL' | 'DELIVERED'>('ALL')
     const [deliveryModalOpen, setDeliveryModalOpen] = useState(false)
     const [selectedDeliverySale, setSelectedDeliverySale] = useState<Sale | null>(null)
 
@@ -175,14 +175,16 @@ export default function SalesList() {
     // Delivery KPI Metrics across current active query
     const deliveryKPI = useMemo(() => {
         let pending = 0
+        let partial = 0
         let delivered = 0
         sales.forEach(s => {
             if (s.status !== 'QUOTATION') {
                 if (s.deliveryStatus === 'DELIVERED') delivered++
+                else if (s.deliveryStatus === 'PARTIAL') partial++
                 else pending++
             }
         })
-        return { pending, delivered }
+        return { pending, partial, delivered }
     }, [sales])
 
     // Client-side Instant Filter (by invoice #, customer name, item name, bank ref, delivery status)
@@ -190,7 +192,9 @@ export default function SalesList() {
         return sales.filter(s => {
             // Delivery Tab Filter
             if (deliveryTab === 'PENDING') {
-                if (s.status === 'QUOTATION' || s.deliveryStatus === 'DELIVERED') return false
+                if (s.status === 'QUOTATION' || s.deliveryStatus === 'DELIVERED' || s.deliveryStatus === 'PARTIAL') return false
+            } else if (deliveryTab === 'PARTIAL') {
+                if (s.deliveryStatus !== 'PARTIAL') return false
             } else if (deliveryTab === 'DELIVERED') {
                 if (s.deliveryStatus !== 'DELIVERED') return false
             }
@@ -618,6 +622,21 @@ export default function SalesList() {
                                 </span>
                             </button>
                             <button
+                                onClick={() => setDeliveryTab('PARTIAL')}
+                                className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                                    deliveryTab === 'PARTIAL'
+                                        ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-500/50'
+                                        : 'bg-blue-50 text-blue-900 hover:bg-blue-100 border border-blue-200'
+                                }`}
+                                title="الفواتير التي تم استلام جزء منها وباقي جزء بالمخزن"
+                            >
+                                <Layers size={13} className="text-blue-700" />
+                                <span>استلام جزئي</span>
+                                <span className="bg-blue-200 text-blue-950 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold">
+                                    {deliveryKPI.partial}
+                                </span>
+                            </button>
+                            <button
                                 onClick={() => setDeliveryTab('DELIVERED')}
                                 className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all whitespace-nowrap flex items-center gap-1.5 ${
                                     deliveryTab === 'DELIVERED'
@@ -627,7 +646,7 @@ export default function SalesList() {
                                 title="الفواتير التي تم تسليم وصرف بضاعتها بالكامل"
                             >
                                 <CheckCircle size={13} className="text-emerald-700" />
-                                <span>تم الاستلام والصرف</span>
+                                <span>تم الاستلام والصرف بالكامل</span>
                                 <span className="bg-emerald-200 text-emerald-950 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold">
                                     {deliveryKPI.delivered}
                                 </span>
@@ -637,6 +656,11 @@ export default function SalesList() {
                         {deliveryTab === 'PENDING' && (
                             <div className="text-[11px] text-amber-800 font-bold bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
                                 ⏳ يتم الآن عرض الفواتير التي لم يحضر أصحابها لاستلام البضاعة بعد
+                            </div>
+                        )}
+                        {deliveryTab === 'PARTIAL' && (
+                            <div className="text-[11px] text-blue-800 font-bold bg-blue-50 px-3 py-1 rounded-lg border border-blue-200">
+                                🔄 يتم الآن عرض الفواتير ذات الاستلام الجزئي (تم استلام جزء وباقي جزء بالمخزن)
                             </div>
                         )}
                     </div>
@@ -817,7 +841,7 @@ export default function SalesList() {
                                                     <div className="flex flex-col gap-1 items-start">
                                                         <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1">
                                                             <PackageCheck size={13} className="text-emerald-600" />
-                                                            <span>تم الاستلام والصرف</span>
+                                                            <span>تم الاستلام والصرف بالكامل</span>
                                                         </span>
                                                         {sale.deliveredAt && (
                                                             <span className="text-[10px] text-slate-500 font-mono">
@@ -841,6 +865,29 @@ export default function SalesList() {
                                                             <span>تصحيح الاستلام</span>
                                                         </button>
                                                     </div>
+                                                ) : sale.deliveryStatus === 'PARTIAL' ? (
+                                                    <div className="flex flex-col gap-1 items-start">
+                                                        <span className="bg-blue-50 text-blue-900 border border-blue-300 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1">
+                                                            <Layers size={13} className="text-blue-600" />
+                                                            <span>استلام جزئي</span>
+                                                        </span>
+                                                        {sale.deliveredBy && (
+                                                            <span className="text-[10px] text-slate-700 font-bold bg-slate-100 px-1.5 py-0.5 rounded">
+                                                                المستلم: {sale.deliveredBy}
+                                                            </span>
+                                                        )}
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedDeliverySale(sale)
+                                                                setDeliveryModalOpen(true)
+                                                            }}
+                                                            className="text-[11px] bg-blue-600 hover:bg-blue-700 text-white font-black px-2.5 py-1 rounded-md shadow-xs mt-1 flex items-center gap-1 transition-all"
+                                                            title="متابعة أو تصحيح صرف باقي الأصناف"
+                                                        >
+                                                            <Layers size={12} />
+                                                            <span>صرف الباقي / تصحيح</span>
+                                                        </button>
+                                                    </div>
                                                 ) : (
                                                     <div className="flex flex-col gap-1 items-start">
                                                         <span className="bg-amber-50 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-lg text-xs font-black flex items-center gap-1">
@@ -856,7 +903,7 @@ export default function SalesList() {
                                                             title="تأكيد أو تصحيح استلام البضاعة"
                                                         >
                                                             <CheckCircle size={12} />
-                                                            <span>تأكيد الاستلام</span>
+                                                            <span>تأكيد / تسليم</span>
                                                         </button>
                                                     </div>
                                                 )}

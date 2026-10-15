@@ -43,9 +43,11 @@ export async function POST(request: Request) {
         const dispatchBranchId = json.dispatchBranchId ? parseInt(json.dispatchBranchId) : null
 
         // Use the exact custom prices from the client, but rounded!
+        const initialDeliveryStatus = json.deliveryStatus || 'PENDING';
         const newItemsData = json.items.map((item: any) => ({
             productId: parseInt(item.productId),
             quantity: parseInt(item.quantity),
+            deliveredQuantity: initialDeliveryStatus === 'DELIVERED' ? parseInt(item.quantity) : (parseInt(item.deliveredQuantity) || 0),
             price: Math.round(parseFloat(item.price)),
             dispatchBranchId: item.dispatchBranchId ? parseInt(item.dispatchBranchId) : dispatchBranchId
         }));

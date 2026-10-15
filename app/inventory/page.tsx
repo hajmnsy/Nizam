@@ -20,6 +20,9 @@ interface Product {
     type: string | null
     thickness: number | null
     quantity: number
+    availableQuantity?: number
+    pendingQuantity?: number
+    physicalQuantity?: number
     price: number
     purchasePriceUSD: number | null
     transportCostUSD: number | null
@@ -437,7 +440,10 @@ export default function Inventory() {
                                     <th className="p-4 print:p-2">اسم المنتج</th>
                                     <th className="p-4 print:p-2 hidden md:table-cell print:table-cell">النوع</th>
                                     <th className="p-4 print:p-2 hidden sm:table-cell print:table-cell">السماكة</th>
-                                    <th className="p-4 print:p-2">الكمية</th>
+                                    <th className="p-4 print:p-2">
+                                        <span>الكمية والمخزون</span>
+                                        <span className="block text-[10px] font-normal text-slate-400 print:hidden">(متاح / مباع / موجود)</span>
+                                    </th>
                                     <th className="p-4 print:p-2">سعر الشراء ($)</th>
                                     <th className="p-4 print:p-2">جملة الصنف ($)</th>
                                     <th className="p-4 print:p-2 print:hidden">تكلفة الترحيل ($)</th>
@@ -468,7 +474,7 @@ export default function Inventory() {
                                                 {product.thickness ? `${product.thickness}mm` : '-'}
                                             </td>
 
-                                            {/* Editable Quantity */}
+                                            {/* Editable Quantity & Stock Breakdown */}
                                             <td className="p-4 print:p-2 print:text-black">
                                                 {editingId === product.id ? (
                                                     <input
@@ -478,9 +484,26 @@ export default function Inventory() {
                                                         onChange={e => setEditForm({ ...editForm, quantity: Number(e.target.value) })}
                                                     />
                                                 ) : (
-                                                    <span className={`font-bold ${product.quantity < 10 ? 'text-amber-600' : 'text-slate-700'}`}>
-                                                        {product.quantity}
-                                                    </span>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-1.5 font-bold font-mono text-sm text-slate-900" title="الرصيد الحر المتاح للبيع">
+                                                            <span className="text-[10px] text-slate-500 font-sans">المتاح للبيع:</span>
+                                                            <span className={product.quantity < 10 ? 'text-amber-600' : 'text-slate-900'}>
+                                                                {product.quantity}
+                                                            </span>
+                                                        </div>
+                                                        {(product.pendingQuantity || 0) > 0 && (
+                                                            <div className="flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded w-fit" title="بضاعة مباعة بفواتير لم تُستلم بعد">
+                                                                <span>مباع لم يستلم:</span>
+                                                                <span className="font-mono">{product.pendingQuantity}</span>
+                                                            </div>
+                                                        )}
+                                                        {(product.pendingQuantity || 0) > 0 && (
+                                                            <div className="text-[9.5px] text-emerald-800 font-bold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded w-fit" title="الكمية المتواجدة حالياً على أرضية المخزن">
+                                                                <span>الموجود بالمخزن:</span>
+                                                                <span className="font-mono">{product.physicalQuantity ?? (product.quantity + (product.pendingQuantity || 0))}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </td>
 

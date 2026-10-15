@@ -26,7 +26,47 @@ export async function GET(request: Request) {
             orderBy: { createdAt: 'desc' }
         })
 
-        return NextResponse.json(products)
+        // Fetch all undelivered items to compute pending and physical stock
+        const undeliveredItems = await prisma.saleItem.findMany({
+            where: {
+                sale: {
+                    deliveryStatus: { in: ['PENDING', 'PARTIAL'] },
+                    status: { in: ['PAID', 'CREDIT'] }
+                },
+                ...(allBranches ? {} : {
+                    OR: [
+                        { dispatchBranchId: branchId },
+                        { dispatchBranchId: null, sale: { branchId } }
+                    ]
+                })
+            },
+            select: {
+                productId: true,
+                quantity: true,
+                deliveredQuantity: true
+            }
+        });
+
+        const pendingMap = new Map<number, number>();
+        for (const item of undeliveredItems) {
+            const delivered = item.deliveredQuantity || 0;
+            const remaining = Math.max(0, item.quantity - delivered);
+            if (remaining > 0) {
+                pendingMap.set(item.productId, (pendingMap.get(item.productId) || 0) + remaining);
+            }
+        }
+
+        const enrichedProducts = products.map(p => {
+            const pendingQuantity = pendingMap.get(p.id) || 0;
+            return {
+                ...p,
+                availableQuantity: p.quantity,
+                pendingQuantity,
+                physicalQuantity: p.quantity + pendingQuantity
+            };
+        });
+
+        return NextResponse.json(enrichedProducts)
     } catch (error) {
         console.error('Error fetching products:', error)
         return NextResponse.json({ error: 'Error fetching products' }, { status: 500 })
