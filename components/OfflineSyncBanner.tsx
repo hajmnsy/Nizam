@@ -123,13 +123,21 @@ export default function OfflineSyncBanner() {
 
             {/* Offline Alert Strip (Visible when internet is lost) */}
             {!isOnline && (
-                <div className="bg-amber-500 text-slate-950 font-bold px-3 py-1.5 text-xs text-center flex items-center justify-center gap-2 shadow-inner print:hidden">
-                    <WifiOff size={15} className="animate-pulse text-amber-950" />
-                    <span>
-                        أنت تعمل الآن في <strong className="underline">وضع عدم الاتصال (أوفلاين)</strong>. يمكنك إصدار الفواتير محلياً بأمان، وسيتم مزامنتها تلقائياً مع الخادم فور عودة الإنترنت.
-                    </span>
+                <div className="bg-amber-500 text-slate-950 font-bold px-3 py-1.5 text-xs text-center flex flex-wrap items-center justify-center gap-2 shadow-inner print:hidden">
+                    <div className="flex items-center gap-1.5">
+                        <WifiOff size={15} className="animate-pulse text-amber-950 shrink-0" />
+                        <span>
+                            أنت تعمل الآن في <strong className="underline">وضع عدم الاتصال (أوفلاين)</strong>. يمكنك إصدار الفواتير وطباعتها محلياً، وستُرفع تلقائياً فور عودة الإنترنت.
+                        </span>
+                    </div>
+                    <a
+                        href="/sales/new"
+                        className="bg-slate-950 hover:bg-slate-800 text-white px-3 py-1 rounded-lg text-xs font-black transition-all shadow-xs flex items-center gap-1 shrink-0"
+                    >
+                        <span>🛒 فتح نقطة البيع لإصدار الفواتير</span>
+                    </a>
                     {pendingCount > 0 && (
-                        <span className="bg-amber-950 text-amber-200 px-2 py-0.5 rounded-full text-[10px] font-mono">
+                        <span className="bg-amber-950 text-amber-200 px-2 py-0.5 rounded-full text-[10px] font-mono shrink-0">
                             {pendingCount} فواتير محفوظة محلياً
                         </span>
                     )}
